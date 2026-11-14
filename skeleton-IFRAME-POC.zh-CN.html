@@ -531,14 +531,13 @@
     50% { box-shadow: inset 0 0 20px var(--brass-glow); }
 }
 
-/* 变量更新面板：接在正文后面、遭遇入口之前（tailBlocks）；分页时一起量高度，只出现在最后一页。
-   展开、收起、确认只切换卡片根节点的 class，不重画正文；卡片高度固定，楼层高度不变。
-   样式是嵌在纸页上的黄铜仪表牌：内凹底色、双线框、四角铆钉，和正文、遭遇入口分开。 */
+/* 变量更新：正文最后一条收起的横条（svBar，接在遭遇入口之前），按下后用浮层（svPop）显示内容。
+   横条高度固定，展开内容盖在正文上方，不改变分页和楼层高度。
+   样式是黄铜仪表牌：内凹底色、双线框、四角铆钉。 */
 .rpg-v7-root { --sv-bg: rgba(0,0,0,.28); --sv-add: #8fb07f; }
 .rpg-v7-root.light-mode { --sv-bg: rgba(90,60,30,.07); --sv-add: #3f6b34; }
 .rpg-v7-root .svEntry {
     position: relative;
-    margin: 28px 0 8px;
     border: 1px solid var(--line);
     border-radius: 3px;
     background: var(--sv-bg);
@@ -556,20 +555,59 @@
                 var(--rv) left 2px bottom 2px / 8px 8px no-repeat, var(--rv) right 2px bottom 2px / 8px 8px no-repeat;
     opacity: .85;
 }
-/* 分页一律用收起的高度计算，展开、确认不会让面板被挤到下一页；多出的部分在最后一页内卷动。 */
-.rpg-v7-root .rpg-page-measure .svEntry > :not(.svHead) { display: none !important; }
-/* 生成中正文可能沿用上一次的画面，面板一律藏起来，避免在串流中按到「重新解析」。 */
-.rpg-v7-root.generating .svEntry { display: none; }
-.rpg-v7-root .svHead { position: relative; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px 0 6px; }
+.rpg-v7-root .svBar { margin: 28px 0 8px; }
+/* 生成中正文可能沿用上一次的画面，横条一律藏起来，避免在串流中按到「重新解析」。 */
+.rpg-v7-root.generating .svBar { display: none; }
+/* 分页模式下这一页还能往下卷（最后一页接上变量横条、遭遇入口后放不下）：底部淡出，提示下面还有内容。 */
+.rpg-v7-root.paged-mode.stage-more .stage {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), rgba(0,0,0,.15));
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), rgba(0,0,0,.15));
+}
+/* 同时在正文区底部中央放一个向下箭头（位置由 syncMoreHint 依正文区算出），按下往下卷。 */
+.rpg-v7-root .moreHint {
+    display: none; position: absolute; z-index: 5; left: 50%; width: 30px; height: 30px; margin-left: -15px; padding: 0;
+    border: 1px solid var(--brass-dim); border-radius: 50%; background: var(--paper); color: var(--brass);
+    box-shadow: 0 2px 6px rgba(0,0,0,.35); cursor: pointer; animation: moreBob 1.8s ease-in-out infinite;
+}
+.rpg-v7-root.paged-mode.stage-more .moreHint { display: grid; place-items: center; }
+.rpg-v7-root.sv-open .moreHint { display: none; }
+.rpg-v7-root .moreHint svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rpg-v7-root .moreHint:hover { background: var(--brass-glow); }
+@keyframes moreBob { 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .rpg-v7-root .moreHint { animation: none; } }
 .rpg-v7-root .svToggle {
     flex: 1 1 auto; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 44px;
-    padding: 0 6px; border: 0; background: none; color: var(--ink-strong);
+    padding: 0 4px; border: 0; background: none; color: var(--ink-strong);
     font: 600 13px/1.2 var(--sans); letter-spacing: .14em; text-align: left; cursor: pointer;
 }
-.rpg-v7-root .svToggle:disabled { cursor: default; }
-.rpg-v7-root .svToggle:focus-visible, .rpg-v7-root .svBtn:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
-.rpg-v7-root .svArrow { flex: 0 0 auto; width: 6px; height: 6px; margin: 0 2px; border: solid var(--brass); border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform .15s; }
-.rpg-v7-root.sv-open .svArrow { transform: rotate(45deg) translate(-1px, -1px); }
+.rpg-v7-root .svToggle:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+.rpg-v7-root .svArrow { flex: 0 0 auto; width: 6px; height: 6px; margin: 0 4px 0 2px; border: solid var(--brass); border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); }
+.rpg-v7-root .svBarWait { display: none; flex: 0 0 auto; padding: 0 6px; color: var(--ink-dim); font: 12px/1 var(--sans); letter-spacing: .08em; white-space: nowrap; }
+.rpg-v7-root .svBarWait::after { content: '…'; animation: encBlink 1.2s steps(4) infinite; }
+.rpg-v7-root.sv-retrying .svBarWait { display: inline-block; }
+.rpg-v7-root .svPop {
+    display: none;
+    position: absolute; z-index: 8; left: 50%; bottom: 12px; transform: translateX(-50%);
+    width: min(calc(100% - 24px), 30rem); max-height: calc(100% - 24px);
+    overflow-y: auto; overscroll-behavior: contain;
+    background: linear-gradient(var(--sv-bg), var(--sv-bg)), var(--paper);
+    box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--line-soft), 0 12px 32px rgba(0,0,0,.5);
+}
+.rpg-v7-root.sv-open .svPop { display: block; }
+.rpg-v7-root.generating .svPop { display: none; }
+.rpg-v7-root .svHead { position: relative; display: flex; align-items: center; gap: 6px; min-height: 46px; padding: 0 6px 0 8px; }
+.rpg-v7-root .svBar .svHead { flex-wrap: wrap; column-gap: 6px; row-gap: 0; padding: 0 10px 0 6px; }
+.rpg-v7-root .svBar .svRetry, .rpg-v7-root .svBar .svBarWait { margin-left: auto; }
+/* 横条一行放不下时（手机的楼层多半如此），「重新解析」改成第二行整行宽的按钮，保留文字。 */
+@container sv-entry (max-width: 290px) {
+    .rpg-v7-root .svBar .svRetry { flex: 1 0 100%; justify-content: center; margin: 0 0 8px; }
+    .rpg-v7-root .svBar .svBarWait { flex: 1 0 100%; margin: 0 0 12px; text-align: center; }
+}
+.rpg-v7-root .svBar .svToggle { flex: 0 1 auto; }
+.rpg-v7-root .svTitle {
+    flex: 1 1 auto; display: flex; align-items: center; gap: 7px; min-width: 0; padding: 0 4px;
+    color: var(--ink-strong); font: 600 13px/1.2 var(--sans); letter-spacing: .14em;
+}
 .rpg-v7-root .svIcon { flex: 0 0 18px; width: 18px; height: 18px; stroke: var(--brass); fill: none; stroke-width: 1.3; stroke-linecap: round; }
 .rpg-v7-root .svName { white-space: nowrap; }
 .rpg-v7-root .svPill {
@@ -585,12 +623,18 @@
 }
 .rpg-v7-root .svBtn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .rpg-v7-root .svBtn:not(:disabled):hover { background: var(--brass-glow); }
+.rpg-v7-root .svBtn:focus-visible, .rpg-v7-root .svClose:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
 .rpg-v7-root .svBtn.is-quiet { border-color: var(--line); color: var(--ink-dim); }
 .rpg-v7-root .svBtn.is-main { border-color: var(--brass); background: var(--brass); color: var(--paper); font-weight: 600; }
 .rpg-v7-root .svBtn.is-main:hover { filter: brightness(1.08); }
-/* 展开的内容：一行一项变动。操作标记、路径（最后一段加亮）、新值。 */
-.rpg-v7-root .svBody { display: none; margin: 0 8px; padding: 2px 6px 10px; border-top: 1px dashed var(--line); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; }
-.rpg-v7-root.sv-open .svBody { display: block; }
+.rpg-v7-root .svClose {
+    flex: 0 0 auto; width: 34px; height: 34px; border: 0; background: none; color: var(--ink-dim);
+    font: 300 22px/1 var(--sans); cursor: pointer;
+}
+.rpg-v7-root .svClose:hover { color: var(--ink-strong); }
+/* 一行一项变动：操作标记、路径（最后一段加亮）、新值。 */
+.rpg-v7-root .svBody { margin: 0 8px; padding: 2px 6px 10px; border-top: 1px dashed var(--line); }
+.rpg-v7-root .svEmpty { margin: 0 8px; padding: 10px 6px 12px; border-top: 1px dashed var(--line); color: var(--ink-dim); font-size: 13px; line-height: 1.6; }
 .rpg-v7-root .svOp { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 9px; align-items: start; padding: 7px 0; }
 .rpg-v7-root .svOp + .svOp { border-top: 1px solid var(--line-soft); }
 .rpg-v7-root .svTag {
@@ -616,9 +660,9 @@
 .rpg-v7-root .svWait { color: var(--ink-dim); }
 .rpg-v7-root .svWait::after { content: '…'; animation: encBlink 1.2s steps(4) infinite; }
 .rpg-v7-root .svMissing { color: var(--enc); }
-/* 面板很窄时（手机约 320px 的楼层），「重新解析」只留图示。 */
-@container sv-entry (max-width: 280px) { .rpg-v7-root .svRetry .svBtnText { display: none; } .rpg-v7-root .svRetry { padding: 0 9px; } }
-@media (prefers-reduced-motion: reduce) { .rpg-v7-root .svWait::after { animation: none; } .rpg-v7-root .svArrow { transition: none; } }
+/* 浮层很窄时（手机约 320px 的楼层），浮层标题列的「重新解析」只留图示（下方确认区仍有文字）。 */
+@container sv-entry (max-width: 280px) { .rpg-v7-root .svPop .svRetry .svBtnText { display: none; } .rpg-v7-root .svPop .svRetry { padding: 0 9px; } }
+@media (prefers-reduced-motion: reduce) { .rpg-v7-root .svWait::after, .rpg-v7-root .svBarWait::after { animation: none; } }
 
 /* ==========================================================================
    [3] 状态面板页签
@@ -1954,10 +1998,11 @@
 .rpg-v7-root.d-material-ui .uiReadingGear { position: absolute; top: 1px; width: 26px; height: 26px; background: var(--ui-corner-gear) center / contain no-repeat; opacity: .38; }
 .rpg-v7-root.d-material-ui .uiReadingGear--right { right: 8px; transform: rotate(15deg); }
 .rpg-v7-root.d-material-ui .uiReadingGear--left { left: 8px; transform: rotate(-15deg); }
-.rpg-v7-root.d-material-ui.paged-mode:not(.generating):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingTop,
-.rpg-v7-root.d-material-ui.paged-mode:not(.generating):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingHead,
-.rpg-v7-root.d-material-ui.paged-mode:not(.generating):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingFoot,
-.rpg-v7-root.d-material-ui:is(:not(.paged-mode), .generating):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingFlowHead,
+/* 分页模式在生成中也照常分页，头尾花饰和结束后相同，页的高度才一致。 */
+.rpg-v7-root.d-material-ui.paged-mode:is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingTop,
+.rpg-v7-root.d-material-ui.paged-mode:is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingHead,
+.rpg-v7-root.d-material-ui.paged-mode:is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingFoot,
+.rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingFlowHead,
 .rpg-v7-root.d-material-ui:not(.paged-mode):not(.generating):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingFlowFoot,
 .rpg-v7-root.d-material-ui:is([data-reading-style="gears"], [data-reading-style="mixed"]) .uiReadingTop,
 .rpg-v7-root.d-material-ui:is([data-reading-style="gears"], [data-reading-style="mixed"]) .uiReadingGear--right,
@@ -3479,6 +3524,8 @@
             <div class="uiReadingFlowFoot" aria-hidden="true"></div>
         </div>
         <div class="uiReadingFoot" aria-hidden="true"></div>
+        <div class="svEntry svPop" data-role="sv-pop" role="dialog" aria-label="变量更新" data-no-edge-turn></div>
+        <button type="button" class="moreHint" data-role="more-hint" aria-label="往下卷动" tabindex="-1" data-no-edge-turn><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg></button>
         <button type="button" class="edgeTurnCorner edgeTurnCorner--previous" data-role="page-corner-prev" aria-label="上一页" title="上一页" disabled><span class="edgeTurnFold" aria-hidden="true"></span></button>
         <button type="button" class="edgeTurnCorner edgeTurnCorner--next" data-role="page-corner-next" aria-label="下一页" title="下一页" disabled><span class="edgeTurnFold" aria-hidden="true"></span></button>
     </div>
@@ -5260,6 +5307,10 @@ var NewCardAlbumData = (function () {
         var blockCache = new Map();
         var pages = [];
         var currPage = 0;
+        // 每一页从第几段开始，以及分页时用的段落清单（判断读者所在页之前的内容有没有变）。
+        var pageStarts = [], pageParas = null;
+        // 这次生成已经完整分页过一次；之后的串流只重量最后几页。
+        var streamPaging = false;
         var pendingRaw = null;
         var lastProcessedRaw = null;
         var lastRenderedText = null;
@@ -7997,10 +8048,8 @@ var NewCardAlbumData = (function () {
             cancelEdgeTurn();
             repagTimer = clearTimer(repagTimer);
             root.classList.toggle('paged-mode', paged);
-            if (!isGenerating) {
-                if (paged) paginate();
-                else showAllText(true);
-            }
+            if (paged) paginate();
+            else showAllText(!isGenerating);
             syncPageControls();
             reportHeight();
         }
@@ -8115,7 +8164,7 @@ var NewCardAlbumData = (function () {
 
         function canTurnPages() {
             return !destroyed && root.isConnected && root.dataset.rpgCardMounted === 'true' &&
-                root.classList.contains('paged-mode') && !isGenerating && !root.classList.contains('sheet-open') && pages.length > 1;
+                root.classList.contains('paged-mode') && !root.classList.contains('sheet-open') && pages.length > 1;
         }
 
         function syncPageControls() {
@@ -8266,6 +8315,11 @@ var NewCardAlbumData = (function () {
             listen(root, 'contextmenu', cancelEdgeTurn, {capture: true, passive: true});
             listen(root, 'dragstart', cancelEdgeTurn, {capture: true, passive: true});
             listen(doc, 'scroll', cancelEdgeTurn, {capture: true, passive: true});
+            listen(stageEl(), 'scroll', syncMoreHint, {passive: true});
+            listen($('more-hint'), 'click', function () {
+                var stage = stageEl();
+                stage.scrollBy({top: Math.max(80, Math.round(stage.clientHeight * 0.8)), behavior: motionReduced() ? 'auto' : 'smooth'});
+            });
             listen(doc, 'keydown', cancelEdgeTurn, {capture: true});
             listen(doc, 'selectionchange', function () {
                 if (edgeSelectionActive()) cancelEdgeTurn();
@@ -8302,6 +8356,7 @@ var NewCardAlbumData = (function () {
             applyDropCap();
             if (resetScroll) stageEl().scrollTop = 0;
             syncPageControls();
+            syncMoreHint();
         }
 
         function renderPageInsideTransaction() {
@@ -8310,49 +8365,133 @@ var NewCardAlbumData = (function () {
             stageEl().scrollTop = 0;
             $('page-num').textContent = (currPage + 1) + '/' + pages.length;
             syncPageControls();
+            syncMoreHint();
+        }
+
+        // 分页模式下这一页还没卷到底时加上 stage-more（底部淡出＋向下箭头）。
+        // 箭头放在正文区外面（正文区有淡出遮罩，放在里面会一起变淡），位置对齐正文区底部。
+        function syncMoreHint() {
+            var stage = stageEl(), hint = $('more-hint');
+            var more = root.classList.contains('paged-mode') && stage.scrollHeight - stage.clientHeight - stage.scrollTop > 4;
+            root.classList.toggle('stage-more', more);
+            if (!more || !hint.offsetParent) return;
+            var top = Math.round(stage.getBoundingClientRect().bottom - hint.offsetParent.getBoundingClientRect().top - 42) + 'px';
+            if (hint.style.top !== top) hint.style.top = top;
         }
 
         function renderPage() {
             withPluginRender(renderPageInsideTransaction);
         }
 
+        // 从第 from 页开始重新量页，之前的页保留（串流中只重量最后几页）。只算页，不画画面。
+        function isTailBlock(paragraph) {
+            return paragraph.indexOf('class="svEntry') >= 0 || paragraph.indexOf('class="encEntry') >= 0;
+        }
+
+        function measurePages(from) {
+            from = Math.max(0, Math.min(from, pages.length - 1, pageStarts.length - 1));
+            var start = from > 0 ? pageStarts[from] : 0;
+            var stage = stageEl();
+            var computed = view.getComputedStyle(stage);
+            var available = stage.clientHeight - parseFloat(computed.paddingTop) - parseFloat(computed.paddingBottom);
+            if (!(available > 0)) available = 400;
+            var measure = create('div');
+            measure.className = textEl().className + ' rpg-page-measure';
+            measure.setAttribute('aria-hidden', 'true');
+            measure.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:-10000px;top:0;height:auto;overflow:visible;';
+            measure.style.width = textEl().clientWidth + 'px';
+            root.append(measure);
+            var next = from > 0 ? pages.slice(0, from) : [], starts = from > 0 ? pageStarts.slice(0, from) : [];
+            var buffer = [], bufferStart = start;
+            try {
+                for (var i = start; i < allParas.length; i++) {
+                    var paragraph = allParas[i];
+                    // Keep each illustration and its controls together on a dedicated page.
+                    if (paragraph.includes('data-rpg-bbi-token=')) {
+                        if (buffer.length) { next.push(buffer.join('')); starts.push(bufferStart); buffer = []; }
+                        next.push(paragraph); starts.push(i); continue;
+                    }
+                    // 正文后面的区块（变量横条、遭遇入口）一律接在最后一段正文的同一页，不换页也不单独成页；
+                    // 放不下时这一页在页内往下卷（底部淡出提示）。正文的分页因此和没有这些区块时相同，
+                    // 生成结束、遭遇稍后送到时，正文都不会移动。
+                    if (isTailBlock(paragraph)) {
+                        if (buffer.length) buffer.push(paragraph);
+                        else if (next.length) next[next.length - 1] += paragraph;
+                        else { buffer.push(paragraph); bufferStart = i; }
+                        continue;
+                    }
+                    if (!buffer.length) bufferStart = i;
+                    buffer.push(paragraph);
+                    measure.classList.toggle('show-drop-cap', next.length === 0);
+                    measure.innerHTML = buffer.join('');
+                    if (measure.scrollHeight > available && buffer.length > 1) {
+                        buffer.pop(); next.push(buffer.join('')); starts.push(bufferStart);
+                        buffer = [paragraph]; bufferStart = i;
+                    }
+                }
+                if (buffer.length) { next.push(buffer.join('')); starts.push(bufferStart); }
+            } finally { measure.remove(); }
+            pages = next.length ? next : [''];
+            pageStarts = next.length ? starts : [0];
+            pageParas = allParas;
+        }
+
+        // 读者目前所在页的第一段。内容换了以后，只要这一段之前的段落都没变，就沿用它；否则从头开始。
+        // 生成结束、MVU 写回、编辑后面的段落、调整视窗大小，都停在同一段所在的页；换了回复就回到第一页。
+        function readingAnchor() {
+            var anchor = pageStarts[currPage] || 0;
+            if (pageParas === allParas) return anchor;
+            if (!pageParas) return 0;
+            var limit = Math.min(anchor, allParas.length);
+            for (var i = 0; i < limit; i++) if (pageParas[i] !== allParas[i]) return 0;
+            return limit;
+        }
+        function pageOf(paragraph) {
+            for (var k = pageStarts.length - 1; k > 0; k--) if (pageStarts[k] <= paragraph) return k;
+            return 0;
+        }
+
         function paginate() {
             if (root.classList.contains('sheet-open')) { sheetPageDirty = true; return; }
-            if (destroyed || isGenerating || !root.classList.contains('paged-mode')) return;
+            if (destroyed || !root.classList.contains('paged-mode')) return;
             var previousPageContent = pages[currPage], previousScroll = stageEl().scrollTop;
+            var anchor = readingAnchor();
             withPluginRender(function () {
-                var stage = stageEl();
-                var computed = view.getComputedStyle(stage);
-                var available = stage.clientHeight - parseFloat(computed.paddingTop) - parseFloat(computed.paddingBottom);
-                if (!(available > 0)) available = 400;
-                var measure = create('div');
-                measure.className = textEl().className + ' rpg-page-measure';
-                measure.setAttribute('aria-hidden', 'true');
-                measure.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:-10000px;top:0;height:auto;overflow:visible;';
-                measure.style.width = textEl().clientWidth + 'px';
-                root.append(measure);
-                var next = [], buffer = [];
-                try {
-                    allParas.forEach(function (paragraph) {
-                        // Keep each illustration and its controls together on a dedicated page.
-                        if (paragraph.includes('data-rpg-bbi-token=')) {
-                            if (buffer.length) { next.push(buffer.join('')); buffer = []; }
-                            next.push(paragraph); return;
-                        }
-                        buffer.push(paragraph);
-                        measure.classList.toggle('show-drop-cap', next.length === 0);
-                        measure.innerHTML = buffer.join('');
-                        if (measure.scrollHeight > available && buffer.length > 1) {
-                            buffer.pop(); next.push(buffer.join('')); buffer = [paragraph];
-                        }
-                    });
-                    if (buffer.length) next.push(buffer.join(''));
-                } finally { measure.remove(); }
-                pages = next.length ? next : [''];
-                currPage = Math.max(0, Math.min(currPage, pages.length - 1));
+                measurePages(0);
+                currPage = pageOf(anchor);
                 renderPageInsideTransaction();
             });
+            if (isGenerating) streamPaging = true;
             if (pages[currPage] === previousPageContent) stageEl().scrollTop = previousScroll;
+            syncMoreHint();
+        }
+
+        // 串流中的分页（比照前作：生成中照常分页、可以翻页，页码停在读者所在的页）。
+        // 前面写完的页不会再变，只重量最后几页，花费不随篇幅增加。结束时 finish() 再完整分页一次。
+        function streamPaginate() {
+            if (destroyed || !root.classList.contains('paged-mode')) return;
+            if (root.classList.contains('sheet-open')) { sheetPageDirty = true; return; }
+            if (!streamPaging) { paginate(); return; }
+            // 检查最后两张已完成的页：串流中段落偶尔会在下一段出现时改变画法（例如对话判定）。
+            var from = Math.max(0, pages.length - 3);
+            while (from < pages.length - 1) {
+                var end = pageStarts[from + 1];
+                if (end > allParas.length || pages[from] !== allParas.slice(pageStarts[from], end).join('')) break;
+                from++;
+            }
+            var stage = stageEl(), shown = pages[currPage], scroll = stage.scrollTop;
+            var atBottom = stage.scrollHeight - stage.clientHeight - scroll < 40;
+            measurePages(from);
+            currPage = Math.min(currPage, pages.length - 1);
+            if (pages[currPage] !== shown) {
+                withPluginRender(renderPageInsideTransaction);
+                // 同一页长出新文字：维持卷动位置；原本在底部就跟着往下。
+                stage.scrollTop = atBottom ? stage.scrollHeight : scroll;
+                syncMoreHint();
+            } else {
+                $('page-num').textContent = (currPage + 1) + '/' + pages.length;
+                syncPageControls();
+            }
         }
 
         function goPage(index) {
@@ -8365,7 +8504,7 @@ var NewCardAlbumData = (function () {
             if (root.classList.contains('sheet-open')) { sheetPageDirty = true; return; }
             cancelEdgeTurn();
             repagTimer = clearTimer(repagTimer);
-            if (destroyed || isGenerating || !root.classList.contains('paged-mode')) return;
+            if (destroyed || !root.classList.contains('paged-mode')) return;
             repagTimer = setTimer(function () {
                 repagTimer = null;
                 paginate();
@@ -8441,8 +8580,9 @@ var NewCardAlbumData = (function () {
                     : '<button type="button" class="encBtn" disabled>等待变量更新</button>') + '</div>';
         }
         // ── 变量更新面板 ──
-        // 显示这一楼 <UpdateVariable>／<JSONPatch> 的内容，预设收起（前作 RPGMVU0916 的「变量更新状态」）。
-        // 生成中不显示。最新一楼另有「重新解析」，触发 MVU 脚本的同名按钮；MVU 只重试最新一楼。
+        // 显示这一楼 <UpdateVariable>／<JSONPatch> 的内容（前作 RPGMVU0916 的「变量更新状态」）。
+        // 正文最后一条收起的横条，按下后内容用浮层盖在正文上方；横条高度固定，不影响分页。生成中不显示。
+        // 最新一楼另有「重新解析」，触发 MVU 脚本的同名按钮；MVU 只重试最新一楼。
         var MVU_RETRY_BUTTON = '重试额外模型解析';   // 必须和 MVU 脚本的按钮名称完全相同（简体）
         var SV_RETRY_TIMEOUT_MS = 120000;
         var svRetryRaw = null, svRetryTimer = null, svMissingTimer = null;
@@ -8511,31 +8651,50 @@ var NewCardAlbumData = (function () {
                     (SV_OPS[name] || '·') + '</span><div class="svPath">' + svPathHtml(op.path) + '</div>' + svValueHtml(op) + '</div>';
             }).join('')};
         }
-        function stateBlock() {
-            if (isGenerating || context.streaming || !rawContentActive) return '';
+        // 正文里的横条。展开状态（aria-expanded）由 setSvOpen 直接改，不写进这段文字，开关时不必重排正文。
+        function svBarHtml(label, pillClass, canRetry) {
+            var title = '<svg class="svIcon" viewBox="0 0 20 20" aria-hidden="true">' + SV_ICON + '</svg>' +
+                '<span class="svName">变量更新</span><span class="svPill' + pillClass + '">' + label + '</span>';
+            var retry = canRetry ? '<button type="button" class="svBtn svRetry" data-sv-action="ask" aria-label="重新解析"><svg viewBox="0 0 16 16" aria-hidden="true">' + SV_RETRY_ICON + '</svg><span class="svBtnText">重新解析</span></button>' : '';
+            return '<div class="svEntry svBar" data-no-edge-turn><div class="svHead">' +
+                '<button type="button" class="svToggle" data-sv-action="toggle" aria-haspopup="dialog" aria-expanded="false">' + title +
+                '<span class="svArrow" aria-hidden="true"></span></button>' + retry +
+                (canRetry ? '<span class="svBarWait" role="status">解析中</span>' : '') + '</div></div>';
+        }
+        // 横条与浮层的内容。没有可显示的东西时回传 null（生成中，或旧楼层又没有变量区域）。
+        function stateView() {
+            if (isGenerating || context.streaming || !rawContentActive) return null;
             var text = extractStateText(floorRaw());
             var canRetry = isLatestFloor() && !!(lastRenderedText && lastRenderedText.trim());
-            if (text === null && !canRetry) return '';
-            var open = root.classList.contains('sv-open'), list = text ? svOpList(text) : null;
-            var pill = text === null ? '<span class="svPill is-missing">未找到</span>'
-                : list ? '<span class="svPill">' + (list.count ? list.count + ' 项' : '无变动') + '</span>'
-                : '<span class="svPill is-plain">' + (text ? '原文' : '无内容') + '</span>';
-            var title = '<svg class="svIcon" viewBox="0 0 20 20" aria-hidden="true">' + SV_ICON + '</svg>' +
-                '<span class="svName">变量更新</span>' + pill;
-            var head = text === null
-                ? '<button type="button" class="svToggle" disabled>' + title + '</button>'
-                : '<button type="button" class="svToggle" data-sv-action="toggle" aria-expanded="' + open + '"><span class="svArrow" aria-hidden="true"></span>' + title + '</button>';
-            var body = text === null ? '' : '<div class="svBody">' + (list ? list.html
-                : '<pre class="svRaw">' + escapeHtml(text || '（没有内容）') + '</pre>') + '</div>';
-            return '<div class="svEntry" data-no-edge-turn><div class="svHead">' + head +
-                (canRetry ? '<button type="button" class="svBtn svRetry" data-sv-action="ask" aria-label="重新解析"><svg viewBox="0 0 16 16" aria-hidden="true">' + SV_RETRY_ICON + '</svg><span class="svBtnText">重新解析</span></button>' : '') + '</div>' +
-                body +
-                (canRetry ? '<div class="svConfirm">要 MVU 用额外模型重新解析这一楼的变量吗？这会再送出一次请求，现有的变量更新会被取代。' +
+            if (text === null && !canRetry) return null;
+            var list = text ? svOpList(text) : null;
+            var label = text === null ? '未找到' : list ? (list.count ? list.count + ' 项' : '无变动') : (text ? '原文' : '无内容');
+            var body = text === null ? '<p class="svEmpty">这一楼的原文里没有变量更新区域。</p>'
+                : '<div class="svBody">' + (list ? list.html : '<pre class="svRaw">' + escapeHtml(text || '（没有内容）') + '</pre>') + '</div>';
+            var bar = svBarHtml(label, text === null ? ' is-missing' : list ? '' : ' is-plain', canRetry);
+            var html = '<div class="svHead"><div class="svTitle"><svg class="svIcon" viewBox="0 0 20 20" aria-hidden="true">' + SV_ICON + '</svg>' +
+                '<span class="svName">变量更新</span><span class="svPill' + (text === null ? ' is-missing' : list ? '' : ' is-plain') + '">' + label + '</span></div>' +
+                (canRetry ? '<button type="button" class="svBtn svRetry" data-sv-action="ask" aria-label="重新解析"><svg viewBox="0 0 16 16" aria-hidden="true">' + SV_RETRY_ICON + '</svg><span class="svBtnText">重新解析</span></button>' : '') +
+                '<button type="button" class="svClose" data-sv-action="close" aria-label="关闭">×</button></div>' + body +
+                (canRetry ? '<div class="svConfirm">' + (text === null ? '要请求补全变量更新吗？' : '要重骰变量吗？原有的变量会被清空取代。') +
                     '<div class="svRow"><button type="button" class="svBtn is-quiet" data-sv-action="cancel">取消</button>' +
                     '<button type="button" class="svBtn is-main" data-sv-action="retry">重新解析</button></div></div>' +
                     '<div class="svWait" role="status">已送出，等待 MVU 解析</div>' +
-                    '<div class="svMissing" role="status">找不到 MVU 的「' + MVU_RETRY_BUTTON + '」按钮。请确认 MVU 脚本已启用，并在酒馆助手的脚本按钮里显示这个按钮。</div>' : '') +
-                '</div>';
+                    '<div class="svMissing" role="status">找不到 MVU 的「' + MVU_RETRY_BUTTON + '」按钮。请确认 MVU 脚本已启用，并在酒馆助手的脚本按钮里显示这个按钮。</div>' : '');
+            return {html: html, bar: bar};
+        }
+        var svShownHtml = null;
+        // 更新浮层内容。内容没变时不重写，避免打断正在操作的按钮。
+        function renderStateView() {
+            if (destroyed) return;
+            var state = stateView(), pop = $('sv-pop');
+            if (!state) { setSvOpen(false); return; }
+            if (state.html !== svShownHtml) { pop.innerHTML = state.html; svShownHtml = state.html; }
+        }
+        function setSvOpen(open) {
+            setSvState('sv-open', open);
+            root.querySelectorAll('.svBar .svToggle').forEach(function (button) { button.setAttribute('aria-expanded', String(!!open)); });
+            if (!open) { setSvState('sv-confirm', false); setSvState('sv-missing', false); }
         }
         // MVU 的按钮事件名称含有 MVU 脚本自己的编号，所以从「已启用的脚本按钮」名单用按钮名称找。
         // 名单只列出设为显示的按钮。
@@ -8556,62 +8715,74 @@ var NewCardAlbumData = (function () {
             svRetryRaw = null;
             setSvState('sv-retrying', false);
         }
-        // 面板变高后卷到看得到整个面板（面板顶端不卷出画面）。
-        // 不用 scrollIntoView：它会连酒馆页面一起卷动。
-        function revealSvEntry() {
-            requestFrame(function () {
-                var entry = root.querySelector('.svEntry');
-                if (!entry) return;
-                var stage = stageEl(), box = entry.getBoundingClientRect(), area = stage.getBoundingClientRect();
-                if (box.bottom > area.bottom) stage.scrollTop += Math.min(box.bottom - area.bottom + 8, box.top - area.top);
-            });
+        // 确认、等待、找不到按钮的提示在浮层底部；出现时把浮层卷到底。
+        function revealSvBottom() {
+            requestFrame(function () { var pop = $('sv-pop'); pop.scrollTop = pop.scrollHeight; });
         }
-        function runSvAction(action, button) {
+        function runSvAction(action) {
             if (action === 'toggle') {
-                var open = !root.classList.contains('sv-open');
-                setSvState('sv-open', open);
-                button.setAttribute('aria-expanded', String(open));
-                if (open) revealSvEntry();
+                setSvOpen(!root.classList.contains('sv-open'));
+            } else if (action === 'close') {
+                setSvOpen(false);
             } else if (action === 'ask') {
+                // 横条上的「重新解析」：打开浮层，直接显示确认。
+                setSvOpen(true);
                 setSvState('sv-missing', false);
                 setSvState('sv-confirm', true);
-                revealSvEntry();
+                revealSvBottom();
             } else if (action === 'cancel') {
                 setSvState('sv-confirm', false);
             } else if (action === 'retry') {
                 setSvState('sv-confirm', false);
                 // 送出前再确认一次状态：可能已有新楼层或新的生成。
-                if (isGenerating || !isLatestFloor()) { repaintEncounter(); return; }
+                if (isGenerating || !isLatestFloor()) { renderStateView(); return; }
                 var target = mvuRetryEvent();
                 if (!target || typeof target.helper.eventEmit !== 'function') {
                     setSvState('sv-missing', true);
                     svMissingTimer = clearTimer(svMissingTimer);
                     svMissingTimer = setTimer(function () { svMissingTimer = null; setSvState('sv-missing', false); }, 8000);
-                    revealSvEntry();
+                    revealSvBottom();
                     return;
                 }
                 svRetryRaw = floorRaw();
                 setSvState('sv-retrying', true);
-                revealSvEntry();
+                revealSvBottom();
                 svRetryTimer = clearTimer(svRetryTimer);
                 svRetryTimer = setTimer(function () { svRetryTimer = null; endSvRetry(); }, SV_RETRY_TIMEOUT_MS);
                 try { target.helper.eventEmit(target.event); } catch (error) { endSvRetry(); console.error('[skeleton-IFRAME-POC] MVU 重新解析送出失败', error); }
             }
         }
         function initializeStateViewer() {
+            // 浮层开着时，点浮层以外的地方只关闭浮层，不触发其他操作（例如边缘翻页）。
+            listen(root, 'click', function (event) {
+                if (!root.classList.contains('sv-open')) return;
+                var target = event.target;
+                if ($('sv-pop').contains(target) || (target.closest && target.closest('.svBar'))) return;
+                setSvOpen(false);
+                event.preventDefault();
+                event.stopPropagation();
+            }, {capture: true});
             listen(root, 'click', function (event) {
                 var button = event.target.closest && event.target.closest('[data-sv-action]');
-                if (button && root.contains(button) && !button.disabled) runSvAction(button.dataset.svAction, button);
+                if (button && root.contains(button) && !button.disabled) runSvAction(button.dataset.svAction);
+            });
+            listen(doc, 'keydown', function (event) {
+                if (event.key !== 'Escape' || !root.classList.contains('sv-open')) return;
+                setSvOpen(false);
+                var toggle = textEl().querySelector('.svBar .svToggle');
+                if (toggle) toggle.focus({preventScroll: true});
             });
         }
-        // 正文后面接的区块，顺序固定为「变量更新 → 遭遇入口」，和原文里标签的先后无关：
-        // 玩家要先确认这一楼的变量，再进入遭遇（探索结束会直接送出结果、进入下一楼）。
+        // 正文后面依序接：变量更新横条 → 遭遇入口（不论原文顺序）。玩家先确认变量，再进入遭遇。
+        // 分页时两者都接在最后一段正文的同一页（见 measurePages）。
         function tailBlocks() {
-            return [stateBlock(), encounterBlock()].filter(Boolean);
+            var state = stateView(), entry = encounterBlock();
+            return [state ? state.bar : '', entry].filter(Boolean);
         }
-        // 生成结束、楼层文字被改写（例如 MVU 补上变量区域）时，重画正文后面的面板与入口。
+        // 生成结束、楼层文字被改写（例如 MVU 补上变量区域）时：更新浮层，并重画正文后面的横条与遭遇入口。
         function syncStateViewer() {
             if (svRetryRaw !== null && floorRaw() !== svRetryRaw) endSvRetry();
+            renderStateView();
             if (destroyed || isGenerating || !rawContentActive || lastRenderedText === null) return;
             var before = allParas.join('\u0001');
             captureParas(toBlocks(lastRenderedText).concat(tailBlocks()).join(''));
@@ -8964,7 +9135,7 @@ var NewCardAlbumData = (function () {
         function setGenerating(on) {
             cancelEdgeTurn();
             isGenerating = !!on;
-            if (isGenerating) { repagTimer = clearTimer(repagTimer); root.classList.remove('sv-confirm'); }
+            if (isGenerating) { repagTimer = clearTimer(repagTimer); streamPaging = false; renderStateView(); }
             root.classList.toggle('generating', isGenerating);
             syncPageControls();
         }
@@ -9014,7 +9185,9 @@ var NewCardAlbumData = (function () {
             if (tailOk && renderStreamTail(blocks)) { reportHeight(); return; }
             captureParas(blocks.join(''));
 
-            if (isGenerating) {
+            if (isGenerating && root.classList.contains('paged-mode')) {
+                streamPaginate();
+            } else if (isGenerating) {
                 var stage = stageEl();
                 var wasAtBottom = stage.scrollHeight - stage.clientHeight - stage.scrollTop < 40;
                 var previousScroll = stage.scrollTop;
@@ -9027,6 +9200,11 @@ var NewCardAlbumData = (function () {
                 }
             } else if (root.classList.contains('paged-mode')) {
                 paginate();
+            } else if (settling) {
+                // 串流结束后的整段重画：内容没换，停在读者原本的位置。
+                var settledStage = stageEl(), settledScroll = settledStage.scrollTop;
+                showAllText(false);
+                settledStage.scrollTop = settledScroll;
             } else {
                 showAllText(true);
             }
@@ -9064,32 +9242,19 @@ var NewCardAlbumData = (function () {
                 setGenerating(false);
                 flushStream();
                 settleStreamDom();
-                if (root.classList.contains('paged-mode')) {
-                    currPage = 0;
-                    paginate();
-                }
+                paginate();
             }, SAFE_UNLOCK_MS);
         }
 
-        // 分页模式：正文改变（新的生成、切换回复、编辑正文）才回到第一页；
-        // 只有正文以外的部分改变时（例如 MVU 写回变量区域），留在原来那一页。
-        var pagedText = null;
+        // 结束时不跳回开头：分页模式停在读者所在段落的页（见 readingAnchor），卷动模式维持卷动位置。
         function finish(raw) {
-            var wasGenerating = isGenerating;
             setGenerating(false);
             safeUnlockTimer = clearTimer(safeUnlockTimer);
             if (raw != null && raw !== '') pendingRaw = raw;
             flushStream();
             settleStreamDom();
             syncStateViewer();
-            var textChanged = wasGenerating || lastRenderedText !== pagedText;
-            pagedText = lastRenderedText;
-            if (root.classList.contains('paged-mode')) {
-                if (textChanged) currPage = 0;
-                paginate();
-            } else if (wasGenerating) {
-                stageEl().scrollTop = 0;
-            }
+            paginate();
             refreshAlbum();
             refreshMvu();
             if (encounterView.tag && context.encounter) context.encounter.query();
