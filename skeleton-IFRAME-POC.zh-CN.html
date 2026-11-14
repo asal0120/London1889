@@ -432,8 +432,7 @@
     -webkit-overflow-scrolling: touch;
 }
 /* 行宽与面板、控制列共用同一上限，确保三者左右对齐。 */
-.rpg-v7-root .text-display,
-.rpg-v7-root [data-role="state-viewer-panel"] {
+.rpg-v7-root .text-display {
     max-width: var(--contentMax);
     margin-left: auto;
     margin-right: auto;
@@ -532,32 +531,94 @@
     50% { box-shadow: inset 0 0 20px var(--brass-glow); }
 }
 
-/* 变量更新状态面板（rpg-core updateStateViewer 会写进来） */
-.rpg-v7-root [data-role="state-viewer-panel"] {
-    margin-top: 16px;
+/* 变量更新面板：接在正文后面、遭遇入口之前（tailBlocks）；分页时一起量高度，只出现在最后一页。
+   展开、收起、确认只切换卡片根节点的 class，不重画正文；卡片高度固定，楼层高度不变。
+   样式是嵌在纸页上的黄铜仪表牌：内凹底色、双线框、四角铆钉，和正文、遭遇入口分开。 */
+.rpg-v7-root { --sv-bg: rgba(0,0,0,.28); --sv-add: #8fb07f; }
+.rpg-v7-root.light-mode { --sv-bg: rgba(90,60,30,.07); --sv-add: #3f6b34; }
+.rpg-v7-root .svEntry {
+    position: relative;
+    margin: 28px 0 8px;
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    background: rgba(120,95,55,.05);
-}
-.rpg-v7-root [data-role="state-viewer-panel"] .svTitle {
+    border-radius: 3px;
+    background: var(--sv-bg);
+    box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--line-soft), inset 0 2px 8px rgba(0,0,0,.28);
+    color: var(--ink);
     font-family: var(--sans);
-    font-size: 12px;
-    letter-spacing: .22em;
-    color: var(--emph);
-    padding: 7px 10px 0;
+    text-indent: 0;
+    letter-spacing: normal;
+    container: sv-entry / inline-size;
 }
-.rpg-v7-root [data-role="state-viewer-body"] {
-    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.65;
-    color: var(--ink-dim);
-    padding: 5px 10px 9px;
-    margin: 0;
-    max-height: 150px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
+.rpg-v7-root .svEntry::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    --rv: radial-gradient(circle, var(--brass) 0 1.3px, var(--brass-dim) 1.6px, transparent 2.3px);
+    background: var(--rv) left 2px top 2px / 8px 8px no-repeat, var(--rv) right 2px top 2px / 8px 8px no-repeat,
+                var(--rv) left 2px bottom 2px / 8px 8px no-repeat, var(--rv) right 2px bottom 2px / 8px 8px no-repeat;
+    opacity: .85;
 }
+/* 分页一律用收起的高度计算，展开、确认不会让面板被挤到下一页；多出的部分在最后一页内卷动。 */
+.rpg-v7-root .rpg-page-measure .svEntry > :not(.svHead) { display: none !important; }
+/* 生成中正文可能沿用上一次的画面，面板一律藏起来，避免在串流中按到「重新解析」。 */
+.rpg-v7-root.generating .svEntry { display: none; }
+.rpg-v7-root .svHead { position: relative; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px 0 6px; }
+.rpg-v7-root .svToggle {
+    flex: 1 1 auto; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 44px;
+    padding: 0 6px; border: 0; background: none; color: var(--ink-strong);
+    font: 600 13px/1.2 var(--sans); letter-spacing: .14em; text-align: left; cursor: pointer;
+}
+.rpg-v7-root .svToggle:disabled { cursor: default; }
+.rpg-v7-root .svToggle:focus-visible, .rpg-v7-root .svBtn:focus-visible { outline: 1px solid var(--brass); outline-offset: 2px; }
+.rpg-v7-root .svArrow { flex: 0 0 auto; width: 6px; height: 6px; margin: 0 2px; border: solid var(--brass); border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform .15s; }
+.rpg-v7-root.sv-open .svArrow { transform: rotate(45deg) translate(-1px, -1px); }
+.rpg-v7-root .svIcon { flex: 0 0 18px; width: 18px; height: 18px; stroke: var(--brass); fill: none; stroke-width: 1.3; stroke-linecap: round; }
+.rpg-v7-root .svName { white-space: nowrap; }
+.rpg-v7-root .svPill {
+    flex: 0 0 auto; margin-left: 3px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--emph); font: 500 11px/1 var(--sans); letter-spacing: .06em; white-space: nowrap;
+}
+.rpg-v7-root .svPill.is-missing { color: var(--enc); border-color: var(--enc); }
+.rpg-v7-root .svPill.is-plain { color: var(--ink-dim); }
+.rpg-v7-root .svBtn {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 11px;
+    border: 1px solid var(--brass-dim); border-radius: 2px; background: none; color: var(--emph);
+    font: 500 12px/1 var(--sans); letter-spacing: .08em; cursor: pointer;
+}
+.rpg-v7-root .svBtn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.rpg-v7-root .svBtn:not(:disabled):hover { background: var(--brass-glow); }
+.rpg-v7-root .svBtn.is-quiet { border-color: var(--line); color: var(--ink-dim); }
+.rpg-v7-root .svBtn.is-main { border-color: var(--brass); background: var(--brass); color: var(--paper); font-weight: 600; }
+.rpg-v7-root .svBtn.is-main:hover { filter: brightness(1.08); }
+/* 展开的内容：一行一项变动。操作标记、路径（最后一段加亮）、新值。 */
+.rpg-v7-root .svBody { display: none; margin: 0 8px; padding: 2px 6px 10px; border-top: 1px dashed var(--line); max-height: 220px; overflow-y: auto; overscroll-behavior: contain; }
+.rpg-v7-root.sv-open .svBody { display: block; }
+.rpg-v7-root .svOp { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 9px; align-items: start; padding: 7px 0; }
+.rpg-v7-root .svOp + .svOp { border-top: 1px solid var(--line-soft); }
+.rpg-v7-root .svTag {
+    grid-row: span 2; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px;
+    border: 1px solid currentColor; border-radius: 2px; color: var(--ink-dim); font: 600 12px/1 var(--sans);
+}
+.rpg-v7-root .svOp[data-op="replace"] .svTag { color: var(--emph); }
+.rpg-v7-root .svOp[data-op="add"] .svTag, .rpg-v7-root .svOp[data-op="insert"] .svTag { color: var(--sv-add); }
+.rpg-v7-root .svOp[data-op="remove"] .svTag { color: var(--enc); }
+.rpg-v7-root .svOp[data-op="delta"] .svTag { color: var(--q); font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; }
+.rpg-v7-root .svPath { font: 12px/1.55 var(--sans); color: var(--ink-dim); overflow-wrap: anywhere; }
+.rpg-v7-root .svSep { margin: 0 4px; opacity: .55; }
+.rpg-v7-root .svKey { color: var(--ink-strong); font-weight: 600; }
+.rpg-v7-root .svVal { font: 12.5px/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--q); white-space: pre-wrap; overflow-wrap: anywhere; }
+.rpg-v7-root .svVal.is-none { color: var(--ink-dim); font-family: var(--sans); }
+.rpg-v7-root .svRaw { margin: 8px 0 0; font: 12px/1.65 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--ink-dim); white-space: pre-wrap; word-break: break-all; }
+.rpg-v7-root .svConfirm, .rpg-v7-root .svWait, .rpg-v7-root .svMissing {
+    display: none; margin: 0 8px; padding: 10px 6px 12px; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.65;
+}
+.rpg-v7-root .svConfirm .svRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.rpg-v7-root.sv-confirm .svConfirm, .rpg-v7-root.sv-retrying .svWait, .rpg-v7-root.sv-missing .svMissing { display: block; }
+.rpg-v7-root.sv-confirm .svRetry, .rpg-v7-root.sv-retrying .svRetry { display: none; }
+.rpg-v7-root .svWait { color: var(--ink-dim); }
+.rpg-v7-root .svWait::after { content: '…'; animation: encBlink 1.2s steps(4) infinite; }
+.rpg-v7-root .svMissing { color: var(--enc); }
+/* 面板很窄时（手机约 320px 的楼层），「重新解析」只留图示。 */
+@container sv-entry (max-width: 280px) { .rpg-v7-root .svRetry .svBtnText { display: none; } .rpg-v7-root .svRetry { padding: 0 9px; } }
+@media (prefers-reduced-motion: reduce) { .rpg-v7-root .svWait::after { animation: none; } .rpg-v7-root .svArrow { transition: none; } }
 
 /* ==========================================================================
    [3] 状态面板页签
@@ -3414,10 +3475,6 @@
             <div class="uiReadingFlowHead" aria-hidden="true"></div>
             <div class="text-display show-drop-cap">
                 <div class="placeholder-text">谱写崭新篇章……</div>
-            </div>
-            <div data-role="state-viewer-panel" style="display:none">
-                <div class="svTitle">变量更新</div>
-                <pre data-role="state-viewer-body"></pre>
             </div>
             <div class="uiReadingFlowFoot" aria-hidden="true"></div>
         </div>
@@ -8383,11 +8440,192 @@ var NewCardAlbumData = (function () {
                 (done || !latest ? '' : floorUpdated() ? '<button type="button" class="encBtn" data-encounter-action="enter">进入探索</button>'
                     : '<button type="button" class="encBtn" disabled>等待变量更新</button>') + '</div>';
         }
+        // ── 变量更新面板 ──
+        // 显示这一楼 <UpdateVariable>／<JSONPatch> 的内容，预设收起（前作 RPGMVU0916 的「变量更新状态」）。
+        // 生成中不显示。最新一楼另有「重新解析」，触发 MVU 脚本的同名按钮；MVU 只重试最新一楼。
+        var MVU_RETRY_BUTTON = '重试额外模型解析';   // 必须和 MVU 脚本的按钮名称完全相同（简体）
+        var SV_RETRY_TIMEOUT_MS = 120000;
+        var svRetryRaw = null, svRetryTimer = null, svMissingTimer = null;
+
+        function floorRaw() {
+            return typeof context.rawData === 'string' ? context.rawData : stRegexRenderedInput || '';
+        }
+        // 找不到变量区域时回传 null；区域存在但没有内容时回传空字串。
+        function extractStateText(raw) {
+            var str = String(raw || '')
+                .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+                .replace(/<think>[\s\S]*?<\/think>/gi, '')
+                .replace(/\[metacognition\][\s\S]*?\[\/metacognition\]/gi, '');
+            var block = str.match(/<UpdateVariable>([\s\S]*?)<\/UpdateVariable>/i);
+            var patch = (block ? block[1] : str).match(new RegExp('<' + STATE_TAG + '>([\\s\\S]*?)<\\/' + STATE_TAG + '>', 'i'));
+            if (patch) return patch[1].trim();
+            return block ? block[1].replace(/<Analysis>[\s\S]*?<\/Analysis>/gi, '').trim() : null;
+        }
+        function isLatestFloor() {
+            var latest = mapLatestFloor(), floor = mapCardFloor();
+            return latest != null && floor != null && Number(latest) === Number(floor);
+        }
+        var SV_ICON = '<circle cx="10" cy="11" r="7"/><path d="M10 11l3.6-3M10 4v1.4M3.6 8.2l1.2.7M16.4 8.2l-1.2.7M7 18h6"/>';
+        var SV_RETRY_ICON = '<path d="M13 3.5v3h-3"/><path d="M12.7 6.4A5 5 0 1 0 13 10"/>';
+        // JSONPatch 的操作（含 MVU 扩充的 insert、delta）用一个字标示。
+        var SV_OPS = {replace: '改', add: '增', insert: '增', remove: '删', delta: '±', move: '移', copy: '复', test: '验'};
+        function svPathHtml(path) {
+            var parts = String(path == null ? '' : path).replace(/^\//, '').split('/').filter(Boolean).map(function (part) {
+                return part.replace(/~1/g, '/').replace(/~0/g, '~');
+            });
+            if (!parts.length) return '<span class="svKey">（全部）</span>';
+            return parts.map(function (part, i) {
+                if (part === '-' && i === parts.length - 1) part = '（末尾）';   // JSONPatch 的 - 表示加到清单最后
+                return '<span' + (i === parts.length - 1 ? ' class="svKey"' : '') + '>' + escapeHtml(part) + '</span>';
+            }).join('<span class="svSep" aria-hidden="true">›</span>');
+        }
+        function svValueHtml(op) {
+            if (op.op === 'remove') return '<div class="svVal is-none">删除这一项</div>';
+            if (op.op === 'move' || op.op === 'copy') return '<div class="svVal is-none">来自 ' + svPathHtml(op.from) + '</div>';
+            var value = op.value;
+            if (value === undefined) return '<div class="svVal is-none">（没有值）</div>';
+            if (op.op === 'delta' && typeof value === 'number') value = (value > 0 ? '+' : '') + value;
+            else if (value === '') value = '（空字串）';
+            else if (typeof value !== 'string') value = svPlainValue(value);
+            return '<div class="svVal">' + escapeHtml(String(value)) + '</div>';
+        }
+        // 只有一层、值都是文字或数字的物件和阵列，改写成「名称：值」；其他照 JSON 显示。
+        function svPlainValue(value) {
+            var scalar = function (item) { return item === null || ['string', 'number', 'boolean'].indexOf(typeof item) >= 0; };
+            if (Array.isArray(value) && value.length && value.every(scalar)) return value.join('、');
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                var keys = Object.keys(value);
+                if (keys.length && keys.every(function (key) { return scalar(value[key]); })) return keys.map(function (key) { return key + '：' + value[key]; }).join('，');
+            }
+            return JSON.stringify(value);
+        }
+        // 内容是 JSONPatch 阵列时拆成一行一项；不是时回传 null，改显示原文。
+        function svOpList(text) {
+            var ops;
+            try { ops = JSON.parse(text); } catch (_) { return null; }
+            if (ops && !Array.isArray(ops)) ops = [ops];
+            if (!Array.isArray(ops) || !ops.every(function (op) { return op && typeof op === 'object' && typeof op.op === 'string'; })) return null;
+            return {count: ops.length, html: ops.map(function (op) {
+                var name = op.op.toLowerCase();
+                return '<div class="svOp" data-op="' + escapeHtml(name).replace(/"/g, '') + '"><span class="svTag" title="' + escapeHtml(op.op).replace(/"/g, '') + '">' +
+                    (SV_OPS[name] || '·') + '</span><div class="svPath">' + svPathHtml(op.path) + '</div>' + svValueHtml(op) + '</div>';
+            }).join('')};
+        }
+        function stateBlock() {
+            if (isGenerating || context.streaming || !rawContentActive) return '';
+            var text = extractStateText(floorRaw());
+            var canRetry = isLatestFloor() && !!(lastRenderedText && lastRenderedText.trim());
+            if (text === null && !canRetry) return '';
+            var open = root.classList.contains('sv-open'), list = text ? svOpList(text) : null;
+            var pill = text === null ? '<span class="svPill is-missing">未找到</span>'
+                : list ? '<span class="svPill">' + (list.count ? list.count + ' 项' : '无变动') + '</span>'
+                : '<span class="svPill is-plain">' + (text ? '原文' : '无内容') + '</span>';
+            var title = '<svg class="svIcon" viewBox="0 0 20 20" aria-hidden="true">' + SV_ICON + '</svg>' +
+                '<span class="svName">变量更新</span>' + pill;
+            var head = text === null
+                ? '<button type="button" class="svToggle" disabled>' + title + '</button>'
+                : '<button type="button" class="svToggle" data-sv-action="toggle" aria-expanded="' + open + '"><span class="svArrow" aria-hidden="true"></span>' + title + '</button>';
+            var body = text === null ? '' : '<div class="svBody">' + (list ? list.html
+                : '<pre class="svRaw">' + escapeHtml(text || '（没有内容）') + '</pre>') + '</div>';
+            return '<div class="svEntry" data-no-edge-turn><div class="svHead">' + head +
+                (canRetry ? '<button type="button" class="svBtn svRetry" data-sv-action="ask" aria-label="重新解析"><svg viewBox="0 0 16 16" aria-hidden="true">' + SV_RETRY_ICON + '</svg><span class="svBtnText">重新解析</span></button>' : '') + '</div>' +
+                body +
+                (canRetry ? '<div class="svConfirm">要 MVU 用额外模型重新解析这一楼的变量吗？这会再送出一次请求，现有的变量更新会被取代。' +
+                    '<div class="svRow"><button type="button" class="svBtn is-quiet" data-sv-action="cancel">取消</button>' +
+                    '<button type="button" class="svBtn is-main" data-sv-action="retry">重新解析</button></div></div>' +
+                    '<div class="svWait" role="status">已送出，等待 MVU 解析</div>' +
+                    '<div class="svMissing" role="status">找不到 MVU 的「' + MVU_RETRY_BUTTON + '」按钮。请确认 MVU 脚本已启用，并在酒馆助手的脚本按钮里显示这个按钮。</div>' : '') +
+                '</div>';
+        }
+        // MVU 的按钮事件名称含有 MVU 脚本自己的编号，所以从「已启用的脚本按钮」名单用按钮名称找。
+        // 名单只列出设为显示的按钮。
+        function mvuRetryEvent() {
+            var helper = context.TavernHelper || view.TavernHelper;
+            try {
+                var map = helper && typeof helper.getAllEnabledScriptButtons === 'function' ? helper.getAllEnabledScriptButtons() : null;
+                for (var id in map || {}) {
+                    var list = Array.isArray(map[id]) ? map[id] : [];
+                    for (var i = 0; i < list.length; i++) if (list[i] && list[i].button_name === MVU_RETRY_BUTTON) return {helper: helper, event: list[i].button_id};
+                }
+            } catch (_) {}
+            return null;
+        }
+        function setSvState(name, on) { root.classList.toggle(name, !!on); }
+        function endSvRetry() {
+            svRetryTimer = clearTimer(svRetryTimer);
+            svRetryRaw = null;
+            setSvState('sv-retrying', false);
+        }
+        // 面板变高后卷到看得到整个面板（面板顶端不卷出画面）。
+        // 不用 scrollIntoView：它会连酒馆页面一起卷动。
+        function revealSvEntry() {
+            requestFrame(function () {
+                var entry = root.querySelector('.svEntry');
+                if (!entry) return;
+                var stage = stageEl(), box = entry.getBoundingClientRect(), area = stage.getBoundingClientRect();
+                if (box.bottom > area.bottom) stage.scrollTop += Math.min(box.bottom - area.bottom + 8, box.top - area.top);
+            });
+        }
+        function runSvAction(action, button) {
+            if (action === 'toggle') {
+                var open = !root.classList.contains('sv-open');
+                setSvState('sv-open', open);
+                button.setAttribute('aria-expanded', String(open));
+                if (open) revealSvEntry();
+            } else if (action === 'ask') {
+                setSvState('sv-missing', false);
+                setSvState('sv-confirm', true);
+                revealSvEntry();
+            } else if (action === 'cancel') {
+                setSvState('sv-confirm', false);
+            } else if (action === 'retry') {
+                setSvState('sv-confirm', false);
+                // 送出前再确认一次状态：可能已有新楼层或新的生成。
+                if (isGenerating || !isLatestFloor()) { repaintEncounter(); return; }
+                var target = mvuRetryEvent();
+                if (!target || typeof target.helper.eventEmit !== 'function') {
+                    setSvState('sv-missing', true);
+                    svMissingTimer = clearTimer(svMissingTimer);
+                    svMissingTimer = setTimer(function () { svMissingTimer = null; setSvState('sv-missing', false); }, 8000);
+                    revealSvEntry();
+                    return;
+                }
+                svRetryRaw = floorRaw();
+                setSvState('sv-retrying', true);
+                revealSvEntry();
+                svRetryTimer = clearTimer(svRetryTimer);
+                svRetryTimer = setTimer(function () { svRetryTimer = null; endSvRetry(); }, SV_RETRY_TIMEOUT_MS);
+                try { target.helper.eventEmit(target.event); } catch (error) { endSvRetry(); console.error('[skeleton-IFRAME-POC] MVU 重新解析送出失败', error); }
+            }
+        }
+        function initializeStateViewer() {
+            listen(root, 'click', function (event) {
+                var button = event.target.closest && event.target.closest('[data-sv-action]');
+                if (button && root.contains(button) && !button.disabled) runSvAction(button.dataset.svAction, button);
+            });
+        }
+        // 正文后面接的区块，顺序固定为「变量更新 → 遭遇入口」，和原文里标签的先后无关：
+        // 玩家要先确认这一楼的变量，再进入遭遇（探索结束会直接送出结果、进入下一楼）。
+        function tailBlocks() {
+            return [stateBlock(), encounterBlock()].filter(Boolean);
+        }
+        // 生成结束、楼层文字被改写（例如 MVU 补上变量区域）时，重画正文后面的面板与入口。
+        function syncStateViewer() {
+            if (svRetryRaw !== null && floorRaw() !== svRetryRaw) endSvRetry();
+            if (destroyed || isGenerating || !rawContentActive || lastRenderedText === null) return;
+            var before = allParas.join('\u0001');
+            captureParas(toBlocks(lastRenderedText).concat(tailBlocks()).join(''));
+            if (allParas.join('\u0001') === before || root.classList.contains('paged-mode')) return;
+            var stage = stageEl(), scroll = stage.scrollTop;
+            showAllText(false);
+            stage.scrollTop = scroll;
+        }
+
         // 只换入口那一段，不重新卷到顶端。
         function repaintEncounter() {
             if (destroyed || isGenerating || !rawContentActive || lastRenderedText === null) return;
-            var stage = stageEl(), scroll = stage.scrollTop, entry = encounterBlock();
-            captureParas(toBlocks(lastRenderedText).concat(entry ? [entry] : []).join(''));
+            var stage = stageEl(), scroll = stage.scrollTop;
+            captureParas(toBlocks(lastRenderedText).concat(tailBlocks()).join(''));
             if (root.classList.contains('paged-mode')) paginate();
             else { showAllText(false); stage.scrollTop = scroll; }
             reportHeight();
@@ -8726,7 +8964,7 @@ var NewCardAlbumData = (function () {
         function setGenerating(on) {
             cancelEdgeTurn();
             isGenerating = !!on;
-            if (isGenerating) repagTimer = clearTimer(repagTimer);
+            if (isGenerating) { repagTimer = clearTimer(repagTimer); root.classList.remove('sv-confirm'); }
             root.classList.toggle('generating', isGenerating);
             syncPageControls();
         }
@@ -8772,8 +9010,7 @@ var NewCardAlbumData = (function () {
             var tailOk = isGenerating && !identityChanged && lastRenderedText !== null && !!streamLive &&
                 !root.classList.contains('paged-mode');
             lastRenderedText = text;
-            var blocks = toBlocks(text), entry = encounterBlock();
-            if (entry) blocks = blocks.concat(entry);
+            var blocks = toBlocks(text).concat(tailBlocks());
             if (tailOk && renderStreamTail(blocks)) { reportHeight(); return; }
             captureParas(blocks.join(''));
 
@@ -8834,6 +9071,9 @@ var NewCardAlbumData = (function () {
             }, SAFE_UNLOCK_MS);
         }
 
+        // 分页模式：正文改变（新的生成、切换回复、编辑正文）才回到第一页；
+        // 只有正文以外的部分改变时（例如 MVU 写回变量区域），留在原来那一页。
+        var pagedText = null;
         function finish(raw) {
             var wasGenerating = isGenerating;
             setGenerating(false);
@@ -8841,8 +9081,11 @@ var NewCardAlbumData = (function () {
             if (raw != null && raw !== '') pendingRaw = raw;
             flushStream();
             settleStreamDom();
+            syncStateViewer();
+            var textChanged = wasGenerating || lastRenderedText !== pagedText;
+            pagedText = lastRenderedText;
             if (root.classList.contains('paged-mode')) {
-                currPage = 0;
+                if (textChanged) currPage = 0;
                 paginate();
             } else if (wasGenerating) {
                 stageEl().scrollTop = 0;
@@ -9079,6 +9322,7 @@ var NewCardAlbumData = (function () {
             renderActions(DEMO_ACTIONS);
             initializeAlbum();
             initializeEncounter();
+            initializeStateViewer();
             applyTheme('dark');
             applyBodyFont(savedBodyFont(), false);
             applyTexMode('local');
