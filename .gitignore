@@ -21,16 +21,20 @@
 # 模型檔已內含 factory/、fireplace/ 與多數 street/ 貼圖；程式另外載入的只有 street/ 的四種牆面（scene3d.js 的 KIT_STYLES）
 !/exploration-3d/assets/*.glb
 !/exploration-3d/assets/*.webp
-!/exploration-3d/assets/street/brick_red.png
-!/exploration-3d/assets/street/brick_stock.png
-!/exploration-3d/assets/street/brick_soot.png
-!/exploration-3d/assets/street/stucco.png
+!/exploration-3d/assets/street/brick_red.webp
+!/exploration-3d/assets/street/brick_stock.webp
+!/exploration-3d/assets/street/brick_soot.webp
+!/exploration-3d/assets/street/stucco.webp
 
 # 素材（資料夾內都是主檔用到的檔案）
 !/assets/
 !/scene/
 # 待機動畫改用圖集（idle-atlas.webp），原本的 idle.webp 不上傳
 /assets/actors/*/idle.webp
+# 戰鬥立繪與背景改用 WebP（2026-11-14），原本的 PNG 不上傳
+/assets/actors/*/*-static.png
+/assets/actors/*/original.png
+/scene/*.png
 
 # 開局頁（放在正則裡）讀的玩家立繪與色譜背景
 !/start/

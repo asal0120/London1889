@@ -487,7 +487,7 @@ const KIT_PAINT=['#2f4a3e','#5a1e24','#1d2a3a','#5a3a1e','#24262a','#6b5a2a','#3
 function kitTexture(name){
   if(KIT.tex[name])return KIT.tex[name];
   let done;KIT.loading.push(new Promise(r=>done=r));
-  const t=new THREE.TextureLoader().load(ASSET+'street/'+name+'.png',done,undefined,done);
+  const t=new THREE.TextureLoader().load(ASSET+'street/'+name+'.webp',done,undefined,done);
   t.flipY=false;t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestMipmapLinearFilter;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;
   return KIT.tex[name]=t;
 }
