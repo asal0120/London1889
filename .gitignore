@@ -1,0 +1,70 @@
+# 倉庫只放玩家實際會用到的檔案：先排除全部，再列出要上傳的項目。
+# 開發用的原始碼、建置腳本、預覽頁、筆記、截圖和原始美術都留在本機。
+/*
+!/.gitignore
+!/.gitattributes
+
+# 主檔
+!/skeleton-IFRAME-POC.html
+!/skeleton-IFRAME-POC.zh-CN.html
+!/exploration-45.html
+!/exploration-45.zh-CN.html
+
+# 立體探索（測試）：顯示設定選「立體」時載入；exploration-3d/build.py 由 exploration-45 產生
+!/exploration-3d.html
+!/exploration-3d.zh-CN.html
+!/exploration-3d/
+/exploration-3d/**
+!/exploration-3d/**/
+!/exploration-3d/scene3d.js
+!/exploration-3d/scene3d.zh-CN.js
+# 模型檔已內含 factory/、fireplace/ 與多數 street/ 貼圖；程式另外載入的只有 street/ 的四種牆面（scene3d.js 的 KIT_STYLES）
+!/exploration-3d/assets/*.glb
+!/exploration-3d/assets/*.webp
+!/exploration-3d/assets/street/brick_red.png
+!/exploration-3d/assets/street/brick_stock.png
+!/exploration-3d/assets/street/brick_soot.png
+!/exploration-3d/assets/street/stucco.png
+
+# 素材（資料夾內都是主檔用到的檔案）
+!/assets/
+!/scene/
+# 待機動畫改用圖集（idle-atlas.webp），原本的 idle.webp 不上傳
+/assets/actors/*/idle.webp
+
+# 開局頁（放在正則裡）讀的玩家立繪與色譜背景
+!/start/
+/start/*
+!/start/*Diff.webp
+!/start/user.webp
+!/start/userBG.webp
+
+# 角色、地圖、怪物：只上傳 .webp，原始 .png 留在本機
+!/img/
+/img/**
+!/img/**/
+!/img/**/*.webp
+
+# 探索與戰鬥：只上傳執行時載入的檔案
+!/exploration-runtime/
+/exploration-runtime/**
+!/exploration-runtime/**/
+!/exploration-runtime/dashboard-art.js
+!/exploration-runtime/effects/*.webp
+!/exploration-runtime/effects/spectrum/*.webp
+!/exploration-runtime/effects/team/*.webp
+!/exploration-runtime/journal-materials/*
+!/exploration-runtime/prep-cover/*.webp
+
+# 音效：只上傳戰鬥打擊回饋用到的兩個檔（Rain.mp3 等其他音檔留在本機）
+!/Sound/
+/Sound/*
+!/Sound/PlayerHit.mp3
+!/Sound/be hit.mp3
+
+# 雨聲：audio/build_bgm.py 產生的 ogg（背景音樂上傳到別處，不放 GitHub）
+!/audio/
+/audio/*
+!/audio/ambience/
+/audio/ambience/*
+!/audio/ambience/rain.ogg
