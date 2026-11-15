@@ -42,6 +42,7 @@
 !/start/*Diff.webp
 !/start/user.webp
 !/start/userBG.webp
+!/start/torch-*.webp
 
 # 角色、地圖、怪物：只上傳 .webp，原始 .png 留在本機
 !/img/
