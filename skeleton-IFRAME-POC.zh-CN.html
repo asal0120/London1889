@@ -1641,6 +1641,10 @@
     transform: rotate(-.6deg);
     filter: drop-shadow(0 2px 2px rgba(25, 13, 3, .25));
 }
+/* 宽版（卡片 600px 以上）：便条宽度跟着文字，不留一大片空白；最宽同原本 360px，再长的地名以「…」截断。手机维持原宽度。 */
+@media (min-width: 600px) {
+    .rpg-v7-root.d-open-shell .topBar { width: fit-content; min-width: 200px; max-width: 360px; }
+}
 .rpg-v7-root.d-open-shell .topBar::before {
     content: '';
     position: absolute;
@@ -4293,6 +4297,8 @@ var NewCardMusic = (function () {
         function open() {
             if (!closed && !dialog.open) {
                 returnFocus = doc.activeElement;
+                // 卡片可先决定对话框位置，让开启时聚焦的按钮已在画面内，浏览器不会再卷动聊天区。
+                if (typeof options.beforeOpen === 'function') options.beforeOpen();
                 dialog.showModal();
                 if (openButton) openButton.setAttribute('aria-expanded', 'true');
             }
@@ -6802,6 +6808,7 @@ var NewCardAlbumData = (function () {
             cancelEdgeTurn();
             mapReturnFocus = doc.activeElement;
             mapRestoreFocus = true;
+            prepareDialogView();
             mapDialog.showModal();
             root.querySelector('.uiMapToggle').setAttribute('aria-expanded', 'true');
             markMapRead();
@@ -7664,6 +7671,14 @@ var NewCardAlbumData = (function () {
             return albumPose(person.id).src || person.art;
         }
 
+        // 相簿只列出已认识的人物（与 TEAM 相同，见 mvuKnows）。数据验证与大图标题仍用完整名单。
+        function albumShownCharacters() {
+            return albumCharacters().filter(function (person) {
+                var bundled = FRONTEND_CONFIG.dialogue.find(function (entry) { return entry.id === person.id; });
+                return mvuKnows(bundled ? bundled.name : person.name);
+            });
+        }
+
         function albumPreloadUrls() {
             return albumCharacters().map(albumArtSource);
         }
@@ -7694,7 +7709,7 @@ var NewCardAlbumData = (function () {
         function renderAlbumNav() {
             var nav = $('album-filters');
             nav.replaceChildren();
-            albumCharacters().forEach(function (person) {
+            albumShownCharacters().forEach(function (person) {
                 var button = create('button'), face = create('span');
                 button.type = 'button';
                 button.dataset.albumFilter = person.id;
@@ -7712,7 +7727,7 @@ var NewCardAlbumData = (function () {
         }
 
         function syncAlbumFilter() {
-            var people = albumCharacters();
+            var people = albumShownCharacters();
             if (!people.some(function (person) { return person.id === albumFilter; })) albumFilter = people.length ? people[0].id : '';
             var person = people.find(function (entry) { return entry.id === albumFilter; });
             $('album-filters').querySelectorAll('button').forEach(function (button) {
@@ -7723,7 +7738,15 @@ var NewCardAlbumData = (function () {
             name.replaceChildren();
             groups.replaceChildren();
             albumDetail('', '');
-            if (!person) { art.hidden = true; return; }
+            if (!person) {
+                art.hidden = true;
+                var none = create('div');
+                none.className = 'ncAlbumEmpty';
+                none.setAttribute('role', 'status');
+                none.append(albumLabel('b', '', '尚无相识的人物'), doc.createTextNode('认识的人物会出现在这里。'));
+                groups.appendChild(none);
+                return;
+            }
             name.append(doc.createTextNode(person.name), albumLabel('i', '', 'Memories'));
             var pose = albumPose(person.id), src = albumArtSource(person);
             [['--al-phone-left', pose.phoneLeft], ['--al-phone-top', pose.phoneTop], ['--al-phone-height', pose.phoneHeight],
@@ -7954,6 +7977,7 @@ var NewCardAlbumData = (function () {
             albumReturnFocus = trigger;
             albumRestoreFocus = true;
             albumViewTitle(item);
+            prepareDialogView();
             albumDialog.showModal();
             showAlbumImage();
             albumDialog.querySelector('[data-album-close]').focus({preventScroll: true});
@@ -8080,6 +8104,13 @@ var NewCardAlbumData = (function () {
         }
         var mvuReadVersion = 0, mvuStat = null;
         function mvuObject(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : null; }
+        // 人物是否已认识（MVU 的 队友.<名字>.认识 为「是」）。变量里没有 队友 分支时视为全部认识，维持原本的画面。相簿使用。
+        function mvuKnows(name) {
+            var team = mvuStat && mvuObject(mvuStat.队友);
+            if (!team) return true;
+            var data = mvuObject(team[MVU_NAMES[name] || name]);
+            return !!data && data.认识 === '是';
+        }
         function applyMvu(variables) {
             var stat = mvuObject(variables) && mvuObject(variables.stat_data) || {};
             mvuStat = stat;
@@ -8104,6 +8135,8 @@ var NewCardAlbumData = (function () {
                 // 环境音目前只有雨声；其他天气（晴、阴、雾、雪）不播放。
                 if (ambience) ambience.setEnvironment({weather: /雨/.test(String(now.天气 || '')) ? 'rain' : null});
             }
+            // 相簿的人物名单跟着「认识」更新。
+            if (albumDialog) renderAlbum();
             // 技能页：有 玩家 分支时改用内置技能树（色谱、阶梯）与楼层变量里的学习进度。
             refreshSkillProgress(stat);
         }
@@ -8314,10 +8347,22 @@ var NewCardAlbumData = (function () {
             var size = Math.max(0, Math.min(height, area.bottom - area.top));
             var top = Math.max(0, Math.min(height - size, area.top - box.top));
             var shift = Math.round(box.top + top - area.top);
-            if (shift && scroller) scroller.scrollTop += shift;
+            if (shift && scroller) {
+                // 立即卷动（不用平滑卷动），之后以实际位置计算：聊天区卷到底或顶而卷不足时，对话框仍落在看得到的范围。
+                var target = scroller.scrollTop + shift;
+                try { scroller.scrollTo({top: target, behavior: 'instant'}); } catch (_) { scroller.scrollTop = target; }
+                box = frame.getBoundingClientRect();
+                top = Math.max(0, Math.min(height - size, area.top - box.top));
+                size = Math.max(0, Math.min(size, area.bottom - box.top - top));
+            }
             root.style.setProperty('--view-top', Math.round(top) + 'px');
             root.style.setProperty('--view-bottom', Math.round(height - top - size) + 'px');
             root.style.setProperty('--view-h', Math.round(size) + 'px');
+        }
+        // 开启对话框之前先定位：showModal 会聚焦对话框里的按钮，按钮不在画面内时手机浏览器会在之后卷动聊天区，
+        // 把已定位的对话框推出可见范围（2026-11-16 留声机在手机上偏下开启）。地图、相簿大图、留声机开启前呼叫。
+        function prepareDialogView() {
+            if (!destroyed && cardHostFrame()) placeDialogView();
         }
         function syncDialogView() {
             if (destroyed) return;
@@ -9240,6 +9285,9 @@ var NewCardAlbumData = (function () {
             var text = extractStateText(floorRaw());
             var canRetry = isLatestFloor() && !!(lastRenderedText && lastRenderedText.trim());
             if (text === null && !canRetry) return null;
+            // 第 0 楼是开场白（开局页写入，本来就没有变量更新），没有变量区域时不显示「未找到」。
+            var floor = mapCardFloor();
+            if (text === null && floor != null && Number(floor) === 0) return null;
             var list = text ? svOpList(text) : null;
             var label = text === null ? '未找到' : list ? (list.count ? list.count + ' 项' : '无变动') : (text ? '原文' : '无内容');
             var body = text === null ? '<p class="svEmpty">这一楼的原文里没有变量更新区域。</p>'
@@ -10006,7 +10054,7 @@ var NewCardAlbumData = (function () {
             var musicSource = function (track) {
                 try { return Object.assign({}, track, {src: /^\.\.?\//.test(track.src) ? cardAsset(track.src) : new URL(track.src, cardAsset(FRONTEND_CONFIG.music.base || './')).href}); } catch (_) { return track; }
             };
-            musicUi = NewCardMusic.mount(root, {window: view, ambience: ambience, tracks: context.musicTracks || FRONTEND_CONFIG.music.tracks.map(musicSource),
+            musicUi = NewCardMusic.mount(root, {window: view, beforeOpen: prepareDialogView, ambience: ambience, tracks: context.musicTracks || FRONTEND_CONFIG.music.tracks.map(musicSource),
                 battleTracks: (FRONTEND_CONFIG.music.battle || []).map(musicSource)});
             listen(root.querySelector('.mode-switch'), 'click', function () {
                 setReadingMode(!root.classList.contains('paged-mode'));
