@@ -1880,46 +1880,13 @@
   --ui-gear: url("./assets/ui/material/mechanical-gear-13-ink.png");
   --ui-corner-gear: url("./assets/ui/material/mechanical-gear-12-ink.png");
 }
-/* The map is a sibling of the paper and the collapsible sheet. Its image and
-   event coordinates share one fitted surface, including any letterboxing. */
+/* The map bar is a sibling of the paper and the collapsible sheet; the map itself opens full screen. */
 .rpg-v7-root.d-material-ui .uiMapZone { display: none; }
 .rpg-v7-root.d-material-ui .uiMapZone {
   display: block; position: relative; flex: 0 0 var(--ui-map-reserved); min-height: 0;
   margin: 0 clamp(8px, 2%, 12px); border: 1px solid var(--ds-stitch); border-radius: var(--radius-xs);
   background: rgba(20, 12, 4, .07); color: var(--card-fg);
 }
-.rpg-v7-root.d-material-ui .uiMapViewport { position: absolute; inset: 0; }
-.rpg-v7-root.d-material-ui .uiMapSurface {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  background: var(--ds-panel); box-shadow: 0 2px 5px rgba(20, 12, 4, .24);
-  container: d-map-surface / size;
-}
-.rpg-v7-root.d-material-ui .uiMapPlaceholder {
-  position: absolute; left: 0; top: 14%; width: 100%; text-align: center; pointer-events: none;
-  font: 12px/1.7 var(--sans); color: var(--card-fg-dim);
-}
-.rpg-v7-root.d-material-ui .uiMapPlaceholder strong { display: block; font: 600 14px/1.8 var(--serif); letter-spacing: .12em; color: var(--card-fg); }
-.rpg-v7-root.d-material-ui .uiMapImage { display: block; width: 100%; height: 100%; }
-.rpg-v7-root.d-material-ui .uiMapPins { position: absolute; inset: 0; pointer-events: none; }
-.rpg-v7-root.d-material-ui .uiMapPin {
-  position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center;
-  width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-round);
-  background: transparent; color: var(--card-fg); cursor: pointer; pointer-events: auto;
-  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-}
-.rpg-v7-root.d-material-ui .uiMapPinVisual {
-  display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid currentColor; border-radius: var(--radius-round);
-  background: var(--ds-panel); box-shadow: 0 1px 3px rgba(20, 12, 4, .22); font: 21px/1 var(--serif);
-}
-.rpg-v7-root.d-material-ui .uiMapPinVisual.has-icon { border: 0; background: none; box-shadow: none; width: 30px; height: 30px; }
-.rpg-v7-root.d-material-ui .uiMapPinVisual img { display: block; width: 100%; height: 100%; object-fit: contain; }
-/* 图面过小时以图示和选取地名辨识，避免占位说明溢出到状态栏。 */
-@container d-map-surface (max-height: 64px) or (max-width: 110px) {
-  .rpg-v7-root.d-material-ui .uiMapPlaceholder { display: none; }
-}
-.rpg-v7-root.d-material-ui .uiMapPin:focus-visible { outline: 2px solid var(--card-fg); outline-offset: 2px; }
-.rpg-v7-root.d-material-ui .uiMapPin:hover .uiMapPinVisual,
-.rpg-v7-root.d-material-ui .uiMapPin[aria-pressed="true"] .uiMapPinVisual { outline: 1px solid currentColor; outline-offset: 3px; }
 /* Keep a reading window when the status sheet and map are both present.
    The existing panel scroll handles longer character and settings content. */
 .rpg-v7-root.d-material-ui .panelArea {
@@ -2023,8 +1990,6 @@
 .rpg-v7-root .dTalkText { padding-left: 11px; border-left: 2px solid var(--dlg-border); overflow-wrap: anywhere; letter-spacing: .015em; }
 .rpg-v7-root .dTalk[data-side="right"] .dTalkName { text-align: right; }
 .rpg-v7-root .dTalk[data-side="right"] .dTalkText { border-left: 0; border-right: 2px solid var(--dlg-border); padding-left: 0; padding-right: 11px; }
-.rpg-v7-root .uiMapStatus { position: absolute; left: 8px; bottom: 2px; max-width: calc(100% - 16px); color: var(--ds-cover-ink); font: 12px/1.5 var(--sans); }
-.rpg-v7-root .uiMapStatus:empty { display: none; }
 @container d-paper-area (max-width: 420px) {
   .rpg-v7-root .dTalk { gap: 9px; margin-block: 10px 20px; }
   .rpg-v7-root .dTalkText { padding-left: 9px; }
@@ -2516,7 +2481,7 @@
   .rpg-v7-root .nc-tonearm { transition: none; }
 }
 
-/* 地图平时只留通知列；大图在原生 dialog 中展开，正文不重新排版。 */
+/* 地图在卡片里只留通知列；地图画面开在酒馆最外层的全萤幕对话框（样式在 map-atlas.css）。 */
 .rpg-v7-root.d-material-ui { --ui-map-reserved: 54px; }
 .rpg-v7-root.d-material-ui .uiMapZone {
   flex: 0 0 auto; min-height: 0; border-color: var(--ds-stitch);
@@ -2539,128 +2504,12 @@
 .rpg-v7-root .uiMapNotice:empty { display: none; }
 .rpg-v7-root .uiMapToggleAction { display: flex; align-items: center; justify-content: center; min-height: 34px; padding: 4px 12px; border: 1px solid currentColor; white-space: nowrap; font-size: 12px; }
 .rpg-v7-root .uiMapToggleAction span { font-size: 20px; }
-.rpg-v7-root .uiMapDialog {
-  position: fixed; inset: var(--view-top) 0 var(--view-bottom); box-sizing: border-box; width: min(1200px, calc(100vw - 32px));
-  height: min(900px, calc(var(--view-h) - 32px)); max-width: none; max-height: none; margin: auto;
-  padding: 0; border: 1px solid var(--ds-stitch); border-radius: var(--radius-lg);
-  background: var(--ds-panel); color: var(--card-fg); box-shadow: 0 18px 70px var(--shade-60);
-  overflow: hidden; overscroll-behavior: contain; font-family: var(--sans);
-}
-.rpg-v7-root .uiMapDialog:not([open]) { display: none; }
-.rpg-v7-root .uiMapDialog[open] { display: flex; flex-direction: column; }
-.rpg-v7-root .uiMapDialog::backdrop { background: rgba(12, 14, 16, .76); }
-.rpg-v7-root .uiMapDialogHead {
-  display: flex; align-items: center; gap: 18px; flex: 0 0 auto;
-  min-width: 0; padding: 14px 20px; border-bottom: 1px solid var(--ds-stitch);
-}
-.rpg-v7-root .uiMapEyebrow { display: block; font: 10px/1.6 Georgia, serif; letter-spacing: .18em; opacity: .8; }
-.rpg-v7-root .uiMapDialogTitle { margin: 3px 0 0; font: 600 25px/1.3 var(--serif); letter-spacing: .1em; }
-.rpg-v7-root .uiMapDialogCount { margin-left: auto; font-size: 12px; }
-.rpg-v7-root .uiMapDialog button { color: inherit; cursor: pointer; font-family: inherit; touch-action: manipulation; }
-.rpg-v7-root .uiMapDialog button:focus-visible { outline: 2px solid var(--card-fg); outline-offset: -3px; }
-.rpg-v7-root .uiMapClose {
-  flex: 0 0 44px; width: 44px; height: 44px; border: 1px solid var(--ds-stitch);
-  border-radius: var(--radius-round); background: transparent; font-size: 26px; line-height: 1;
-}
-.rpg-v7-root .uiMapCanvas { position: relative; flex: 1 1 0; min-height: 80px; overflow: hidden; background: rgba(17, 19, 18, .13); }
-.rpg-v7-root.d-material-ui .uiMapViewport {
-  position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain;
-  touch-action: pan-x pan-y pinch-zoom; scrollbar-width: thin; cursor: grab;
-}
-.rpg-v7-root .uiMapViewport.is-dragging { cursor: grabbing; }
-.rpg-v7-root .uiMapViewport:focus-visible { outline: 2px solid var(--card-fg-dim); outline-offset: -3px; }
-.rpg-v7-root .uiMapPlane { position: relative; min-width: 100%; min-height: 100%; }
-.rpg-v7-root.d-material-ui .uiMapSurface { user-select: none; -webkit-user-select: none; }
-.rpg-v7-root .uiMapImage { -webkit-user-drag: none; }
-/* 所在分区：只亮目前分区，其他地方压暗（不去色）；不在伦敦时整张压暗。 */
-.rpg-v7-root .uiMapDistricts { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.rpg-v7-root .uiMapShade { fill: #120c06; fill-rule: evenodd; opacity: .55; transition: opacity .3s; }
-.rpg-v7-root .uiMapArea { fill: none; stroke: #f3d38b; stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.rpg-v7-root .uiMapZoom {
-  position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center;
-  border: 1px solid var(--ds-stitch); border-radius: var(--radius-md); background: var(--ds-panel); box-shadow: 0 2px 10px var(--shade-20);
-}
-.rpg-v7-root .uiMapZoom button { min-width: 44px; height: 44px; padding: 0 8px; border: 0; background: transparent; font-size: 14px; }
-.rpg-v7-root .uiMapZoom button:disabled { opacity: .3; cursor: default; }
-.rpg-v7-root .uiMapZoomValue { min-width: 38px; text-align: center; font: 12px/1 var(--sans); opacity: .7; }
-/* 事件小视窗：点地图上的事件后浮在地图左上，沿用正文遭遇入口的图示、菱形与按钮。 */
-.rpg-v7-root .uiMapEventCard {
-  position: absolute; top: 12px; left: 12px; z-index: 2; box-sizing: border-box; width: min(340px, calc(100% - 24px));
-  padding: 12px 14px 14px; border: 1px solid var(--ds-stitch); border-radius: var(--radius-md);
-  background: var(--ds-panel); box-shadow: 0 6px 24px var(--shade-20); color: var(--card-fg); text-align: center;
-}
-.rpg-v7-root .uiMapEventCard[hidden] { display: none; }
-.rpg-v7-root .uiMapEventCardClose {
-  position: absolute; top: 2px; right: 2px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 22px; line-height: 1;
-}
-.rpg-v7-root .uiMapEventHead { display: flex; align-items: center; justify-content: center; gap: 8px; padding-inline: 36px; color: var(--enc); }
-.rpg-v7-root .uiMapEventHead strong { font: 600 16px/1.4 var(--serif); letter-spacing: .08em; color: var(--card-fg); }
-.rpg-v7-root .uiMapEventHead span { font-size: 12px; color: var(--card-fg-dim); }
-.rpg-v7-root .uiMapEventHead + .uiMapEventMeta { margin-top: 8px; }
-.rpg-v7-root .uiMapEventLife { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; font-size: 14px; }
-.rpg-v7-root .uiMapEventLife i { width: 120px; height: 4px; border-radius: 2px; background: rgba(171, 144, 91, .25); overflow: hidden; }
-.rpg-v7-root .uiMapEventLife b { display: block; height: 100%; background: var(--enc); }
-/* 事件标记：伦敦地图颜色多，加红色光晕（与遭遇入口同色系）让标记从地图上浮出来。自订图片的标记不加。 */
-.rpg-v7-root.d-material-ui .uiMapPinVisual:not(.has-icon) { box-shadow: 0 0 0 2px rgba(192, 88, 63, .5), 0 0 12px 4px rgba(214, 96, 64, .8); }
-.rpg-v7-root .uiMapPin.is-fading { opacity: .5; }
-.rpg-v7-root .uiMapEventMeta { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 13px; }
-.rpg-v7-root .uiMapEventTime { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
-.rpg-v7-root .uiMapEventTime span { font-size: 15px; }
-.rpg-v7-root .uiMapEventError:empty { display: none; }
-.rpg-v7-root .uiMapEventError { margin: 8px 0 0; color: var(--enc); font-size: 12px; }
-.rpg-v7-root .uiMapEventCard .encBtn[hidden] { display: none; }
-/* 分区名称：固定标在各区中央，点下去开分区说明。地图图片日夜相同，标签用固定的纸色与墨色。 */
-.rpg-v7-root .uiMapLabels { position: absolute; inset: 0; pointer-events: none; }
-.rpg-v7-root .uiMapLabels[hidden] { display: none; }
-.rpg-v7-root .uiMapDialog .uiMapLabel {
-  position: absolute; transform: translate(-50%, -50%); padding: 1px 8px; border: 1px solid rgba(59, 42, 23, .6); border-radius: var(--radius-xs);
-  background: rgba(244, 234, 209, .9); color: #3b2a17; box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
-  font: 600 12px/1.6 var(--serif); letter-spacing: .14em; white-space: nowrap; pointer-events: auto; -webkit-tap-highlight-color: transparent;
-}
-/* 点按范围比外观大，手指容易点中。 */
-.rpg-v7-root .uiMapLabel::before { content: ''; position: absolute; inset: -10px -6px; }
-.rpg-v7-root .uiMapDialog .uiMapLabel:hover { background: #fff6dc; }
-.rpg-v7-root .uiMapDialog .uiMapLabel[aria-pressed="true"] { background: #3b2a17; color: #f6e4b8; border-color: #f3d38b; }
-.rpg-v7-root .uiMapDialog .uiMapLabel:focus-visible { outline: 2px solid #f3d38b; outline-offset: 2px; }
-.rpg-v7-root .uiMapPick { fill: rgba(255, 236, 184, .2); stroke: #fff3cf; stroke-width: 3; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-/* 分区说明小卡：与事件小卡同位置、同外框。 */
-.rpg-v7-root .uiMapDistrictCard {
-  position: absolute; top: 12px; left: 12px; z-index: 2; box-sizing: border-box; width: min(340px, calc(100% - 24px));
-  max-height: calc(100% - 24px); overflow: auto; overscroll-behavior: contain;
-  padding: 10px 14px 12px; border: 1px solid var(--ds-stitch); border-radius: var(--radius-md);
-  background: var(--ds-panel); box-shadow: 0 6px 24px var(--shade-20); color: var(--card-fg);
-}
-.rpg-v7-root .uiMapDistrictCard[hidden] { display: none; }
-.rpg-v7-root .uiMapDistrictName { display: flex; align-items: baseline; gap: 8px; margin: 0; padding-right: 36px; font: 600 17px/1.6 var(--serif); letter-spacing: .1em; }
-.rpg-v7-root .uiMapDistrictName span { font: 12px/1.4 var(--sans); letter-spacing: .04em; color: var(--card-fg-dim); }
-.rpg-v7-root .uiMapDistrictSummary { margin: 4px 0 0; font-size: 13px; line-height: 1.75; }
-.rpg-v7-root .uiMapDistrictPlacesTitle { margin: 8px 0 4px; font: 600 12px/1.5 var(--sans); letter-spacing: .08em; color: var(--card-fg-dim); }
-.rpg-v7-root .uiMapDistrictPlaces { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; }
-.rpg-v7-root .uiMapDistrictPlaces li { padding: 1px 7px; border: 1px solid var(--ds-stitch); border-radius: var(--radius-xs); font-size: 12px; line-height: 1.6; }
-.rpg-v7-root .uiMapDialogFoot { flex: 0 0 auto; min-height: 0; padding: 9px 16px 12px; border-top: 1px solid var(--ds-stitch); }
-.rpg-v7-root .uiMapDialog .uiMapStatus { position: static; max-width: none; margin: 0; color: var(--card-fg); font-size: 13px; }
 @container rpg-card (max-width: 560px) {
   .rpg-v7-root .uiMapToggle { gap: 6px; padding-inline: 9px 4px; }
   .rpg-v7-root .uiMapToggleTitle { font-size: 13px; letter-spacing: 0; }
   .rpg-v7-root .uiMapEmblem { font-size: 25px; }
   .rpg-v7-root .uiMapToggleAction { font-size: 12px; gap: 0; padding-inline: 8px; }
   .rpg-v7-root .uiMapNotice:not(:empty) { padding-inline: 5px; }
-}
-@media (max-width: 560px) {
-  .rpg-v7-root .uiMapDialog { width: calc(100vw - 12px); height: calc(var(--view-h) - 12px); border-radius: var(--radius-md); }
-  .rpg-v7-root .uiMapDialogHead { gap: 10px; padding: 10px 12px; }
-  .rpg-v7-root .uiMapDialogTitle { font-size: 22px; }
-  .rpg-v7-root .uiMapDialogCount { font-size: 12px; }
-  .rpg-v7-root .uiMapDialogFoot { padding: 7px 10px 10px; }
-  /* 直式手机：地图靠上，空白留在下方给事件与分区小卡，点选的地方不会被小卡盖住。放大后与原本相同（上下各留 28px）。 */
-  .rpg-v7-root.d-material-ui .uiMapSurface { top: 28px; transform: translateX(-50%); }
-  .rpg-v7-root .uiMapEventCard,
-  .rpg-v7-root .uiMapDistrictCard { top: auto; bottom: 8px; left: 8px; width: calc(100% - 16px); max-height: 60%; overflow: auto; }
-}
-@media (max-height: 480px) {
-  .rpg-v7-root .uiMapEyebrow { display: none; }
-  .rpg-v7-root .uiMapDialogHead { padding-block: 5px; }
-  .rpg-v7-root .uiMapDialogFoot { padding-block: 5px; }
 }
 
 /* 102861466 原始向量角饰；四角各自等比缩放，中央不连接外框。 */
@@ -3042,16 +2891,6 @@
 .rpg-v7-root.d-refresh .ncAlbumCharacter::after { top: 2px; right: 2px; transform: scaleX(-1); }
 .rpg-v7-root.d-refresh .ncAlbumCharacter .ncAlbumPortrait { background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.5), transparent 70%); filter: sepia(.12); }
 
-/* ── K. 地图大图：制图框＋比例尺 ────────────────────────── */
-.rpg-v7-root.d-refresh .uiMapCanvas {
-  background: radial-gradient(ellipse at 50% 50%, #cdb88c, #a78c5e) !important;
-}
-.rpg-v7-root.d-refresh .uiMapSurface { outline: 1px solid var(--map-ink); outline-offset: 6px; box-shadow: 0 0 0 7px #e9dbb6, 0 0 0 8px var(--map-ink), 0 6px 18px var(--shade-35); }
-.rpg-v7-root.d-refresh .uiMapCanvas::after {
-  content: ''; position: absolute; left: 16px; bottom: 16px; width: 80px; height: 24px; pointer-events: none;
-  background: var(--vr-map-scale) left top / contain no-repeat;
-}
-.rpg-v7-root.d-refresh .uiMapDialogHead { border-bottom: 3px double rgba(59,42,23,.45); }
 /* 窄版：封蜡缩小、数量文字收起，避免「查看」被挤出底板 */
 @container rpg-card (max-width: 360px) {
   .rpg-v7-root.d-refresh .uiMapToggle { gap: 5px; padding-inline: 8px 6px; }
@@ -3615,42 +3454,6 @@
         <span class="uiMapNotice" role="status" aria-live="polite" aria-atomic="true"></span>
         <span class="uiMapToggleAction" aria-hidden="true">查看</span>
       </button>
-      <dialog class="uiMapDialog" data-no-edge-turn>
-        <header class="uiMapDialogHead">
-          <div><span class="uiMapEyebrow">ATLAS OF LONDON</span><h2 class="uiMapDialogTitle">伦敦地图</h2></div>
-          <span class="uiMapDialogCount">暂无事件</span>
-          <button type="button" class="uiMapClose" data-map-action="close" aria-label="关闭地图">×</button>
-        </header>
-        <div class="uiMapCanvas">
-          <div class="uiMapViewport" tabindex="0" aria-label="地图；放大后可拖曳或卷动查看">
-            <div class="uiMapPlane"><div class="uiMapSurface">
-              <div class="uiMapPlaceholder"><strong>伦敦地图</strong><span>尚未提供地图图片</span></div>
-              <svg class="uiMapDistricts" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" focusable="false"></svg>
-              <div class="uiMapLabels" hidden></div>
-              <div class="uiMapPins"></div>
-            </div></div>
-          </div>
-          <nav class="uiMapZoom" aria-label="地图缩放">
-            <button type="button" data-map-action="out" aria-label="缩小地图">−</button>
-            <button type="button" data-map-action="fit" title="显示完整地图">全图</button>
-            <output class="uiMapZoomValue" aria-label="相对全图的放大倍率">1×</output>
-            <button type="button" data-map-action="in" aria-label="放大地图">＋</button>
-          </nav>
-          <div class="uiMapEventCard" hidden aria-live="polite">
-            <button type="button" class="uiMapEventCardClose" data-map-action="deselect" aria-label="关闭事件资讯">×</button>
-            <div class="uiMapEventCardBody"></div>
-            <p class="uiMapEventError" role="status"></p>
-            <button type="button" class="encBtn uiMapEnter" data-map-action="enter">进入探索</button>
-          </div>
-          <div class="uiMapDistrictCard" hidden aria-live="polite">
-            <button type="button" class="uiMapEventCardClose" data-map-action="district-close" aria-label="关闭分区说明">×</button>
-            <div class="uiMapDistrictBody"></div>
-          </div>
-        </div>
-        <footer class="uiMapDialogFoot">
-          <p class="uiMapStatus" role="status"></p>
-        </footer>
-      </dialog>
     </section>
     <div class="sheetZone">
       <div class="sheetClip">
@@ -3939,6 +3742,61 @@
 var FRONTEND_ASSETS = {"characters":[{"id":"companion-1","name":"莉泽","aliases":[],"avatar":"./img/Char/1-莉澤/01正方.webp","portrait":"./img/Char/1-莉澤/01四分之三.webp","portraitFull":"./img/Char/1-莉澤/01Full.webp","backdrop":{"src":"./img/Char/1-莉澤/01BG.webp","x":50,"y":50,"mask":1},"color":{"light":"#a3341f","dark":"#e58a72"},"albumPortrait":"./img/Char/1-莉澤/01FullDiff.webp","surname":"海因路伯特","profile":{"种族":"血族","生日":"1867年7月4日","身高":"143cm","喜好":"文学、园艺、茶点","位阶":""},"notes":""},{"id":"companion-2","name":"蒂安娜","aliases":[],"avatar":"./img/Char/2-蒂安娜/02正方.webp","portrait":"./img/Char/2-蒂安娜/02四分之三.webp","portraitFull":"./img/Char/2-蒂安娜/02Full.webp","backdrop":{"src":"./img/Char/2-蒂安娜/02BG.webp","x":50,"y":50,"mask":3},"color":{"light":"#285f41","dark":"#84c7a0"},"albumPortrait":"./img/Char/2-蒂安娜/02FullDiff.webp","surname":"艾伦希亚","profile":{"种族":"人类","生日":"1870年5月14日","身高":"145cm","喜好":"烹饪、草地运动","位阶":""},"notes":""},{"id":"companion-3","name":"格蕾","aliases":[],"avatar":"./img/Char/3-格蕾/03正方.webp","portrait":"./img/Char/3-格蕾/03四分之三.webp","portraitFull":"./img/Char/3-格蕾/03Full.webp","backdrop":{"src":"./img/Char/3-格蕾/03BG.webp","x":50,"y":50,"mask":5},"color":{"light":"#2f5d8c","dark":"#8db6e0"},"albumPortrait":"./img/Char/3-格蕾/03FullDiff.webp","surname":"宁姆耶芙尼","profile":{"种族":"女巫","生日":"1869年1月3日","身高":"141cm","喜好":"世界观察","位阶":""},"notes":""},{"id":"companion-4","name":"纱夜","aliases":[],"avatar":"./img/Char/4-紗夜/04正方.webp","portrait":"./img/Char/4-紗夜/04四分之三.webp","portraitFull":"./img/Char/4-紗夜/04Full.webp","backdrop":{"src":"./img/Char/4-紗夜/04BG.webp","x":50,"y":50,"mask":6},"color":{"light":"#64398a","dark":"#bd9be0"},"albumPortrait":"./img/Char/4-紗夜/04FullDiff.webp","surname":"清水谷","profile":{"种族":"鬼族","生日":"1869年10月21日","身高":"147cm","喜好":"绘画、音乐","位阶":""},"notes":""},{"id":"companion-5","name":"薇薇安","aliases":[],"avatar":"./img/Char/5-薇薇安/05正方.webp","portrait":"./img/Char/5-薇薇安/05四分之三.webp","portraitFull":"./img/Char/5-薇薇安/05Full.webp","backdrop":{"src":"./img/Char/5-薇薇安/05BG.webp","x":50,"y":50,"mask":4},"color":{"light":"#9c3d63","dark":"#f2a3c2"},"albumPortrait":"./img/Char/5-薇薇安/05FullDiff.webp","surname":"宁姆耶芙尼","profile":{"种族":"妖精","生日":"1585年6月24日","身高":"138cm","喜好":"观星、下棋、时尚","位阶":""},"notes":""}],"map":"./img/LondonMap/London.webp"};
 // 对话名字的繁简对照（build.py 产生）：比对前把繁体字换成简体，两种写法都认得。
 var NAME_FOLD = (function (from, to) { var map = new Map(); for (var i = 0; i < from.length; i++) map.set(from[i], to[i]); return map; })("\u4e1f\u4e26\u4e48\u4e7e\u4e82\u4e99\u4e9e\u4f47\u4f48\u4f54\u4f75\u4f86\u4f96\u4fb6\u4fb7\u4fc2\u4fe0\u5000\u5006\u5009\u500b\u5011\u5016\u502b\u5049\u5074\u5075\u507d\u5091\u5096\u5098\u5099\u50a2\u50ad\u50af\u50b3\u50b5\u50b7\u50be\u50c5\u50d1\u50d5\u50e5\u50f1\u50f9\u5100\u5102\u5104\u5108\u5109\u5110\u5114\u5115\u5118\u511f\u512a\u5132\u5137\u5138\u513b\u513c\u5147\u514c\u5152\u5157\u5167\u5169\u518a\u5191\u51aa\u51cd\u51dc\u51f1\u5225\u522a\u5247\u524b\u524e\u525b\u525d\u5274\u5275\u5277\u5283\u5287\u5289\u528a\u528d\u5291\u52c1\u52d5\u52d9\u52db\u52dd\u52de\u52e2\u52f3\u52f5\u52f8\u52fb\u532f\u5331\u5340\u5354\u5379\u537b\u53ad\u53b2\u53c3\u53e2\u5412\u5433\u5436\u5442\u54e1\u5538\u554f\u555e\u555f\u559a\u55aa\u55ab\u55ac\u55ae\u55b2\u55c6\u55c7\u55ce\u55da\u55f6\u5606\u560d\u5614\u5616\u5617\u5629\u562e\u562f\u5630\u5653\u5665\u566f\u5674\u5678\u5679\u5680\u5687\u5690\u5695\u56a5\u56a8\u56ae\u56b4\u56b6\u56c0\u56c1\u56c2\u56c8\u56c9\u56cc\u56d1\u56ea\u570b\u570d\u5712\u5713\u5716\u5718\u57f7\u5805\u580a\u581d\u582f\u5831\u5834\u584a\u584b\u5852\u5857\u585a\u5862\u5875\u5879\u588a\u589c\u58ae\u58b3\u58be\u58c7\u58ce\u58d3\u58d8\u58d9\u58de\u58df\u58e2\u58e9\u58ef\u58fa\u58fd\u5920\u5922\u5925\u593e\u5950\u5967\u5969\u596a\u596e\u599d\u59cd\u59e6\u5a1b\u5a41\u5a66\u5aa7\u5abc\u5abd\u5ad7\u5af5\u5afb\u5b08\u5b0b\u5b0c\u5b24\u5b2a\u5b30\u5b38\u5b43\u5b6b\u5b78\u5b7f\u5bae\u5be2\u5be6\u5be7\u5be9\u5beb\u5bec\u5bf5\u5bf6\u5c07\u5c08\u5c0b\u5c0d\u5c0e\u5c37\u5c46\u5c4d\u5c5c\u5c62\u5c64\u5c68\u5c6c\u5ca1\u5cf4\u5cf6\u5cfd\u5d11\u5d17\u5d19\u5d22\u5d50\u5d84\u5d87\u5d94\u5db8\u5dba\u5dbc\u5dbd\u5dd2\u5dd4\u5dd6\u5e25\u5e2b\u5e33\u5e36\u5e40\u5e43\u5e57\u5e5f\u5e63\u5e6b\u5e79\u5e7e\u5eab\u5ec1\u5ec2\u5ec4\u5ec8\u5eda\u5edd\u5edf\u5ee0\u5ee2\u5ee3\u5eec\u5ef3\u5f12\u5f14\u5f35\u5f37\u5f46\u5f48\u5f4c\u5f4e\u5f59\u5f65\u5f6b\u5f7f\u5f8c\u5f91\u5f9e\u5fa0\u5fa9\u5fb5\u5fb9\u6046\u6065\u6085\u60b5\u60b6\u60bd\u60e1\u60f1\u60fb\u611b\u611c\u6134\u6137\u613e\u6144\u614b\u614d\u6158\u615a\u615f\u6163\u616b\u616e\u6176\u617c\u617e\u6182\u618a\u6190\u6191\u619a\u61a4\u61ab\u61ae\u61b2\u61b6\u61c7\u61c9\u61cd\u61e3\u61f2\u61f6\u61f7\u61f8\u61fa\u61fc\u61fe\u6200\u6230\u6232\u6236\u62cb\u62da\u633e\u6368\u636b\u6371\u6372\u6383\u6384\u6399\u639b\u63a1\u63c0\u63da\u63db\u63ee\u640d\u6416\u6417\u6436\u6451\u645f\u646f\u647a\u647b\u6488\u6490\u6493\u64a5\u64ab\u64b2\u64b3\u64bb\u64be\u64bf\u64c1\u64c4\u64c7\u64ca\u64cb\u64d4\u64da\u64e0\u64ec\u64f0\u64f1\u64f2\u64f4\u64f7\u64fa\u64fb\u64fe\u6506\u650f\u6514\u6519\u651c\u651d\u6523\u6524\u652a\u652c\u6557\u6558\u6575\u6578\u6582\u6583\u6595\u65ac\u65b7\u65bc\u6607\u6642\u6649\u665d\u6688\u6689\u6698\u66a2\u66ab\u66c4\u66c6\u66c7\u66c9\u66d6\u66e0\u66ec\u66f8\u6703\u6727\u672e\u6771\u67b4\u67f5\u687f\u6894\u689d\u689f\u68c4\u68d7\u68df\u68e7\u68f2\u694a\u6953\u6968\u696d\u6975\u69a6\u69ae\u69cb\u69cd\u69d3\u69e8\u69f3\u6a01\u6a02\u6a05\u6a11\u6a13\u6a19\u6a1e\u6a23\u6a38\u6a39\u6a3a\u6a48\u6a4b\u6a5f\u6a62\u6a6b\u6a94\u6a9c\u6aa2\u6aa3\u6aae\u6aaf\u6ab3\u6ab8\u6abb\u6ac3\u6ad3\u6ada\u6adb\u6add\u6ae5\u6aec\u6afb\u6b04\u6b0a\u6b16\u6b3d\u6b4e\u6b50\u6b5f\u6b61\u6b72\u6b77\u6b78\u6b7f\u6b98\u6ba4\u6bae\u6baf\u6bb2\u6bba\u6bbc\u6bc0\u6bc6\u6c08\u6c23\u6c2b\u6c2c\u6c33\u6c3e\u6c4e\u6c59\u6c7a\u6c92\u6c96\u6cc1\u6d29\u6d36\u6d79\u6d87\u6dbc\u6dd2\u6dda\u6de8\u6dea\u6df5\u6dfa\u6e19\u6e1b\u6e26\u6e2c\u6e3e\u6e4a\u6e67\u6e6f\u6e96\u6e9d\u6eab\u6ebc\u6ec4\u6ec5\u6ecc\u6eec\u6eef\u6ef2\u6ef7\u6efe\u6eff\u6f01\u6f22\u6f23\u6f2c\u6f32\u6f38\u6f3f\u6f51\u6f54\u6f5b\u6f64\u6f6f\u6f70\u6f80\u6f86\u6f97\u6fa0\u6fa4\u6fa6\u6fb1\u6fc1\u6fc3\u6fd5\u6fd8\u6fdb\u6fdf\u6fe4\u6feb\u6ff0\u6ff1\u6ffa\u6ffe\u7006\u7009\u700b\u700f\u7015\u7018\u701d\u701f\u7028\u7030\u7032\u703e\u7051\u7058\u7063\u7064\u707d\u70ba\u70cf\u7121\u7149\u7159\u7165\u7169\u716c\u7192\u71b1\u71be\u71c8\u71c9\u71d2\u71d9\u71dc\u71df\u71e6\u71ec\u71ed\u71f4\u71fb\u71fc\u71fe\u720d\u7210\u721b\u722d\u723a\u723e\u7246\u7258\u7274\u727d\u7296\u729b\u72a2\u72a7\u72c0\u72f9\u72fd\u7319\u7336\u7344\u7345\u734e\u7368\u7370\u7372\u7375\u7377\u7378\u737a\u737b\u7380\u73fe\u743a\u743f\u7463\u7464\u7469\u746a\u74a3\u74a6\u74b0\u74bd\u74bf\u74ca\u74cf\u74d4\u74da\u750c\u7515\u7522\u755d\u7562\u756b\u7570\u7576\u7587\u758a\u75d9\u75e0\u75fa\u760b\u760d\u7613\u7621\u7627\u763a\u7642\u7646\u7652\u7658\u765f\u7661\u7662\u7665\u7669\u766c\u766e\u7671\u7672\u767c\u769a\u76b0\u76ba\u76c3\u76dc\u76de\u76e1\u76e3\u76e4\u76e7\u76ea\u773e\u774f\u775c\u775e\u776a\u779e\u77bc\u77c7\u77d3\u77da\u77ef\u7843\u786f\u78a9\u78ba\u78bc\u78da\u78e7\u78ef\u790e\u7919\u7926\u792a\u792b\u792c\u7955\u797f\u798d\u798e\u79a6\u79aa\u79ae\u79b1\u79bf\u79c8\u7a05\u7a08\u7a1c\u7a1f\u7a2e\u7a31\u7a40\u7a4c\u7a4d\u7a4e\u7a60\u7a61\u7a62\u7a69\u7a6b\u7aa9\u7aaa\u7aae\u7aaf\u7aba\u7ac4\u7ac5\u7ac7\u7aca\u7af6\u7b46\u7b4d\u7b67\u7b87\u7b8b\u7b8f\u7bc0\u7bc4\u7bc9\u7be0\u7be4\u7be9\u7c0d\u7c11\u7c1e\u7c21\u7c23\u7c2b\u7c37\u7c3d\u7c3e\u7c43\u7c4c\u7c5f\u7c60\u7c64\u7c6c\u7c6e\u7c72\u7cb5\u7cdd\u7cde\u7ce7\u7cf0\u7cfe\u7d00\u7d02\u7d04\u7d05\u7d06\u7d07\u7d09\u7d0b\u7d0d\u7d10\u7d14\u7d15\u7d17\u7d19\u7d1a\u7d1b\u7d1c\u7d21\u7d2e\u7d30\u7d31\u7d32\u7d33\u7d39\u7d3c\u7d40\u7d42\u7d43\u7d44\u7d46\u7d50\u7d55\u7d5b\u7d5e\u7d61\u7d62\u7d66\u7d68\u7d70\u7d71\u7d72\u7d73\u7d79\u7d81\u7d8f\u7d91\u7d93\u7d9c\u7d9e\u7da0\u7da2\u7dac\u7dad\u7db0\u7db1\u7db2\u7db4\u7db5\u7db8\u7dba\u7dbb\u7dbd\u7dbe\u7dbf\u7dc7\u7dca\u7dd2\u7dd8\u7dd9\u7dda\u7ddd\u7dde\u7de0\u7de3\u7de8\u7de9\u7dec\u7def\u7df2\u7df4\u7df9\u7dfb\u7e08\u7e09\u7e0a\u7e10\u7e11\u7e1b\u7e1d\u7e1e\u7e23\u7e2b\u7e2e\u7e31\u7e32\u7e34\u7e35\u7e37\u7e39\u7e3d\u7e3e\u7e43\u7e45\u7e46\u7e52\u7e54\u7e55\u7e5a\u7e5e\u7e61\u7e69\u7e6a\u7e6b\u7e6d\u7e73\u7e79\u7e7c\u7e7d\u7e8c\u7e8f\u7e93\u7e94\u7e96\u7e9c\u7f3d\u7f48\u7f4c\u7f70\u7f75\u7f77\u7f85\u7f88\u7f8b\u7fa8\u7fa9\u7fb6\u7fd2\u7ff9\u8056\u805e\u806f\u8070\u8072\u8073\u8076\u8077\u807d\u807e\u8085\u8105\u8108\u8123\u8129\u812b\u8139\u814e\u8166\u816b\u8173\u8178\u819a\u81a0\u81a9\u81bd\u81be\u81bf\u81c9\u81cd\u81cf\u81d8\u81da\u81df\u81e2\u81e5\u81e8\u81fa\u8207\u8208\u8209\u820a\u8259\u8266\u8271\u8277\u82bb\u82e7\u8332\u834a\u838a\u8396\u83a2\u83a7\u83ef\u83f4\u83f8\u8407\u840a\u842c\u8435\u8449\u8457\u8466\u8477\u8490\u849e\u84bc\u84c0\u84c6\u84cb\u84ee\u8514\u8523\u8525\u852d\u8569\u856a\u856d\u858a\u8591\u8594\u85a6\u85a9\u85b9\u85ba\u85cd\u85dd\u85e5\u85ea\u85f9\u85fa\u8606\u8607\u860a\u860b\u861a\u862d\u863f\u8655\u865b\u865c\u865f\u8667\u86fb\u8706\u8755\u8766\u8768\u8778\u879e\u87a2\u87bb\u87c8\u87ec\u87ef\u87f2\u87fb\u8805\u880d\u8814\u881f\u8823\u8831\u8836\u883b\u8853\u885b\u885d\u889e\u88ca\u88dc\u88dd\u88e1\u88fd\u8907\u8932\u8938\u893b\u8956\u8960\u8964\u896a\u896c\u896f\u8972\u898b\u898f\u8993\u8996\u89a6\u89aa\u89ac\u89b2\u89ba\u89bd\u89c0\u89f4\u89f8\u8a02\u8a03\u8a08\u8a0a\u8a0c\u8a0e\u8a10\u8a13\u8a15\u8a16\u8a17\u8a18\u8a1b\u8a1d\u8a1f\u8a22\u8a23\u8a25\u8a2a\u8a2d\u8a31\u8a34\u8a36\u8a3a\u8a3b\u8a3c\u8a41\u8a46\u8a50\u8a54\u8a55\u8a56\u8a5b\u8a5e\u8a60\u8a62\u8a63\u8a66\u8a69\u8a6b\u8a6c\u8a6d\u8a6e\u8a70\u8a71\u8a72\u8a73\u8a7c\u8a85\u8a87\u8a8c\u8a8d\u8a91\u8a95\u8a98\u8a9a\u8a9e\u8aa0\u8aa1\u8aa3\u8aa4\u8aa5\u8aa6\u8aa8\u8aaa\u8ab0\u8ab2\u8ab6\u8ab9\u8abc\u8abf\u8ac2\u8ac4\u8ac7\u8ac9\u8acb\u8acd\u8ad2\u8ad6\u8adb\u8adc\u8ae6\u8ae7\u8aeb\u8aed\u8aee\u8af1\u8af3\u8af6\u8af7\u8af8\u8afa\u8afc\u8afe\u8b00\u8b01\u8b02\u8b04\u8b0a\u8b0e\u8b10\u8b17\u8b19\u8b1b\u8b1d\u8b20\u8b28\u8b2b\u8b2c\u8b39\u8b41\u8b49\u8b4e\u8b4f\u8b58\u8b59\u8b5a\u8b5c\u8b5f\u8b6b\u8b6f\u8b70\u8b74\u8b77\u8b7d\u8b80\u8b8a\u8b92\u8b93\u8b96\u8b9a\u8b9c\u8c3f\u8c48\u8c4e\u8c50\u8c54\u8c6c\u8c8d\u8c93\u8c9d\u8c9e\u8ca0\u8ca1\u8ca2\u8ca7\u8ca8\u8ca9\u8caa\u8cab\u8cac\u8caf\u8cb2\u8cb3\u8cb4\u8cb6\u8cb7\u8cb8\u8cbb\u8cbc\u8cbd\u8cbf\u8cc0\u8cc1\u8cc2\u8cc3\u8cc4\u8cc5\u8cc7\u8cc8\u8cca\u8cd1\u8cd2\u8cd3\u8cdc\u8cde\u8ce0\u8ce1\u8ce2\u8ce3\u8ce4\u8ce6\u8cea\u8cec\u8ced\u8cf4\u8cfa\u8cfb\u8cfc\u8cfd\u8d05\u8d08\u8d0a\u8d0d\u8d0f\u8d13\u8d16\u8d17\u8d1b\u8d95\u8d99\u8da8\u8de1\u8e10\u8e34\u8e55\u8e5f\u8e63\u8e64\u8e7a\u8e82\u8e89\u8e8a\u8e8b\u8e8d\u8e91\u8e93\u8ea1\u8eaa\u8ec0\u8eca\u8ecb\u8ecc\u8ecd\u8ed2\u8ed4\u8edb\u8edf\u8ef8\u8efb\u8efc\u8efe\u8f03\u8f09\u8f0a\u8f12\u8f13\u8f14\u8f15\u8f1b\u8f1c\u8f1d\u8f1e\u8f1f\u8f25\u8f26\u8f29\u8f2a\u8f2f\u8f33\u8f38\u8f3b\u8f3e\u8f3f\u8f42\u8f44\u8f45\u8f49\u8f4d\u8f4e\u8f54\u8f5f\u8f61\u8fa6\u8fad\u8fae\u8faf\u8fb2\u8ff4\u9015\u9019\u9023\u9031\u9032\u904a\u904b\u904e\u9054\u9055\u9059\u905c\u905e\u9060\u9069\u9072\u9077\u9078\u907a\u907c\u9081\u9084\u9087\u908a\u908f\u9090\u90f5\u9109\u9112\u9127\u912d\u9130\u9134\u9148\u9183\u919c\u919e\u91a3\u91ab\u91ac\u91b1\u91c0\u91c1\u91c5\u91cb\u91d0\u91d7\u91d8\u91d9\u91dd\u91e3\u91e6\u91e7\u91e9\u91f5\u9209\u920d\u9210\u9211\u9214\u9215\u921e\u9223\u9234\u9237\u9238\u9239\u923d\u923e\u923f\u9240\u9245\u9249\u924b\u924d\u9251\u9257\u925a\u925b\u9264\u9278\u927b\u9280\u9285\u9291\u9293\u9296\u9298\u929c\u92a8\u92ac\u92b3\u92b7\u92bb\u92bc\u92c1\u92c5\u92c7\u92d2\u92e4\u92ea\u92f0\u92f8\u92fc\u9304\u9310\u9315\u9318\u9319\u931a\u9320\u9321\u9322\u9326\u9328\u932b\u932e\u932f\u9333\u9336\u934a\u934b\u934d\u9354\u935a\u935b\u9365\u936c\u9370\u9375\u937e\u9382\u938a\u9394\u9396\u9398\u939a\u93a2\u93ac\u93ae\u93b0\u93b3\u93c3\u93c8\u93cd\u93d1\u93d7\u93d8\u93dc\u93dd\u93df\u93e1\u93e2\u93e4\u93e8\u93fd\u9403\u9418\u942b\u942e\u9432\u9433\u9435\u9438\u943a\u9444\u9451\u9452\u9460\u9463\u9470\u9472\u9477\u947c\u947d\u947e\u947f\u9577\u9580\u9582\u9583\u9589\u958b\u958e\u958f\u9591\u9592\u9593\u9594\u9598\u95a1\u95a3\u95a4\u95a5\u95a8\u95a9\u95ad\u95b1\u95bb\u95c6\u95c8\u95ca\u95cb\u95cc\u95d0\u95d4\u95d5\u95d6\u95dc\u95e1\u95e2\u9658\u965d\u965e\u9663\u9670\u9673\u9678\u967d\u968a\u968e\u9695\u969b\u96a8\u96aa\u96b1\u96b4\u96b8\u96bb\u96cb\u96d6\u96d9\u96db\u96dc\u96de\u96e2\u96e3\u96f2\u96fb\u9711\u9727\u973d\u9742\u9744\u9748\u975c\u9766\u9768\u978f\u97a6\u97c1\u97c3\u97c6\u97c9\u97cb\u97cc\u97d3\u97dc\u97fb\u97ff\u9801\u9802\u9803\u9805\u9806\u9808\u980a\u980c\u9810\u9811\u9812\u9813\u9817\u9818\u981c\u9821\u9824\u982d\u9830\u9837\u9838\u9839\u983b\u9846\u984c\u984d\u984e\u984f\u9853\u9858\u985b\u985e\u9865\u9867\u986b\u986f\u9870\u9871\u98a8\u98af\u98b1\u98b3\u98b6\u98ba\u98bc\u98c4\u98db\u98e2\u98e9\u98ea\u98ed\u98ef\u98f2\u98f4\u98fc\u98fd\u98fe\u9903\u9905\u9909\u990a\u990c\u9912\u9913\u9918\u991a\u991b\u991e\u9921\u9928\u9935\u993e\u993f\u9945\u9949\u9951\u9952\u9957\u995c\u995e\u99ac\u99ad\u99ae\u99b1\u99b3\u99b4\u99c1\u99d0\u99d1\u99d2\u99d5\u99d9\u99db\u99dd\u99df\u99e2\u99ed\u99f1\u99ff\u9a01\u9a0e\u9a16\u9a19\u9a2b\u9a30\u9a37\u9a3e\u9a40\u9a43\u9a45\u9a4d\u9a55\u9a57\u9a5a\u9a5b\u9a5f\u9a62\u9a65\u9a6a\u9aaf\u9acf\u9ad2\u9ad4\u9ad6\u9aee\u9b06\u9b0d\u9b1a\u9b22\u9b25\u9b27\u9b28\u9b31\u9b4e\u9b58\u9b5a\u9b6f\u9b77\u9b91\u9baa\u9bab\u9bad\u9bae\u9bc0\u9bc9\u9bca\u9bd6\u9bdb\u9be7\u9be8\u9bfd\u9c0d\u9c13\u9c25\u9c2d\u9c31\u9c3b\u9c3e\u9c49\u9c54\u9c56\u9c57\u9c5f\u9c77\u9c78\u9ce5\u9ce9\u9cf3\u9cf4\u9cf6\u9d06\u9d09\u9d12\u9d15\u9d1b\u9d23\u9d26\u9d28\u9d3b\u9d3f\u9d51\u9d5d\u9d60\u9d61\u9d6a\u9d6c\u9d72\u9d89\u9daf\u9db4\u9dc2\u9dd3\u9dd7\u9de5\u9df9\u9dfa\u9e1a\u9e1b\u9e1e\u9e75\u9e79\u9e7c\u9e7d\u9e97\u9ea5\u9ea9\u9eb4\u9eb5\u9ebc\u9ec3\u9ecc\u9ede\u9ee8\u9ef4\u9ef7\u9f15\u9f34\u9f4a\u9f4b\u9f52\u9f5c\u9f5f\u9f61\u9f63\u9f66\u9f67\u9f6a\u9f6c\u9f72\u9f77\u9f8d\u9f90\u9f94\u9f9c", "\u4e22\u5e76\u5e7a\u5e72\u4e71\u4e98\u4e9a\u4f2b\u5e03\u5360\u5e76\u6765\u4ed1\u4fa3\u5c40\u7cfb\u4fa0\u4f25\u4fe9\u4ed3\u4e2a\u4eec\u5e78\u4f26\u4f1f\u4fa7\u4fa6\u4f2a\u6770\u4f27\u4f1e\u5907\u5bb6\u4f63\u506c\u4f20\u503a\u4f24\u503e\u4ec5\u4fa8\u4ec6\u4fa5\u96c7\u4ef7\u4eea\u4fac\u4ebf\u4fa9\u4fed\u50a7\u4fe6\u4faa\u5c3d\u507f\u4f18\u50a8\u4fea\u3469\u50a5\u4fe8\u51f6\u5151\u513f\u5156\u5185\u4e24\u518c\u80c4\u5e42\u51bb\u51db\u51ef\u522b\u5220\u5219\u514b\u5239\u521a\u5265\u5240\u521b\u94f2\u5212\u5267\u5218\u523d\u5251\u5242\u52b2\u52a8\u52a1\u52cb\u80dc\u52b3\u52bf\u52cb\u52b1\u529d\u5300\u6c47\u532e\u533a\u534f\u6064\u5374\u538c\u5389\u53c2\u4e1b\u54a4\u5434\u5450\u5415\u5458\u5ff5\u95ee\u54d1\u542f\u5524\u4e27\u5403\u4e54\u5355\u54df\u545b\u556c\u5417\u545c\u54d4\u53f9\u55bd\u5455\u5567\u5c1d\u54d7\u5520\u5578\u53fd\u5618\u54dd\u55f3\u55b7\u5428\u5f53\u549b\u5413\u5c1d\u565c\u54bd\u5499\u5411\u4e25\u5624\u556d\u55eb\u56a3\u5453\u5570\u82cf\u5631\u56f1\u56fd\u56f4\u56ed\u5706\u56fe\u56e2\u6267\u575a\u57a9\u57da\u5c27\u62a5\u573a\u5757\u8314\u57d8\u6d82\u51a2\u575e\u5c18\u5811\u57ab\u5760\u5815\u575f\u57a6\u575b\u57d9\u538b\u5792\u5739\u574f\u5784\u575c\u575d\u58ee\u58f6\u5bff\u591f\u68a6\u4f19\u5939\u5942\u5965\u5941\u593a\u594b\u5986\u59d7\u5978\u5a31\u5a04\u5987\u5a32\u5aaa\u5988\u59aa\u59a9\u5a34\u5a06\u5a75\u5a07\u5b37\u5ad4\u5a74\u5a76\u5a18\u5b59\u5b66\u5b6a\u5bab\u5bdd\u5b9e\u5b81\u5ba1\u5199\u5bbd\u5ba0\u5b9d\u5c06\u4e13\u5bfb\u5bf9\u5bfc\u5c34\u5c4a\u5c38\u5c49\u5c61\u5c42\u5c66\u5c5e\u5188\u5c98\u5c9b\u5ce1\u6606\u5c97\u4ed1\u5ce5\u5c9a\u5d2d\u5c96\u5d5a\u5d58\u5cad\u5c7f\u5cb3\u5ce6\u5dc5\u5ca9\u5e05\u5e08\u5e10\u5e26\u5e27\u5e0f\u5e3c\u5e1c\u5e01\u5e2e\u5e72\u51e0\u5e93\u5395\u53a2\u53a9\u53a6\u53a8\u53ae\u5e99\u5382\u5e9f\u5e7f\u5e90\u5385\u5f11\u540a\u5f20\u5f3a\u522b\u5f39\u5f25\u5f2f\u6c47\u5f66\u96d5\u4f5b\u540e\u5f84\u4ece\u5f95\u590d\u5f81\u5f7b\u6052\u803b\u60a6\u6005\u95f7\u51c4\u6076\u607c\u607b\u7231\u60ec\u6006\u607a\u5ffe\u6817\u6001\u6120\u60e8\u60ed\u6078\u60ef\u6002\u8651\u5e86\u621a\u6b32\u5fe7\u60eb\u601c\u51ed\u60ee\u6124\u60af\u6003\u5baa\u5fc6\u6073\u5e94\u61d4\u61d1\u60e9\u61d2\u6000\u60ac\u5fcf\u60e7\u6151\u604b\u6218\u620f\u6237\u629b\u62fc\u631f\u820d\u626a\u6328\u5377\u626b\u62a1\u6323\u6302\u91c7\u62e3\u626c\u6362\u6325\u635f\u6447\u6363\u62a2\u63b4\u6402\u631a\u6298\u63ba\u635e\u6491\u6320\u62e8\u629a\u6251\u63ff\u631e\u631d\u6361\u62e5\u63b3\u62e9\u51fb\u6321\u62c5\u636e\u6324\u62df\u62e7\u6401\u63b7\u6269\u64b7\u6446\u64de\u6270\u64b5\u62e2\u62e6\u6400\u643a\u6444\u631b\u644a\u6405\u63fd\u8d25\u53d9\u654c\u6570\u655b\u6bd9\u6593\u65a9\u65ad\u4e8e\u5347\u65f6\u664b\u663c\u6655\u6656\u65f8\u7545\u6682\u6654\u5386\u6619\u6653\u66a7\u65f7\u6652\u4e66\u4f1a\u80e7\u672f\u4e1c\u62d0\u6805\u6746\u6800\u6761\u67ad\u5f03\u67a3\u680b\u6808\u6816\u6768\u67ab\u6862\u4e1a\u6781\u5e72\u8363\u6784\u67aa\u6760\u6901\u6868\u6869\u4e50\u679e\u6881\u697c\u6807\u67a2\u6837\u6734\u6811\u6866\u6861\u6865\u673a\u692d\u6a2a\u6863\u6867\u68c0\u6a2f\u68bc\u53f0\u69df\u67e0\u69db\u67dc\u6a79\u6988\u6809\u691f\u6a71\u6987\u6a31\u680f\u6743\u6984\u94a6\u53f9\u6b27\u6b24\u6b22\u5c81\u5386\u5f52\u6b81\u6b8b\u6b87\u6b93\u6ba1\u6b7c\u6740\u58f3\u6bc1\u6bb4\u6be1\u6c14\u6c22\u6c29\u6c32\u6cdb\u6cdb\u6c61\u51b3\u6ca1\u51b2\u51b5\u6cc4\u6c79\u6d43\u6cfe\u51c9\u51c4\u6cea\u51c0\u6ca6\u6e0a\u6d45\u6da3\u51cf\u6da1\u6d4b\u6d51\u51d1\u6d8c\u6c64\u51c6\u6c9f\u6e29\u6e7f\u6ca7\u706d\u6da4\u6caa\u6ede\u6e17\u5364\u6eda\u6ee1\u6e14\u6c49\u6d9f\u6e0d\u6da8\u6e10\u6d46\u6cfc\u6d01\u6f5c\u6da6\u6d54\u6e83\u6da9\u6d47\u6da7\u6e11\u6cfd\u6eea\u6dc0\u6d4a\u6d53\u6e7f\u6cde\u8499\u6d4e\u6d9b\u6ee5\u6f4d\u6ee8\u6e85\u6ee4\u6e0e\u6cfb\u6c88\u6d4f\u6fd2\u6cf8\u6ca5\u6f47\u6fd1\u5f25\u6f4b\u6f9c\u6d12\u6ee9\u6e7e\u6ee6\u707e\u4e3a\u4e4c\u65e0\u70bc\u70df\u7115\u70e6\u7080\u8367\u70ed\u70bd\u706f\u7096\u70e7\u70eb\u7116\u8425\u707f\u6bc1\u70db\u70e9\u718f\u70ec\u7118\u70c1\u7089\u70c2\u4e89\u7237\u5c14\u5899\u724d\u62b5\u7275\u8366\u7266\u728a\u727a\u72b6\u72ed\u72c8\u72f0\u72b9\u72f1\u72ee\u5956\u72ec\u72de\u83b7\u730e\u72b7\u517d\u736d\u732e\u7321\u73b0\u73d0\u73f2\u7410\u7476\u83b9\u739b\u7391\u7477\u73af\u73ba\u7487\u743c\u73d1\u748e\u74d2\u74ef\u74ee\u4ea7\u4ea9\u6bd5\u753b\u5f02\u5f53\u7574\u53e0\u75c9\u9178\u75f9\u75af\u75a1\u75ea\u75ae\u759f\u7618\u7597\u75e8\u6108\u75a0\u762a\u75f4\u75d2\u75c7\u765e\u7663\u763e\u762b\u766b\u53d1\u7691\u75b1\u76b1\u676f\u76d7\u76cf\u5c3d\u76d1\u76d8\u5362\u8361\u4f17\u56f0\u7741\u7750\u777e\u7792\u7751\u8499\u772c\u77a9\u77eb\u6731\u781a\u7855\u786e\u7801\u7816\u789b\u77f6\u7840\u788d\u77ff\u783a\u783e\u77fe\u79d8\u7984\u7978\u796f\u5fa1\u7985\u793c\u7977\u79c3\u7c7c\u7a0e\u79c6\u68f1\u7980\u79cd\u79f0\u8c37\u7a23\u79ef\u9896\u79fe\u7a51\u79fd\u7a33\u83b7\u7a9d\u6d3c\u7a77\u7a91\u7aa5\u7a9c\u7a8d\u7aa6\u7a83\u7ade\u7b14\u7b0b\u7b15\u4e2a\u7b3a\u7b5d\u8282\u8303\u7b51\u7b7f\u7b03\u7b5b\u7bd3\u84d1\u7baa\u7b80\u7bd1\u7bab\u6a90\u7b7e\u5e18\u7bee\u7b79\u7c41\u7b3c\u7b7e\u7bf1\u7ba9\u5401\u7ca4\u7cc1\u7caa\u7cae\u56e2\u7ea0\u7eaa\u7ea3\u7ea6\u7ea2\u7ea1\u7ea5\u7eab\u7eb9\u7eb3\u7ebd\u7eaf\u7eb0\u7eb1\u7eb8\u7ea7\u7eb7\u7ead\u7eba\u624e\u7ec6\u7ec2\u7ec1\u7ec5\u7ecd\u7ecb\u7ecc\u7ec8\u5f26\u7ec4\u7eca\u7ed3\u7edd\u7ee6\u7ede\u7edc\u7eda\u7ed9\u7ed2\u7ed6\u7edf\u4e1d\u7edb\u7ee2\u7ed1\u7ee5\u6346\u7ecf\u7efc\u7f0d\u7eff\u7ef8\u7ef6\u7ef4\u7efe\u7eb2\u7f51\u7f00\u5f69\u7eb6\u7eee\u7efd\u7ef0\u7eeb\u7ef5\u7f01\u7d27\u7eea\u7f04\u7f02\u7ebf\u7f09\u7f0e\u7f14\u7f18\u7f16\u7f13\u7f05\u7eac\u7f08\u7ec3\u7f07\u81f4\u8426\u7f19\u7f22\u7ec9\u7f23\u7f1a\u7f1c\u7f1f\u53bf\u7f1d\u7f29\u7eb5\u7f27\u7ea4\u7f26\u7f15\u7f25\u603b\u7ee9\u7ef7\u7f2b\u7f2a\u7f2f\u7ec7\u7f2e\u7f2d\u7ed5\u7ee3\u7ef3\u7ed8\u7cfb\u8327\u7f34\u7ece\u7ee7\u7f24\u7eed\u7f20\u7f28\u624d\u7ea4\u7f06\u94b5\u575b\u7f42\u7f5a\u9a82\u7f62\u7f57\u7f81\u8288\u7fa1\u4e49\u81bb\u4e60\u7fd8\u5723\u95fb\u8054\u806a\u58f0\u8038\u8042\u804c\u542c\u804b\u8083\u80c1\u8109\u5507\u4fee\u8131\u80c0\u80be\u8111\u80bf\u811a\u80a0\u80a4\u80f6\u817b\u80c6\u810d\u8113\u8138\u8110\u8191\u814a\u80ea\u810f\u81dc\u5367\u4e34\u53f0\u4e0e\u5174\u4e3e\u65e7\u8231\u8230\u8270\u8273\u520d\u82ce\u5179\u8346\u5e84\u830e\u835a\u82cb\u534e\u5eb5\u70df\u82cc\u83b1\u4e07\u83b4\u53f6\u7740\u82c7\u8364\u641c\u8385\u82cd\u836a\u5e2d\u76d6\u83b2\u535c\u848b\u8471\u836b\u8361\u829c\u8427\u84df\u59dc\u8537\u8350\u8428\u82d4\u8360\u84dd\u827a\u836f\u85ae\u853c\u853a\u82a6\u82cf\u8574\u82f9\u85d3\u5170\u841d\u5904\u865a\u864f\u53f7\u4e8f\u8715\u86ac\u8680\u867e\u8671\u8717\u8682\u8424\u877c\u8748\u8749\u86f2\u866b\u8681\u8747\u874e\u869d\u8721\u86ce\u86ca\u8695\u86ee\u672f\u536b\u51b2\u886e\u8885\u8865\u88c5\u91cc\u5236\u590d\u88e4\u891b\u4eb5\u8884\u88c6\u8934\u889c\u6446\u886c\u88ad\u89c1\u89c4\u89c5\u89c6\u89ce\u4eb2\u89ca\u89d0\u89c9\u89c8\u89c2\u89de\u89e6\u8ba2\u8ba3\u8ba1\u8baf\u8ba7\u8ba8\u8ba6\u8bad\u8baa\u8bab\u6258\u8bb0\u8bb9\u8bb6\u8bbc\u4723\u8bc0\u8bb7\u8bbf\u8bbe\u8bb8\u8bc9\u8bc3\u8bca\u6ce8\u8bc1\u8bc2\u8bcb\u8bc8\u8bcf\u8bc4\u8bd0\u8bc5\u8bcd\u548f\u8be2\u8be3\u8bd5\u8bd7\u8be7\u8bdf\u8be1\u8be0\u8bd8\u8bdd\u8be5\u8be6\u8bd9\u8bdb\u5938\u5fd7\u8ba4\u8bf3\u8bde\u8bf1\u8bee\u8bed\u8bda\u8beb\u8bec\u8bef\u8bf0\u8bf5\u8bf2\u8bf4\u8c01\u8bfe\u8c07\u8bfd\u8c0a\u8c03\u8c04\u8c06\u8c08\u8bff\u8bf7\u8be4\u8c05\u8bba\u8c00\u8c0d\u8c1b\u8c10\u8c0f\u8c15\u54a8\u8bb3\u8c19\u8c0c\u8bbd\u8bf8\u8c1a\u8c16\u8bfa\u8c0b\u8c12\u8c13\u8a8a\u8c0e\u8c1c\u8c27\u8c24\u8c26\u8bb2\u8c22\u8c23\u8c1f\u8c2a\u8c2c\u8c28\u54d7\u8bc1\u8c32\u8ba5\u8bc6\u8c2f\u8c2d\u8c31\u566a\u8c35\u8bd1\u8bae\u8c34\u62a4\u8a89\u8bfb\u53d8\u8c17\u8ba9\u8c36\u8d5e\u8c20\u6eaa\u5c82\u7ad6\u4e30\u8273\u732a\u72f8\u732b\u8d1d\u8d1e\u8d1f\u8d22\u8d21\u8d2b\u8d27\u8d29\u8d2a\u8d2f\u8d23\u8d2e\u8d40\u8d30\u8d35\u8d2c\u4e70\u8d37\u8d39\u8d34\u8d3b\u8d38\u8d3a\u8d32\u8d42\u8d41\u8d3f\u8d45\u8d44\u8d3e\u8d3c\u8d48\u8d4a\u5bbe\u8d50\u8d4f\u8d54\u8d53\u8d24\u5356\u8d31\u8d4b\u8d28\u8d26\u8d4c\u8d56\u8d5a\u8d59\u8d2d\u8d5b\u8d58\u8d60\u8d5e\u8d61\u8d62\u8d43\u8d4e\u8d5d\u8d63\u8d76\u8d75\u8d8b\u8ff9\u8df5\u8e0a\u8df8\u8ff9\u8e52\u8e2a\u8df7\u8df6\u8db8\u8e0c\u8dfb\u8dc3\u8e2f\u8e2c\u8e51\u8e8f\u8eaf\u8f66\u8f67\u8f68\u519b\u8f69\u8f6b\u8f6d\u8f6f\u8f74\u8f72\u8f76\u8f7c\u8f83\u8f7d\u8f7e\u8f84\u633d\u8f85\u8f7b\u8f86\u8f8e\u8f89\u8f8b\u8f8d\u8f8a\u8f87\u8f88\u8f6e\u8f91\u8f8f\u8f93\u8f90\u8f97\u8206\u6bc2\u8f96\u8f95\u8f6c\u8f99\u8f7f\u8f9a\u8f70\u8f94\u529e\u8f9e\u8fab\u8fa9\u519c\u56de\u5f84\u8fd9\u8fde\u5468\u8fdb\u6e38\u8fd0\u8fc7\u8fbe\u8fdd\u9065\u900a\u9012\u8fdc\u9002\u8fdf\u8fc1\u9009\u9057\u8fbd\u8fc8\u8fd8\u8fe9\u8fb9\u903b\u9026\u90ae\u4e61\u90b9\u9093\u90d1\u90bb\u90ba\u90e6\u814c\u4e11\u915d\u7cd6\u533b\u9171\u9166\u917f\u8845\u917d\u91ca\u5398\u948a\u9489\u948b\u9488\u9493\u6263\u948f\u9492\u9497\u94a0\u949d\u94a4\u94a3\u949e\u94ae\u94a7\u9499\u94c3\u94b4\u94b9\u94cd\u94b8\u94c0\u94bf\u94be\u5de8\u94c9\u94c7\u94cb\u94c2\u94b3\u94c6\u94c5\u94a9\u94f0\u94ec\u94f6\u94dc\u94e3\u94e8\u94e2\u94ed\u8854\u94f5\u94d0\u9510\u9500\u9511\u9509\u94dd\u950c\u94a1\u950b\u9504\u94fa\u9502\u952f\u94a2\u5f55\u9525\u951f\u9524\u9531\u94ee\u952d\u951c\u94b1\u9526\u951a\u9521\u9522\u9519\u9530\u8868\u70bc\u9505\u9540\u9537\u9496\u953b\u9532\u9539\u953e\u952e\u949f\u9541\u9551\u9555\u9501\u9549\u9524\u94a8\u9550\u9547\u9552\u954d\u955e\u94fe\u9559\u955d\u94ff\u9535\u9557\u9558\u94f2\u955c\u9556\u9542\u933e\u9508\u94d9\u949f\u954c\u9570\u956f\u956d\u94c1\u94ce\u94db\u94f8\u9274\u9274\u94c4\u9573\u94a5\u9576\u954a\u9523\u94bb\u92ae\u51ff\u957f\u95e8\u95e9\u95ea\u95ed\u5f00\u95f3\u95f0\u95f2\u95f2\u95f4\u95f5\u95f8\u9602\u9601\u5408\u9600\u95fa\u95fd\u95fe\u9605\u960e\u677f\u95f1\u9614\u9615\u9611\u9617\u9616\u9619\u95ef\u5173\u9610\u8f9f\u9649\u9655\u5347\u9635\u9634\u9648\u9646\u9633\u961f\u9636\u9668\u9645\u968f\u9669\u9690\u9647\u96b6\u53ea\u96bd\u867d\u53cc\u96cf\u6742\u9e21\u79bb\u96be\u4e91\u7535\u6cbe\u96fe\u9701\u96f3\u972d\u7075\u9759\u817c\u9765\u5de9\u79cb\u7f30\u9791\u5343\u97af\u97e6\u97e7\u97e9\u97ec\u97f5\u54cd\u9875\u9876\u9877\u9879\u987a\u987b\u987c\u9882\u9884\u987d\u9881\u987f\u9887\u9886\u988c\u9889\u9890\u5934\u988a\u9894\u9888\u9893\u9891\u9897\u9898\u989d\u816d\u989c\u989b\u613f\u98a0\u7c7b\u98a2\u987e\u98a4\u663e\u98a6\u9885\u98ce\u98d2\u53f0\u522e\u98d3\u98cf\u98d5\u98d8\u98de\u9965\u9968\u996a\u996c\u996d\u996e\u9974\u9972\u9971\u9970\u997a\u997c\u9977\u517b\u9975\u9981\u997f\u4f59\u80b4\u9984\u996f\u9985\u9986\u5582\u998f\u998a\u9992\u9991\u9965\u9976\u98e8\u990d\u998b\u9a6c\u9a6d\u51af\u9a6e\u9a70\u9a6f\u9a73\u9a7b\u9a7d\u9a79\u9a7e\u9a78\u9a76\u9a7c\u9a77\u9a88\u9a87\u9a86\u9a8f\u9a8b\u9a91\u9a9b\u9a97\u9a9e\u817e\u9a9a\u9aa1\u84e6\u9aa0\u9a71\u9a81\u9a84\u9a8c\u60ca\u9a7f\u9aa4\u9a74\u9aa5\u9a8a\u80ae\u9ac5\u810f\u4f53\u9acb\u53d1\u677e\u80e1\u987b\u9b13\u6597\u95f9\u54c4\u90c1\u9b49\u9b47\u9c7c\u9c81\u9c7f\u9c8d\u9c94\u9c9b\u9c91\u9c9c\u9ca7\u9ca4\u9ca8\u9cad\u9cb7\u9cb3\u9cb8\u9cab\u9cc5\u9cc3\u9ccf\u9ccd\u9ca2\u9cd7\u9cd4\u9cd6\u9cdd\u9cdc\u9cde\u9c8e\u9cc4\u9c88\u9e1f\u9e20\u51e4\u9e23\u9e22\u9e29\u9e26\u9e30\u9e35\u9e33\u9e2a\u9e2f\u9e2d\u9e3f\u9e3d\u9e43\u9e45\u9e44\u9e49\u9e4c\u9e4f\u9e4a\u9e51\u83ba\u9e64\u9e5e\u9e67\u9e25\u9e36\u9e70\u9e6d\u9e66\u9e73\u9e3e\u5364\u54b8\u78b1\u76d0\u4e3d\u9ea6\u9eb8\u66f2\u9762\u4e48\u9ec4\u9ec9\u70b9\u515a\u9709\u9ee9\u51ac\u9f39\u9f50\u658b\u9f7f\u9f87\u9f83\u9f84\u51fa\u9f88\u556e\u9f8a\u9f89\u9f8b\u9f8c\u9f99\u5e9e\u9f9a\u9f9f");
+/* 酒馆最外层的全萤幕画面（留声机、地图共用）。
+   在最外层的同来源页面建立 <dialog>（盖满整个视窗），里面放一个 srcdoc <iframe>；画面写在这个 iframe 里，
+   不受酒馆主题样式影响，也不受楼层宽度与卡片高度限制（2026-11-16 使用者决定）。
+   每次开启时建立、关闭时移除，不会残留在酒馆页面里。 */
+var NewCardFullscreen = (function () {
+    'use strict';
+    // 往上找最外层可存取的同来源视窗（外层跨来源时停在最后一个可存取的那层）。
+    function hostWindow(view) {
+        var host = view;
+        try { while (host.parent !== host && host.parent.document) host = host.parent; } catch (_) {}
+        return host;
+    }
+    // options：
+    //   window：卡片所在的视窗；className：外框 dialog 的 class；label：无障碍名称（也当 iframe 标题）；
+    //   background：底色（预设透明）；onLoad(guestWindow)：iframe 载入后呼叫；onCancel()：按 Esc／返回键。
+    // 回传 {shell, frame, close()}；close() 关闭并移除画面，重复呼叫没有作用。
+    function open(options) {
+        var doc = hostWindow(options.window).document, background = options.background || 'transparent';
+        var shell = doc.createElement('dialog'), frame = doc.createElement('iframe');
+        var closed = false;
+        shell.className = options.className;
+        shell.setAttribute('aria-label', options.label);
+        shell.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;padding:0;margin:0;border:0;overflow:hidden;background:' + background;
+        frame.title = options.label;
+        // color-scheme 两边一致，透明的 iframe 才会保持透明（不一致时浏览器会补上不透明底色）。
+        frame.style.cssText = 'display:block;width:100%;height:100%;border:0;color-scheme:normal;background:' + background;
+        frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">' +
+            '<style>:root{color-scheme:normal}html,body{margin:0;height:100%;overflow:hidden;background:' + background + '}</style></head><body></body></html>';
+        shell.addEventListener('cancel', function (event) {
+            event.preventDefault();
+            if (!closed && options.onCancel) options.onCancel();
+        });
+        // 每次 load 都交给呼叫端（各自检查是否已建立画面），同原本在手机上测过的做法。
+        frame.addEventListener('load', function () {
+            if (!closed && options.onLoad) options.onLoad(frame.contentWindow);
+        });
+        shell.append(frame);
+        doc.body.append(shell);
+        shell.showModal();
+        return {shell: shell, frame: frame, close: function () {
+            if (closed) return false;
+            closed = true;
+            try { if (shell.open) shell.close(); } catch (_) {}
+            shell.remove();
+            return true;
+        }};
+    }
+    // 卡片选用的正文字体（网路字型的 CSS 连结）复制到画面的文件里，字体与卡片相同。
+    function copyFonts(cardDocument, guestDocument) {
+        cardDocument.querySelectorAll('link[data-body-font]').forEach(function (link) {
+            guestDocument.head.appendChild(guestDocument.importNode(link, true));
+        });
+    }
+    return {hostWindow: hostWindow, open: open, copyFonts: copyFonts};
+})();
 /* 原生音讯与共用播放状态；每个宿主视窗只建立一个播放器。 */
 var NewCardMusic = (function () {
     'use strict';
@@ -4368,9 +4226,7 @@ var NewCardMusic = (function () {
         ui.destroy = function () { destroy(); root.remove(); };
         return ui;
     }
-    // 正文卡片用：卡片里只有静音键与展开键，留声机面板开在酒馆最外层的全萤幕对话框，里面是独立的 iframe
-    // （不受酒馆主题样式影响，做法同技能星图、小游戏）。面板大小跟着整个画面，不受楼层宽度与卡片高度限制
-    // （2026-11-16 使用者决定）。每次开启时建立、关闭时移除，所以不会残留在酒馆页面里。
+    // 正文卡片用：卡片里只有静音键与展开键，留声机面板开在酒馆最外层的全萤幕画面（NewCardFullscreen，见 fullscreen.js）。
     // options.fonts：回传 {serif, sans} 的函式（开启时读卡片目前的字型）。
     function mountFullscreen(root, options) {
         var view = options.window, host = hostWindow(view), doc = root.ownerDocument;
@@ -4392,8 +4248,7 @@ var NewCardMusic = (function () {
             if (!current) return;
             panel = null;
             if (current.ui) current.ui.destroy();
-            if (current.shell.open) current.shell.close();
-            current.shell.remove();
+            current.screen.close();
             if (openButton) {
                 openButton.setAttribute('aria-expanded', 'false');
                 if (restoreFocus !== false && openButton.isConnected) openButton.focus({preventScroll: true});
@@ -4401,30 +4256,18 @@ var NewCardMusic = (function () {
         }
         function open() {
             if (closed || panel) return;
-            var top = host.document;
-            var shell = top.createElement('dialog'), frame = top.createElement('iframe');
-            shell.className = 'nc-music-shell';
-            shell.setAttribute('aria-label', '随行留声机');
-            shell.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;padding:0;margin:0;border:0;background:transparent;overflow:hidden';
-            frame.title = '随行留声机';
-            // color-scheme 两边一致，iframe 才会保持透明（不一致时浏览器会补上不透明底色）。
-            frame.style.cssText = 'display:block;width:100%;height:100%;border:0;background:transparent;color-scheme:normal';
-            frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-                '<style>:root{color-scheme:normal}html,body{margin:0;height:100%;background:transparent}</style></head><body></body></html>';
-            var current = panel = {shell: shell, ui: null};
-            shell.addEventListener('cancel', function (event) { event.preventDefault(); closePanel(); });
-            frame.addEventListener('load', function () {
-                if (panel !== current) return;
-                var guest = frame.contentWindow;
-                // 卡片选用的正文字体（网路字型的 CSS）一并载入，面板字体与卡片相同。
-                doc.querySelectorAll('link[data-body-font]').forEach(function (link) { guest.document.head.appendChild(guest.document.importNode(link, true)); });
-                current.ui = mountGuest(guest, Object.assign({}, options, {fonts: typeof options.fonts === 'function' ? options.fonts() : options.fonts}));
-                guest.document.querySelector('dialog.nc-music').addEventListener('close', function () { if (panel === current) closePanel(); });
-                current.ui.open();
-            });
-            shell.append(frame);
-            top.body.append(shell);
-            shell.showModal();
+            var current = panel = {screen: null, ui: null};
+            // 外框与 iframe 由 NewCardFullscreen 建立（fullscreen.js，地图也用同一份）；底色透明，面板浮在酒馆画面上。
+            current.screen = NewCardFullscreen.open({window: view, className: 'nc-music-shell', label: '随行留声机',
+                onCancel: function () { if (panel === current) closePanel(); },
+                onLoad: function (guest) {
+                    if (panel !== current) return;
+                    // 卡片选用的正文字体（网路字型的 CSS）一并载入，面板字体与卡片相同。
+                    NewCardFullscreen.copyFonts(doc, guest.document);
+                    current.ui = mountGuest(guest, Object.assign({}, options, {fonts: typeof options.fonts === 'function' ? options.fonts() : options.fonts}));
+                    guest.document.querySelector('dialog.nc-music').addEventListener('close', function () { if (panel === current) closePanel(); });
+                    current.ui.open();
+                }});
             if (openButton) openButton.setAttribute('aria-expanded', 'true');
         }
         if (button) listen(button, 'click', function () { player.mute(); });
@@ -5495,7 +5338,6 @@ var NewCardAlbumData = (function () {
         var rawContentActive = false;
         var failedAvatars = new Set();
         var unsubscribeContext = null;
-        var mapObserver = null;
         var mapImage = null;
         var mapImageVersion = 0;
         var mapRatio = FRONTEND_CONFIG.map.ratio;
@@ -6448,6 +6290,8 @@ var NewCardAlbumData = (function () {
             }
           }
         };
+        var MAP_ATLAS_HTML = "<svg width=\"0\" height=\"0\" style=\"position:absolute\" aria-hidden=\"true\" focusable=\"false\"><defs>\n  <linearGradient id=\"uiMapGilt\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fbe9b9\"/><stop offset=\".55\" stop-color=\"#d6b26a\"/><stop offset=\"1\" stop-color=\"#8f6c33\"/><\/linearGradient>\n<\/defs><\/svg>\n<dialog class=\"uiMapDialog\" aria-labelledby=\"uiMapDialogTitle\">\n  <div class=\"uiMapDialogHead\">\n    <div><span class=\"uiMapEyebrow\">ATLAS OF LONDON<\/span><h1 class=\"uiMapDialogTitle\" id=\"uiMapDialogTitle\">伦敦地图<\/h1><\/div>\n    <span class=\"uiMapDialogCount\">暂无事件<\/span>\n    <button type=\"button\" class=\"uiMapClose\" data-map-action=\"close\" aria-label=\"关闭地图\">×<\/button>\n  <\/div>\n  <div class=\"uiMapCanvas\">\n    <div class=\"uiMapViewport\" tabindex=\"0\" aria-label=\"伦敦地图。双指或滚轮缩放，拖曳移动，点分区查看说明。\">\n      <div class=\"uiMapSurface\">\n        <img class=\"uiMapImage\" alt=\"\" draggable=\"false\" hidden>\n        <svg class=\"uiMapDistricts\" viewBox=\"0 0 1 1\" preserveAspectRatio=\"none\" aria-hidden=\"true\" focusable=\"false\"><\/svg>\n      <\/div>\n      <div class=\"uiMapMarks\"><div class=\"uiMapLabels\"><\/div><div class=\"uiMapPins\"><\/div><\/div>\n    <\/div>\n    <div class=\"uiMapPlaceholder\" hidden><strong>伦敦地图<\/strong><span>尚未提供地图图片<\/span><\/div>\n    <p class=\"uiMapStatus\" role=\"status\"><\/p>\n    <nav class=\"uiMapZoom\" aria-label=\"地图缩放\">\n      <button type=\"button\" data-map-action=\"in\" aria-label=\"放大\">＋<\/button>\n      <button type=\"button\" data-map-action=\"out\" aria-label=\"缩小\">−<\/button>\n      <button type=\"button\" data-map-action=\"fit\" aria-label=\"显示完整地图\"><svg viewBox=\"0 0 20 20\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4\"/><\/svg><\/button>\n    <\/nav>\n    <section class=\"uiMapSheet\" aria-live=\"polite\">\n      <button type=\"button\" class=\"uiMapSheetClose\" data-map-action=\"sheet-close\" aria-label=\"关闭说明\">×<\/button>\n      <article class=\"uiMapEventCard\" hidden>\n        <div class=\"uiMapEventCardBody\"><\/div>\n        <p class=\"uiMapEventError\" role=\"status\"><\/p>\n        <button type=\"button\" class=\"uiMapEnter\" data-map-action=\"enter\">进入探索<\/button>\n      <\/article>\n      <article class=\"uiMapDistrictCard\" hidden><\/article>\n    <\/section>\n  <\/div>\n<\/dialog>";
+        var MAP_ATLAS_CSS = "/* 全萤幕地图：开在酒馆最外层的独立 iframe 里（map.js 开启时嵌入，不受酒馆主题与卡片样式影响）。\n   配色固定；地图图片日夜相同。事件标记沿用卡片原本的画法，--pin-panel／--pin-ink／--enc 开启时从卡片读入。 */\n*, *::before, *::after { box-sizing: border-box; }\n.uiMapDialog {\n  --serif: \"Noto Serif SC\", \"Noto Serif TC\", \"Songti SC\", \"Songti TC\", serif; --sans: \"Noto Sans SC\", \"Noto Sans TC\", \"Microsoft YaHei\", \"Microsoft JhengHei\", system-ui, sans-serif;\n  --ink: #2a221b; --ink-2: #33291f;\n  --paper: #e7d9b8; --paper-2: #d5c299; --paper-ink: #3a2c1e;\n  --gilt: #dcc28a; --gilt-hi: #f5e5b8; --gilt-lo: #9a7a43;\n  --text: #efe4cb; --dim: #b6a483; --line: rgba(220, 194, 138, .26);\n  --seal: #8d281b; --seal-hi: #bb4a33;\n  --pin-panel: #302b23; --pin-ink: #e3ddd0; --enc: #c0583f;\n  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;\n  background: #14100c; color: var(--text); font-family: var(--sans); overflow: hidden;\n}\n.uiMapDialog:not([open]) { display: none; }\n.uiMapDialog[open] { display: flex; flex-direction: column; }\n.uiMapDialog::backdrop { background: #14100c; }\n/* 按钮的基本样式不加权重，各按钮自己的字型与颜色才会生效。 */\n:where(.uiMapDialog button) { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.uiMapDialog button:focus-visible, .uiMapViewport:focus-visible { outline: 2px solid var(--gilt); outline-offset: 2px; }\n.uiMapDialog [hidden] { display: none !important; }\n\n/* ── 标题列 ─────────────────────────────────── */\n.uiMapDialogHead {\n  flex: none; display: flex; align-items: center; gap: 14px; position: relative; z-index: 3;\n  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left));\n  background: linear-gradient(180deg, #2f271f, #231c16); border-bottom: 1px solid var(--line);\n  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);\n}\n.uiMapEyebrow { display: block; font: 10px/1.5 Georgia, serif; letter-spacing: .24em; color: var(--dim); }\n.uiMapDialogTitle { margin: 1px 0 0; font: 600 22px/1.3 var(--serif); letter-spacing: .14em; }\n.uiMapDialogCount { margin-left: auto; font-size: 13px; color: var(--dim); white-space: nowrap; }\n.uiMapDialogCount b { color: var(--gilt-hi); font: 600 15px Georgia, serif; margin-right: 2px; }\n.uiMapClose { flex: none; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: transparent; font: 24px/1 Georgia, serif; }\n\n/* ── 地图：整张图以 transform 平移缩放；双指、滚轮、拖曳由 map.js 处理 ── */\n.uiMapCanvas { position: relative; flex: 1; min-height: 0; overflow: hidden;\n  background: radial-gradient(ellipse at 50% 42%, #cbb387, #a88e62 68%, #7f6847); }\n.uiMapViewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }\n.uiMapViewport.is-dragging { cursor: grabbing; }\n.uiMapViewport:focus-visible { outline-offset: -3px; }\n.uiMapSurface { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; background: #e2d2ac; box-shadow: 0 12px 40px rgba(40, 24, 8, .5); }\n.uiMapImage { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }\n.uiMapDistricts { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }\n/* 所在分区：只亮目前分区，其他地方压暗；不在伦敦时整张压暗。线宽由 map.js 依缩放换算成萤幕像素。 */\n.uiMapShade { fill: #120c06; fill-rule: evenodd; opacity: .42; }\n.uiMapArea { fill: none; stroke: #f3d38b; stroke-linejoin: round; }\n.uiMapPickHalo { fill: none; stroke: rgba(28, 16, 6, .78); stroke-linejoin: round; animation: uiMapPick .3s ease-out; }\n.uiMapPick { fill: rgba(250, 226, 160, .18); stroke: #fff3d2; stroke-linejoin: round; animation: uiMapPick .3s ease-out; }\n@keyframes uiMapPick { from { fill-opacity: 0; stroke-opacity: 0; } }\n.uiMapPlaceholder { position: absolute; left: 0; right: 0; top: 40%; text-align: center; pointer-events: none; font: 13px/1.7 var(--sans); color: var(--paper-ink); }\n.uiMapPlaceholder strong { display: block; font: 600 17px/1.8 var(--serif); letter-spacing: .12em; }\n.uiMapStatus { position: absolute; left: 50%; top: 12px; z-index: 3; transform: translateX(-50%); max-width: calc(100% - 120px); margin: 0; padding: 6px 12px;\n  border-radius: 4px; background: rgba(42, 34, 27, .92); color: var(--text); font-size: 13px; text-align: center; }\n.uiMapStatus:empty { display: none; }\n\n/* 事件标记与分区名放在画面座标的图层：缩放时大小不变、保持清晰。 */\n.uiMapMarks, .uiMapLabels, .uiMapPins { position: absolute; inset: 0; pointer-events: none; }\n.uiMapLabel, .uiMapPin { position: absolute; left: 0; top: 0; pointer-events: auto; touch-action: none; }\n.uiMapLabel {\n  padding: 3px 11px; border: 1px solid rgba(90, 64, 30, .45); border-radius: 3px; background: rgba(245, 236, 212, .93);\n  color: #3a2d1f; font: 600 14px/1.45 var(--serif); letter-spacing: .16em; white-space: nowrap; box-shadow: 0 2px 5px rgba(40, 25, 10, .3);\n}\n.uiMapLabel:hover { background: #fff6dc; }\n.uiMapLabel[aria-pressed=\"true\"] { background: #33281e; color: var(--gilt-hi); border-color: var(--gilt-lo); }\n.uiMapLabel.is-here::before { content: '◆'; margin-right: 5px; color: var(--seal-hi); font-size: 10px; vertical-align: 2px; }\n/* 点按范围比外观大，手指容易点中。 */\n.uiMapLabel::after { content: ''; position: absolute; inset: -8px -6px; }\n/* 窄版不放常驻的分区名（2026-11-16 使用者决定）：点分区时由说明卡告知名称。 */\n@media (max-width: 759px) { .uiMapLabel { display: none; } }\n/* 事件标记：卡片原本的画法（✦ 圆章＋红色光晕；事件自带图示时只放图示）。 */\n.uiMapPin {\n  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;\n  background: transparent; color: var(--pin-ink);\n}\n.uiMapPinVisual {\n  display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid currentColor; border-radius: 50%;\n  background: var(--pin-panel); font: 21px/1 var(--serif);\n  box-shadow: 0 0 0 2px rgba(192, 88, 63, .5), 0 0 12px 4px rgba(214, 96, 64, .8);\n}\n.uiMapPinVisual.has-icon { border: 0; background: none; box-shadow: none; width: 30px; height: 30px; }\n.uiMapPinVisual img { display: block; width: 100%; height: 100%; object-fit: contain; }\n.uiMapPin.is-fading { opacity: .5; }\n.uiMapPin:hover .uiMapPinVisual,\n.uiMapPin[aria-pressed=\"true\"] .uiMapPinVisual { outline: 1px solid currentColor; outline-offset: 3px; }\n\n.uiMapZoom { position: absolute; right: max(12px, env(safe-area-inset-right)); top: 12px; z-index: 2; display: flex; flex-direction: column;\n  border: 1px solid rgba(60, 42, 20, .55); border-radius: 22px; background: rgba(40, 32, 25, .88); box-shadow: 0 3px 10px rgba(30, 15, 5, .35); overflow: hidden; }\n.uiMapZoom button { width: 42px; height: 42px; border: 0; background: none; font: 20px/1 Georgia, serif; }\n.uiMapZoom button + button { border-top: 1px solid var(--line); }\n.uiMapZoom button:disabled { opacity: .32; cursor: default; }\n.uiMapZoom svg { display: block; margin: auto; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }\n\n/* ── 说明卡：手机由下方滑出，宽版浮在地图右上 ──────────── */\n.uiMapSheet {\n  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; max-height: 64%; overflow: auto; overscroll-behavior: contain;\n  padding: 8px max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));\n  border-top: 1px solid var(--gilt-lo); border-radius: 16px 16px 0 0;\n  background: radial-gradient(ellipse at 20% 0, #4a3a2b, transparent 60%), linear-gradient(180deg, var(--ink-2), var(--ink));\n  box-shadow: 0 -10px 30px rgba(0, 0, 0, .45);\n  transform: translateY(105%); visibility: hidden; transition: transform .26s cubic-bezier(.2, .8, .2, 1), visibility 0s .26s;\n}\n.uiMapSheet.is-open { transform: none; visibility: visible; transition: transform .26s cubic-bezier(.2, .8, .2, 1); }\n.uiMapSheet::before { content: ''; display: block; width: 44px; height: 4px; margin: 0 auto 6px; border-radius: 2px; background: rgba(220, 194, 138, .35); }\n.uiMapSheetClose { position: absolute; top: 10px; right: max(12px, env(safe-area-inset-right)); z-index: 1; width: 40px; height: 40px;\n  border: 1px solid var(--line); border-radius: 50%; background: rgba(0, 0, 0, .15); font: 22px/1 Georgia, serif; }\n@media (min-width: 760px) {\n  .uiMapZoom { top: auto; bottom: 18px; right: 18px; }\n  .uiMapSheet { left: auto; right: 18px; top: 18px; bottom: auto; width: 390px; max-height: calc(100% - 36px);\n    padding: 18px 22px 22px; border: 1px solid var(--gilt-lo); border-radius: 6px; box-shadow: 0 16px 40px rgba(0, 0, 0, .5);\n    transform: translateX(16px); opacity: 0; transition: transform .22s ease-out, opacity .22s, visibility 0s .22s; }\n  .uiMapSheet.is-open { transform: none; opacity: 1; transition: transform .22s ease-out, opacity .22s; }\n  .uiMapSheet::before { display: none; }\n}\n/* 矮的宽版画面：说明卡几乎和地图一样高，缩放钮移到左下，避免被盖住。 */\n@media (min-width: 760px) and (max-height: 520px) { .uiMapZoom { right: auto; left: 18px; } }\n/* 矮的横向画面：标题列缩短，留给地图。 */\n@media (max-height: 480px) {\n  .uiMapEyebrow { display: none; }\n  .uiMapDialogHead { padding-block: max(4px, env(safe-area-inset-top)) 4px; }\n  .uiMapDialogTitle { font-size: 18px; }\n}\n\n/* ── 分区说明 ───────────────────────────────── */\n.uiMapDistrictHead { position: relative; display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 14px; align-items: center; padding: 6px 48px 14px 0; }\n.uiMapDistrictEmblem { position: relative; display: block; width: 68px; height: 68px; border-radius: 50%;\n  background: radial-gradient(circle at 35% 30%, #4b3c2c, #211a14 72%);\n  box-shadow: 0 0 0 2px var(--gilt-lo), 0 0 0 5px #241c15, 0 0 0 6px rgba(220, 194, 138, .45), 0 4px 10px rgba(0, 0, 0, .5); }\n.uiMapDistrictEmblem svg { position: absolute; inset: 12px; width: 44px; height: 44px; overflow: visible; }\n.uiMapDistrictEmblem path { fill: url(#uiMapGilt); stroke: #fff1c8; stroke-width: 1.2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }\n.uiMapDistrictName { margin: 0; font: 600 34px/1.25 var(--serif); letter-spacing: .2em; color: var(--gilt-hi); text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }\n/* 目前所在：封蜡章 */\n.uiMapDistrictSeal { position: absolute; right: 52px; top: 0; width: 58px; height: 58px; display: grid; place-items: center; transform: rotate(-12deg);\n  border-radius: 47% 53% 50% 48%; background: radial-gradient(circle at 35% 30%, var(--seal-hi), var(--seal) 60%, #5e170f);\n  box-shadow: inset 0 0 0 4px rgba(0, 0, 0, .18), inset 0 0 0 6px rgba(255, 190, 160, .18), 0 3px 6px rgba(0, 0, 0, .5);\n  color: #f8dcc8; font: 600 13px/1.15 var(--serif); letter-spacing: .1em; text-align: center; }\n.uiMapDistrictSummary { position: relative; margin: 2px 0 16px; padding: 14px 16px 15px; border-radius: 2px; color: var(--paper-ink);\n  background: linear-gradient(175deg, var(--paper), var(--paper-2)); box-shadow: inset 0 0 0 1px rgba(90, 64, 30, .25), 0 2px 8px rgba(0, 0, 0, .35);\n  font: 17px/1.85 var(--serif); letter-spacing: .04em; }\n.uiMapDistrictSummary::after { content: ''; position: absolute; top: -7px; left: 50%; width: 64px; height: 14px; margin-left: -32px; transform: rotate(-2deg);\n  background: rgba(236, 222, 186, .7); box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }\n.uiMapSheetRule { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font: 600 15px/1.5 var(--serif); letter-spacing: .3em; color: var(--gilt); }\n.uiMapSheetRule::before, .uiMapSheetRule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gilt-lo)); }\n.uiMapSheetRule::after { background: linear-gradient(270deg, transparent, var(--gilt-lo)); }\n.uiMapDistrictPlaces { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }\n.uiMapDistrictPlaces li { padding: 4px 11px; border: 1px solid var(--line); border-radius: 3px; background: rgba(0, 0, 0, .14); font: 16px/1.45 var(--serif); letter-spacing: .04em; }\n\n/* ── 事件卡 ───────────────────────────────── */\n.uiMapEventHead { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; align-items: center; padding: 6px 48px 14px 0; }\n.uiMapEventMedal { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center;\n  background: radial-gradient(circle at 35% 30%, #f3dfab, #c49d55 55%, #7c5c2b); box-shadow: inset 0 0 0 3px rgba(60, 40, 15, .35), 0 3px 8px rgba(0, 0, 0, .5); }\n.uiMapEventMedal svg { width: 30px; height: 30px; fill: none; stroke: #3a2810; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }\n.uiMapEventName { margin: 0; font: 600 26px/1.3 var(--serif); letter-spacing: .14em; color: var(--gilt-hi); }\n.uiMapEventMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 4px 0 18px; padding: 14px 16px;\n  border: 1px solid var(--line); border-radius: 4px; background: rgba(0, 0, 0, .16); font-size: 15px; font-variant-numeric: tabular-nums; }\n.uiMapEventTime { display: inline-flex; align-items: center; gap: 2px; }\n.uiMapEventTime > span { font-size: 17px; color: var(--gilt); }\n.encPips { display: inline-flex; gap: 5px; }\n.encPips i { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid var(--gilt-lo); }\n.encPips i.on { background: linear-gradient(135deg, var(--gilt-hi), var(--gilt-lo)); border-color: var(--gilt); }\n.uiMapEventLife { display: flex; align-items: center; gap: 4px; flex: 1 1 120px; min-width: 120px; }\n.uiMapEventLife > span { font-size: 16px; color: var(--gilt); }\n.uiMapEventLife i { flex: 1; height: 6px; border-radius: 3px; background: rgba(220, 194, 138, .18); overflow: hidden; }\n.uiMapEventLife b { display: block; height: 100%; background: linear-gradient(90deg, var(--gilt-lo), var(--gilt-hi)); }\n.uiMapEventLife.is-low b { background: linear-gradient(90deg, #7d2a1c, var(--seal-hi)); }\n.uiMapEventError { margin: -6px 0 14px; color: #f0a48f; font-size: 13px; }\n.uiMapEventError:empty { display: none; }\n.uiMapEnter { width: 100%; min-height: 50px; border: 1px solid #f1d9a0; border-radius: 4px; color: #2d2010;\n  background: linear-gradient(180deg, #ecd39a, #c19a52); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 3px 8px rgba(0, 0, 0, .4);\n  font: 600 16px/1 var(--serif); letter-spacing: .3em; }\n.uiMapEnter:disabled { opacity: .6; cursor: default; letter-spacing: .12em; }\n@media (prefers-reduced-motion: reduce) { .uiMapPick, .uiMapPickHalo { animation: none; } .uiMapSheet { transition: none; } }";
         /* 伦敦地图事件：由前端抽签产生，存在楼层变量 手札地图（与 stat_data 并列，模型读不到）。
            每一楼从最近一份 手札地图 往后推算；只有最新一楼的卡片会写入（出现新事件、打完移除）。
            规则见 小游戏双轨触发设计.md 2026-10-31 段落，数值在 london-events.json。 */
@@ -6716,40 +6560,33 @@ var NewCardAlbumData = (function () {
         }
 
         /* These functions share the card's lifecycle, image validation and event data. */
-        var mapDialog = null, mapReturnFocus = null, mapRestoreFocus = true;
-        var mapReadIds = new Set(), mapEventSignature = null, mapZoom = 1, mapDrag = null;
+        // 地图画面开在酒馆最外层的全萤幕对话框（2026-11-16 使用者决定；楼层宽度因主题而异，只有全萤幕方便排版）。
+        // 做法同留声机、小游戏：最外层页面放 dialog.uiMapShell，里面是独立的 iframe（不受酒馆主题样式影响），
+        // 每次开启时建立、关闭时移除。卡片里只留通知列。事件、选取、所在分区等状态都留在卡片里，地图开着时才画进 iframe。
+        // iframe 是另一个视窗：宽度、动画影格、时间、媒体查询一律用 atlas.win，不用卡片的 view。
+        var mapAtlas = null, mapReturnFocus = null;
+        var mapReadIds = new Set(), mapEventSignature = null;
         var mapLoadError = '', mapArea = null, mapEnterError = '';
-        var selectedMapDistrict = null, mapDistrictRings = null, mapDragMoved = false;
+        var selectedMapDistrict = null, mapDistrictRings = null;
+        var MAP_WIDE = 760;   // 画面宽度达到这个值：说明卡浮在右侧、常驻分区名（与 map-atlas.css 相同）。
+        var MAP_NS = 'http://www.w3.org/2000/svg';
 
         function hasMapDistrict(key) { return Object.prototype.hasOwnProperty.call(MAP_DISTRICTS, key); }
+        function mapReadyAtlas() { return mapAtlas && mapAtlas.ready ? mapAtlas : null; }
 
         // 依 MVU 的 世界.位置.区域 亮起所在分区。MAP_DISTRICTS 由 build_districts.py 从遮罩图产生、build.py 嵌入。
         // null（没有数据）＝全图照常；六区之一＝只亮该区；其他值（伦敦以外）＝整张压暗。
         function setMapArea(area) {
             if (destroyed) return false;
             mapArea = area ? String(area) : null;
-            drawMapDistricts();
-            syncMapDistrictCard();
+            if (mapReadyAtlas()) { drawMapDistricts(); syncMapPressed(); renderMapSheet(); }
             return true;
         }
 
-        // 分区图层：所在分区（压暗其他地方）与玩家点选的分区（淡金色）。
-        function drawMapDistricts() {
-            var layer = root.querySelector('.uiMapDistricts'), ns = 'http://www.w3.org/2000/svg';
-            layer.replaceChildren();
-            layer.hidden = !mapImage;
-            function path(className, d) {
-                var node = doc.createElementNS(ns, 'path');
-                node.setAttribute('class', className);
-                node.setAttribute('d', d);
-                layer.append(node);
-            }
-            if (mapArea !== null) {
-                var current = hasMapDistrict(mapArea) ? MAP_DISTRICTS[mapArea] : '';
-                path('uiMapShade', 'M0 0H1V1H0Z ' + current);
-                if (current) path('uiMapArea', current);
-            }
-            if (selectedMapDistrict) path('uiMapPick', MAP_DISTRICTS[selectedMapDistrict]);
+        // 地图图片的原始尺寸；没有图片时用设定的长宽比。
+        function mapSize() {
+            var w = mapImage && mapImage.naturalWidth, h = mapImage && mapImage.naturalHeight;
+            return w && h ? {w: w, h: h} : {w: 1000 * mapRatio, h: 1000};
         }
 
         // 分区形状：把路径拆成多边形（0–1 的相对座标），用来判断点到哪一区、决定标签位置。
@@ -6780,6 +6617,14 @@ var NewCardAlbumData = (function () {
             }) || null;
         }
 
+        function mapDistrictBox(key) {
+            var box = [1, 1, 0, 0];
+            mapRings()[key].forEach(function (ring) {
+                ring.forEach(function (p) { box = [Math.min(box[0], p[0]), Math.min(box[1], p[1]), Math.max(box[2], p[0]), Math.max(box[3], p[1])]; });
+            });
+            return box;
+        }
+
         // 标签位置：london-district-notes.json 的 label（[x, y]，0–1）优先，否则用最大一块形状的重心。
         function mapLabelPoint(key) {
             var note = MAP_DISTRICT_NOTES[key] || {};
@@ -6796,46 +6641,318 @@ var NewCardAlbumData = (function () {
             return best || [.5, .5];
         }
 
+        // ── 地图画面里的图层 ─────────────────────────────────────
+
+        // 分区图层：所在分区（压暗其他地方）与点选的分区（深色底线＋浅色虚线）。
+        function drawMapDistricts() {
+            var atlas = mapReadyAtlas();
+            if (!atlas) return;
+            var layer = atlas.districts;
+            layer.replaceChildren();
+            layer.style.display = mapImage ? '' : 'none';
+            function path(className, d, px) {
+                var node = atlas.doc.createElementNS(MAP_NS, 'path');
+                node.setAttribute('class', className);
+                node.setAttribute('d', d);
+                if (px) node.setAttribute('data-px', px);
+                layer.append(node);
+            }
+            if (mapArea !== null) {
+                var current = hasMapDistrict(mapArea) ? MAP_DISTRICTS[mapArea] : '';
+                path('uiMapShade', 'M0 0H1V1H0Z ' + current);
+                if (current) path('uiMapArea', current, '2.5');
+            }
+            if (selectedMapDistrict) {
+                path('uiMapPickHalo', MAP_DISTRICTS[selectedMapDistrict], '6');
+                path('uiMapPick', MAP_DISTRICTS[selectedMapDistrict], '3 9 6');
+            }
+            syncMapStroke(atlas);
+        }
+
+        // 线宽以萤幕像素计：整张图用 transform 缩放，SVG 的 non-scaling-stroke 在这里无效，所以每次缩放重算。
+        function syncMapStroke(atlas) {
+            var unit = 1 / (mapSize().w * atlas.view.s);
+            atlas.districts.querySelectorAll('[data-px]').forEach(function (node) {
+                var px = node.getAttribute('data-px').split(' ').map(Number);
+                node.setAttribute('stroke-width', px[0] * unit);
+                if (px.length > 2) node.setAttribute('stroke-dasharray', px[1] * unit + ' ' + px[2] * unit);
+            });
+        }
+
+        // 分区名：宽版常驻，窄版由 CSS 隐藏（点分区时由说明卡告知名称）。没有地图图片时不放。
         function renderMapLabels() {
-            var labels = root.querySelector('.uiMapLabels');
-            labels.replaceChildren();
-            Object.keys(MAP_DISTRICTS).forEach(function (key) {
-                var point = mapLabelPoint(key), label = create('button');
+            var atlas = mapReadyAtlas();
+            if (!atlas) return;
+            atlas.labels.replaceChildren();
+            if (mapImage) Object.keys(MAP_DISTRICTS).forEach(function (key) {
+                var label = atlas.doc.createElement('button');
                 label.type = 'button';
                 label.className = 'uiMapLabel';
                 label.dataset.district = key;
-                label.style.left = point[0] * 100 + '%';
-                label.style.top = point[1] * 100 + '%';
+                label._at = mapLabelPoint(key);
                 label.textContent = MAP_AREA_NAMES[key] || key;
                 label.setAttribute('aria-label', (MAP_AREA_NAMES[key] || key) + '：分区说明');
-                labels.append(label);
+                atlas.labels.append(label);
+            });
+            syncMapPressed();
+            placeMapMarks(atlas);
+        }
+
+        // 事件标记：卡片原本的画法（✦，事件自带图示时换成图示）。焦点在标记上时，重画后移到同一个事件。
+        function renderMapPins() {
+            var atlas = mapReadyAtlas();
+            if (!atlas) return;
+            var focused = atlas.doc.activeElement, focusId = focused && focused.dataset ? focused.dataset.eventId : undefined;
+            atlas.pins.replaceChildren();
+            mapEvents.forEach(function (data) {
+                var pin = atlas.doc.createElement('button'), visual = atlas.doc.createElement('span');
+                pin.type = 'button';
+                pin.className = 'uiMapPin';
+                pin.dataset.eventId = data.id;
+                pin._at = [data.x, data.y];
+                pin.classList.toggle('is-fading', data.fading);
+                pin.setAttribute('aria-label', '事件地点：' + data.label);
+                visual.className = 'uiMapPinVisual';
+                visual.setAttribute('aria-hidden', 'true');
+                visual.textContent = '✦';
+                pin.append(visual);
+                atlas.pins.append(pin);
+                if (data.icon) {
+                    var icon = atlas.doc.createElement('img');
+                    icon.alt = '';
+                    icon.draggable = false;
+                    icon.addEventListener('load', function () {
+                        if (!pin.isConnected) return;
+                        visual.replaceChildren(icon);
+                        visual.classList.add('has-icon');
+                    }, {once: true});
+                    icon.src = data.icon;
+                }
+            });
+            syncMapPressed();
+            placeMapMarks(atlas);
+            if (focusId !== undefined) {
+                var replacement = Array.from(atlas.pins.children).find(function (node) { return node.dataset.eventId === focusId; });
+                (replacement || atlas.box.querySelector('.uiMapClose')).focus({preventScroll: true});
+            }
+        }
+
+        function placeMapMarks(atlas) {
+            var v = atlas.view, size = mapSize();
+            atlas.marks.querySelectorAll('.uiMapLabel, .uiMapPin').forEach(function (node) {
+                var x = v.tx + node._at[0] * size.w * v.s, y = v.ty + node._at[1] * size.h * v.s;
+                node.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) translate(-50%,-50%)';
             });
         }
 
-        // 分区说明小卡：与事件小卡同一位置，一次只开一张。
-        function syncMapDistrictCard() {
-            var card = root.querySelector('.uiMapDistrictCard'), key = selectedMapDistrict;
-            root.querySelectorAll('.uiMapLabel').forEach(function (node) {
-                node.setAttribute('aria-pressed', String(node.dataset.district === key));
+        function syncMapPressed() {
+            var atlas = mapReadyAtlas();
+            if (!atlas) return;
+            atlas.labels.querySelectorAll('.uiMapLabel').forEach(function (node) {
+                node.setAttribute('aria-pressed', String(node.dataset.district === selectedMapDistrict));
                 node.classList.toggle('is-here', node.dataset.district === mapArea);
             });
-            card.hidden = !key;
-            if (!key) return;
+            atlas.pins.querySelectorAll('.uiMapPin').forEach(function (node) {
+                node.setAttribute('aria-pressed', String(node.dataset.eventId === selectedMapEvent));
+            });
+        }
+
+        // 图片换了（或第一次画）：底图、占位文字、分区名与缩放全部重来。
+        function applyMapImage(atlas) {
+            var size = mapSize();
+            atlas.image.hidden = !mapImage;
+            if (mapImage) atlas.image.src = mapImage.src;
+            else atlas.image.removeAttribute('src');
+            atlas.placeholder.hidden = !!mapImage;
+            atlas.surface.style.width = size.w + 'px';
+            atlas.surface.style.height = size.h + 'px';
+            mapRefit(atlas, false);
+            drawMapDistricts();
+            renderMapLabels();
+        }
+
+        // ── 平移与缩放：整张图以原始像素为单位，view = {s 缩放, tx/ty 平移, fit 全图时的缩放} ──
+
+        function mapViewportSize(atlas) { return {w: atlas.viewport.clientWidth, h: atlas.viewport.clientHeight}; }
+        // 看得到的范围：说明卡开着时，窄版扣掉下方卡片的高度，宽版扣掉右侧卡片的宽度。
+        function mapVisibleArea(atlas) {
+            var v = mapViewportSize(atlas), area = {left: 0, top: 0, right: v.w, bottom: v.h};
+            if (atlas.sheet.classList.contains('is-open')) {
+                if (atlas.win.innerWidth < MAP_WIDE) area.bottom = Math.max(v.h * .3, v.h - atlas.sheet.offsetHeight);
+                else area.right = Math.max(v.w * .4, v.w - atlas.sheet.offsetWidth - 30);
+            }
+            return area;
+        }
+        function mapMaxScale(atlas) { return Math.max(atlas.view.fit * 8, 1.1); }
+        // 地图的中心不能离开看得到的范围：可以拖到边缘看角落，但不会整张拖丢。
+        function mapClamp(atlas, next) {
+            var s = Math.max(atlas.view.fit, Math.min(mapMaxScale(atlas), next.s));
+            var a = mapVisibleArea(atlas), size = mapSize(), cx = (a.left + a.right) / 2, cy = (a.top + a.bottom) / 2;
+            return {s: s, tx: Math.min(cx, Math.max(cx - size.w * s, next.tx)), ty: Math.min(cy, Math.max(cy - size.h * s, next.ty))};
+        }
+        function mapApply(atlas, next) {
+            next = mapClamp(atlas, next);
+            atlas.view.s = next.s; atlas.view.tx = next.tx; atlas.view.ty = next.ty;
+            atlas.surface.style.transform = 'translate3d(' + next.tx + 'px,' + next.ty + 'px,0) scale(' + next.s + ')';
+            placeMapMarks(atlas);
+            syncMapStroke(atlas);
+            atlas.box.querySelector('[data-map-action="in"]').disabled = next.s >= mapMaxScale(atlas) - 1e-6;
+            atlas.box.querySelector('[data-map-action="out"]').disabled = next.s <= atlas.view.fit + 1e-6;
+        }
+        function mapCentered(atlas, s) {
+            var v = mapViewportSize(atlas), size = mapSize();
+            return {s: s, tx: (v.w - size.w * s) / 2, ty: (v.h - size.h * s) / 2};
+        }
+        // 以画面上的一点为中心缩放（双指中点、滑鼠位置）。
+        function mapZoomAt(atlas, px, py, s) {
+            var v = atlas.view;
+            s = Math.max(v.fit, Math.min(mapMaxScale(atlas), s));
+            return {s: s, tx: px - (px - v.tx) / v.s * s, ty: py - (py - v.ty) / v.s * s};
+        }
+        function mapStopAnim(atlas) {
+            if (atlas.anim) { atlas.win.cancelAnimationFrame(atlas.anim); atlas.anim = 0; }
+        }
+        function mapAnimate(atlas, target, ms) {
+            mapStopAnim(atlas);
+            target = mapClamp(atlas, target);
+            if (atlas.win.matchMedia('(prefers-reduced-motion: reduce)').matches) { mapApply(atlas, target); return; }
+            var from = {s: atlas.view.s, tx: atlas.view.tx, ty: atlas.view.ty}, start = atlas.win.performance.now();
+            function step(now) {
+                if (mapAtlas !== atlas) return;
+                var t = Math.min(1, Math.max(0, now - start) / ms), k = 1 - Math.pow(1 - t, 3);
+                mapApply(atlas, {s: from.s + (target.s - from.s) * k, tx: from.tx + (target.tx - from.tx) * k, ty: from.ty + (target.ty - from.ty) * k});
+                atlas.anim = t < 1 ? atlas.win.requestAnimationFrame(step) : 0;
+            }
+            atlas.anim = atlas.win.requestAnimationFrame(step);
+        }
+        // keep：视窗大小改变时，已放大的画面维持原样；在全图状态则重新置中。
+        function mapRefit(atlas, keep) {
+            var old = atlas.view.fit, v = mapViewportSize(atlas), size = mapSize();
+            atlas.view.fit = Math.max(1e-3, Math.min((v.w - 24) / size.w, (v.h - 24) / size.h));
+            if (!keep || atlas.view.s <= old + 1e-6) mapApply(atlas, mapCentered(atlas, atlas.view.fit));
+            else mapApply(atlas, atlas.view);
+        }
+        // 让地图上的一个范围（0–1 座标）落在看得到的区域中央；范围太小就放大到刚好放得下（不会缩小）。
+        function mapReveal(atlas, box, minScale) {
+            var a = mapVisibleArea(atlas), size = mapSize(), v = atlas.view;
+            var bw = Math.max(1e-3, box[2] - box[0]) * size.w, bh = Math.max(1e-3, box[3] - box[1]) * size.h;
+            var fitBox = Math.min((a.right - a.left - 48) / bw, (a.bottom - a.top - 48) / bh);
+            var s = Math.max(v.s, minScale || 0, Math.min(fitBox, v.fit * 4));
+            var inside = v.tx + box[0] * size.w * v.s > a.left + 8 && v.ty + box[1] * size.h * v.s > a.top + 8 &&
+                v.tx + box[2] * size.w * v.s < a.right - 8 && v.ty + box[3] * size.h * v.s < a.bottom - 8;
+            if (inside && s === v.s) return;
+            var x = (box[0] + box[2]) / 2, y = (box[1] + box[3]) / 2;
+            mapAnimate(atlas, {s: s, tx: (a.left + a.right) / 2 - x * size.w * s, ty: (a.top + a.bottom) / 2 - y * size.h * s}, 340);
+        }
+
+        function fitMap() {
+            var atlas = mapReadyAtlas();
+            if (atlas) mapRefit(atlas, true);
+        }
+
+        // ── 说明卡（事件或分区，一次一张） ─────────────────────────
+
+        // 分区轮廓：依地图比例还原形状，置中放进圆章。
+        function mapEmblem(key) {
+            var b = mapDistrictBox(key), size = mapSize(), ratio = size.w / size.h;
+            var w = b[2] - b[0], h = b[3] - b[1], side = Math.max(w, h / ratio);
+            var box = [b[0] - (side - w) / 2, b[1] - (side * ratio - h) / 2, side, side * ratio].map(function (n) { return n.toFixed(4); }).join(' ');
+            return '<svg viewBox="' + box + '" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + MAP_DISTRICTS[key] + '"/></svg>';
+        }
+
+        function renderMapDistrictCard(atlas, key) {
             var note = MAP_DISTRICT_NOTES[key] || {}, places = Array.isArray(note.places) ? note.places : [];
-            root.querySelector('.uiMapDistrictBody').innerHTML =
-                '<h3 class="uiMapDistrictName">' + esc(MAP_AREA_NAMES[key] || key) + (key === mapArea ? '<span>目前所在</span>' : '') + '</h3>' +
+            var name = MAP_AREA_NAMES[key] || key;
+            atlas.districtCard.innerHTML =
+                '<header class="uiMapDistrictHead"><span class="uiMapDistrictEmblem">' + mapEmblem(key) + '</span>' +
+                '<h2 class="uiMapDistrictName">' + esc(name) + '</h2>' +
+                (key === mapArea ? '<span class="uiMapDistrictSeal" role="img" aria-label="目前所在"><span aria-hidden="true">目前<br>所在</span></span>' : '') + '</header>' +
                 (note.summary ? '<p class="uiMapDistrictSummary">' + esc(note.summary) + '</p>' : '') +
-                (places.length ? '<h4 class="uiMapDistrictPlacesTitle">主要地点</h4><ul class="uiMapDistrictPlaces">' +
+                (places.length ? '<h3 class="uiMapSheetRule">主要地点</h3><ul class="uiMapDistrictPlaces">' +
                     places.map(function (place) { return '<li>' + esc(place) + '</li>'; }).join('') + '</ul>' : '');
         }
 
-        function selectMapDistrict(key) {
-            key = key && hasMapDistrict(key) ? key : null;
-            selectedMapDistrict = selectedMapDistrict === key ? null : key;
-            if (selectedMapDistrict && selectedMapEvent) { selectedMapEvent = null; syncMapSelection(); }
-            drawMapDistricts();
-            syncMapDistrictCard();
+        // 事件卡：分区、场景图示、地图大小、时间标签与剩余量；不写场景名、不列敌人（探索时才随机出现）。只有最新一楼能进入探索。
+        function renderMapEventCard(atlas, event) {
+            var size = MAP_SIZES[event.size] || 2, pips = '';
+            for (var i = 0; i < 4; i++) pips += '<i' + (i < size ? ' class="on"' : '') + '></i>';
+            var meta = '<span class="encPips" role="img" aria-label="地图大小 ' + size + '／4">' + pips + '</span>';
+            if (event.time) {
+                var clock = ('0' + event.time.hour).slice(-2) + ':' + ('0' + event.time.minute).slice(-2);
+                var night = event.time.hour < 6 || event.time.hour >= 18;
+                meta += '<span class="uiMapEventTime" role="img" aria-label="' + (night ? '夜间 ' : '白天 ') + clock + '"><span aria-hidden="true">' + (night ? '☾' : '☼') + '</span> ' + clock + '</span>';
+            }
+            var left = mapRemaining(mapEventRules, event, mapEventNow);
+            if (left !== null) {
+                var percent = Math.round(left * 100);
+                meta += '<span class="uiMapEventLife' + (left <= .25 ? ' is-low' : '') + '" role="meter" aria-label="剩余时间" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + percent + '">' +
+                    '<span aria-hidden="true">⧗</span> <i><b style="width:' + percent + '%"></b></i></span>';
+            }
+            atlas.eventCard.querySelector('.uiMapEventCardBody').innerHTML =
+                '<div class="uiMapEventHead"><span class="uiMapEventMedal" role="img" aria-label="' + esc(MAP_SCENE_NAMES[event.scene] || '') + '">' + encounterIcon(event.scene) + '</span>' +
+                '<h2 class="uiMapEventName">' + esc(MAP_AREA_NAMES[event.area] || event.area) + '</h2></div>' +
+                '<div class="uiMapEventMeta">' + meta + '</div>';
+            atlas.eventCard.querySelector('.uiMapEventError').textContent = mapEnterError;
+            var enter = atlas.eventCard.querySelector('.uiMapEnter'), waiting = mapEnterWaiting();
+            enter.hidden = !waiting && !canEnterMapEvent();
+            enter.disabled = waiting;
+            enter.textContent = waiting ? '等待变量更新' : '进入探索';
         }
+
+        // 换了说明的对象时，卷回顶端并把该处移到看得到的地方。
+        function renderMapSheet() {
+            var atlas = mapReadyAtlas();
+            if (!atlas) return;
+            var event = findMapEvent(selectedMapEvent), key = !event && mapImage && selectedMapDistrict ? selectedMapDistrict : null;
+            atlas.eventCard.hidden = !event;
+            atlas.districtCard.hidden = !key;
+            if (event) renderMapEventCard(atlas, event);
+            if (key) renderMapDistrictCard(atlas, key);
+            var sheetKey = event ? 'event:' + event.id : key ? 'district:' + key : '';
+            atlas.sheet.classList.toggle('is-open', !!sheetKey);
+            if (sheetKey === atlas.sheetKey) return;
+            atlas.sheetKey = sheetKey;
+            if (!sheetKey) { mapAnimate(atlas, atlas.view, 240); return; }
+            if (event && mapEnterOpen()) mapPrefetchExploration();
+            atlas.sheet.scrollTop = 0;
+            var box = event ? [event.x - .03, event.y - .03, event.x + .03, event.y + .03] : mapDistrictBox(key);
+            atlas.win.requestAnimationFrame(function () { if (mapAtlas === atlas) mapReveal(atlas, box, event ? atlas.view.fit * 1.6 : 0); });
+        }
+
+        function syncMapSelection() {
+            if (selectedMapEvent && selectedMapDistrict) selectedMapDistrict = null;
+            if (!findMapEvent(selectedMapEvent)) mapEnterError = '';
+            var atlas = mapReadyAtlas();
+            if (!atlas) return;
+            atlas.box.querySelector('.uiMapStatus').textContent = mapLoadError;
+            drawMapDistricts();
+            syncMapPressed();
+            renderMapSheet();
+        }
+
+        function selectMapDistrict(key) {
+            selectedMapDistrict = key && hasMapDistrict(key) ? key : null;
+            if (selectedMapDistrict) selectedMapEvent = null;
+            syncMapSelection();
+        }
+
+        function selectMapEvent(id) {
+            if (!mapEvents.some(function (entry) { return entry.id === id; })) return;
+            selectedMapEvent = selectedMapEvent === id ? null : id;
+            if (selectedMapEvent) selectedMapDistrict = null;
+            mapEnterError = '';
+            mapReadIds.add(id);
+            syncMapSelection();
+            syncMapNotice();
+        }
+
+        function closeMapSheet() {
+            selectedMapEvent = null;
+            selectedMapDistrict = null;
+            syncMapSelection();
+        }
+
+        // ── 通知列与开关 ─────────────────────────────────────────
 
         function mapUnreadIds() {
             return mapEvents.filter(function (event) { return !mapReadIds.has(event.id); }).map(function (event) { return event.id; });
@@ -6848,8 +6965,9 @@ var NewCardAlbumData = (function () {
             var notice = root.querySelector('.uiMapNotice');
             if (notice.textContent !== noticeText) notice.textContent = noticeText;
             root.querySelector('.uiMapCount').textContent = countText;
-            root.querySelector('.uiMapDialogCount').textContent = countText;
             root.querySelector('.uiMapToggle').setAttribute('aria-label', '开启伦敦地图，' + countText + (unread ? '，' + noticeText : ''));
+            var atlas = mapReadyAtlas();
+            if (atlas) atlas.box.querySelector('.uiMapDialogCount').innerHTML = count ? '<b>' + count + '</b> 个事件' : '暂无事件';
         }
 
         function markMapRead() {
@@ -6857,204 +6975,245 @@ var NewCardAlbumData = (function () {
             syncMapNotice();
         }
 
-        function fitMap() {
-            if (destroyed || !mapDialog || !mapDialog.open) return;
-            var viewport = root.querySelector('.uiMapViewport'), surface = root.querySelector('.uiMapSurface');
-            var plane = root.querySelector('.uiMapPlane');
-            var ratio = mapImage ? mapImage.naturalWidth / mapImage.naturalHeight : mapRatio;
-            var width = Math.min(Math.max(0, viewport.clientWidth - 56), Math.max(0, viewport.clientHeight - 56) * ratio) * mapZoom;
-            surface.style.width = width + 'px';
-            surface.style.height = width / ratio + 'px';
-            plane.style.width = Math.max(viewport.clientWidth, width + 56) + 'px';
-            plane.style.height = Math.max(viewport.clientHeight, width / ratio + 56) + 'px';
-            root.querySelector('.uiMapZoomValue').textContent = Number(mapZoom.toFixed(1)) + '×';
-            root.querySelector('[data-map-action="out"]').disabled = mapZoom <= 1;
-            root.querySelector('[data-map-action="in"]').disabled = mapZoom >= 6;
-        }
-
-        function zoomMap(value) {
-            if (destroyed || !mapDialog.open) return;
-            var viewport = root.querySelector('.uiMapViewport'), plane = root.querySelector('.uiMapPlane');
-            var x = (viewport.scrollLeft + viewport.clientWidth / 2) / Math.max(1, plane.clientWidth);
-            var y = (viewport.scrollTop + viewport.clientHeight / 2) / Math.max(1, plane.clientHeight);
-            mapZoom = Math.max(1, Math.min(6, value));
-            fitMap();
-            viewport.scrollLeft = x * plane.clientWidth - viewport.clientWidth / 2;
-            viewport.scrollTop = y * plane.clientHeight - viewport.clientHeight / 2;
-        }
-
         function openMap() {
-            if (destroyed || !mapDialog || !root.isConnected || root.classList.contains('sheet-open')) return false;
-            if (mapDialog.open) return true;
+            if (destroyed || !root.isConnected || root.classList.contains('sheet-open')) return false;
+            if (mapAtlas) return true;
             cancelEdgeTurn();
             mapReturnFocus = doc.activeElement;
-            mapRestoreFocus = true;
-            prepareDialogView();
-            mapDialog.showModal();
+            var atlas = mapAtlas = {screen: null, frame: null, ready: false, view: {s: 1, tx: 0, ty: 0, fit: 1}, anim: 0,
+                pointers: new Map(), gesture: null, moved: false, lastTap: null, tapTarget: null, sheetKey: ''};
+            // 外框与 iframe 由 NewCardFullscreen 建立（fullscreen.js，留声机也用同一份）。
+            atlas.screen = NewCardFullscreen.open({window: view, className: 'uiMapShell', label: '伦敦地图', background: '#14100c',
+                onCancel: function () { if (mapAtlas === atlas) closeMap(); },
+                onLoad: function () { if (mapAtlas === atlas && !atlas.ready) mountMapAtlas(atlas); }});
+            atlas.frame = atlas.screen.frame;
             root.querySelector('.uiMapToggle').setAttribute('aria-expanded', 'true');
             markMapRead();
-            fitMap();
-            root.querySelector('.uiMapClose').focus({preventScroll: true});
             return true;
         }
 
         function closeMap(restoreFocus) {
-            if (!mapDialog || !mapDialog.open) return false;
-            mapRestoreFocus = restoreFocus !== false;
-            mapDrag = null;
-            root.querySelector('.uiMapViewport').classList.remove('is-dragging');
+            var atlas = mapAtlas;
+            if (!atlas) return false;
+            mapAtlas = null;
+            if (atlas.ready) {
+                mapStopAnim(atlas);
+                atlas.abort.abort();
+            }
+            atlas.screen.close();
             root.querySelector('.uiMapToggle').setAttribute('aria-expanded', 'false');
-            mapDialog.close();
+            if (restoreFocus !== false && !destroyed && mapReturnFocus && mapReturnFocus.isConnected) mapReturnFocus.focus({preventScroll: true});
+            mapReturnFocus = null;
             return true;
         }
 
-        function syncMapSelection() {
-            root.querySelectorAll('.uiMapPin').forEach(function (node) {
-                node.setAttribute('aria-pressed', String(node.dataset.eventId === selectedMapEvent));
+        // iframe 载入后：放入样式与画面，接上操作，依目前状态画出来。
+        function mountMapAtlas(atlas) {
+            var win = atlas.frame.contentWindow, gdoc = win && win.document;
+            if (!gdoc || !gdoc.body) return;
+            atlas.win = win;
+            atlas.doc = gdoc;
+            atlas.abort = new win.AbortController();
+            // 卡片选用的正文字体（网路字型的 CSS）一并载入。
+            NewCardFullscreen.copyFonts(doc, gdoc);
+            var style = gdoc.createElement('style');
+            style.textContent = MAP_ATLAS_CSS;
+            gdoc.head.appendChild(style);
+            gdoc.body.innerHTML = MAP_ATLAS_HTML;
+            var box = atlas.box = gdoc.querySelector('.uiMapDialog'), card = view.getComputedStyle(root);
+            // 字型与事件标记的颜色跟着卡片（标记沿用卡片原本的画法）。
+            [['--serif', '--serif'], ['--sans', '--sans'], ['--pin-panel', '--ds-panel'], ['--pin-ink', '--card-fg'], ['--enc', '--enc']].forEach(function (pair) {
+                var value = card.getPropertyValue(pair[1]).trim();
+                if (value) box.style.setProperty(pair[0], value);
             });
-            root.querySelector('.uiMapStatus').textContent = mapLoadError;
-            syncMapEventCard();
-            if (selectedMapEvent && selectedMapDistrict) {
-                selectedMapDistrict = null;
-                drawMapDistricts();
-                syncMapDistrictCard();
-            }
+            ['viewport', 'surface', 'image', 'placeholder', 'districts', 'marks', 'labels', 'pins', 'sheet'].forEach(function (name) {
+                atlas[name] = box.querySelector('.uiMap' + name.charAt(0).toUpperCase() + name.slice(1));
+            });
+            atlas.eventCard = box.querySelector('.uiMapEventCard');
+            atlas.districtCard = box.querySelector('.uiMapDistrictCard');
+            bindMapAtlas(atlas);
+            box.showModal();
+            atlas.ready = true;
+            applyMapImage(atlas);
+            renderMapPins();
+            syncMapNotice();
+            syncMapSelection();
+            // showModal 会把焦点放在第一个按钮并可能画出焦点框；先移开，再放到关闭钮但不画框（手机开地图时不出现外框）。
+            if (gdoc.activeElement && gdoc.activeElement.blur) gdoc.activeElement.blur();
+            box.querySelector('.uiMapClose').focus({preventScroll: true, focusVisible: false});
         }
 
-        // 事件小视窗：分区、场景图示、地图大小、时间标签与剩余量；不列敌人（探索时才随机出现）。只有最新一楼能进入探索。
-        function syncMapEventCard() {
-            var card = root.querySelector('.uiMapEventCard'), event = findMapEvent(selectedMapEvent);
-            card.hidden = !event;
-            if (!event) { mapEnterError = ''; return; }
-            var size = MAP_SIZES[event.size] || 2, pips = '';
-            for (var i = 0; i < 4; i++) pips += '<i' + (i < size ? ' class="on"' : '') + '></i>';
-            var time = '';
-            if (event.time) {
-                var clock = ('0' + event.time.hour).slice(-2) + ':' + ('0' + event.time.minute).slice(-2);
-                var night = event.time.hour < 6 || event.time.hour >= 18;
-                time = '<span class="uiMapEventTime" role="img" aria-label="' + (night ? '夜间 ' : '白天 ') + clock + '"><span aria-hidden="true">' + (night ? '☾' : '☼') + '</span>' + clock + '</span>';
-            }
-            var left = mapRemaining(mapEventRules, event, mapEventNow), life = '';
-            if (left !== null) {
-                var percent = Math.round(left * 100);
-                life = '<div class="uiMapEventLife" role="meter" aria-label="剩余时间" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + percent + '">' +
-                    '<span aria-hidden="true">⧗</span><i><b style="width:' + percent + '%"></b></i></div>';
-            }
-            root.querySelector('.uiMapEventCardBody').innerHTML =
-                '<div class="uiMapEventHead"><span role="img" aria-label="' + esc(MAP_SCENE_NAMES[event.scene] || '') + '">' + encounterIcon(event.scene) + '</span>' +
-                '<strong>' + esc(MAP_AREA_NAMES[event.area] || event.area) + '</strong></div>' +
-                '<div class="uiMapEventMeta"><span class="encPips" role="img" aria-label="地图大小 ' + size + '／4">' + pips + '</span>' + time + '</div>' + life;
-            root.querySelector('.uiMapEventError').textContent = mapEnterError;
-            var enter = root.querySelector('.uiMapEnter'), waiting = mapEnterWaiting();
-            enter.hidden = !waiting && !canEnterMapEvent();
-            enter.disabled = waiting;
-            enter.textContent = waiting ? '等待变量更新' : '进入探索';
+        function activateMapMark(button) {
+            if (button.dataset.eventId !== undefined) selectMapEvent(button.dataset.eventId);
+            else if (button.dataset.district !== undefined) selectMapDistrict(selectedMapDistrict === button.dataset.district ? null : button.dataset.district);
         }
 
+        // 操作：单指／滑鼠拖曳、双指缩放、滚轮（触控板）缩放、点两下放大、方向键与 +／−。
+        // 从事件标记或分区名开始的手势也交给地图（才能在标记上拖曳、缩放）；没有移动才算点了那个按钮。
+        function bindMapAtlas(atlas) {
+            var box = atlas.box, viewport = atlas.viewport, win = atlas.win, opts = {signal: atlas.abort.signal};
+            function on(target, type, fn, extra) { target.addEventListener(type, fn, extra ? Object.assign({}, opts, extra) : opts); }
+            function point(event) { var rect = viewport.getBoundingClientRect(); return {x: event.clientX - rect.left, y: event.clientY - rect.top}; }
+            function startGesture() {
+                var list = Array.from(atlas.pointers.values()), v = atlas.view;
+                if (list.length >= 2) {
+                    var a = list[0], b = list[1];
+                    atlas.gesture = {pinch: true, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, s: v.s, tx: v.tx, ty: v.ty};
+                } else atlas.gesture = list.length ? {pinch: false, x: list[0].x, y: list[0].y, tx: v.tx, ty: v.ty} : null;
+            }
+            on(box, 'cancel', function (event) {
+                event.preventDefault();
+                if (atlas.sheetKey) closeMapSheet(); else closeMap();
+            });
+            on(box, 'close', function () { if (mapAtlas === atlas) closeMap(); });
+            on(box, 'click', function (event) {
+                var button = event.target.closest('button');
+                if (!button) return;
+                // 标记与分区名：滑鼠和触控在放开时处理；这里只处理键盘（Enter／空白键）与程式触发的点击。
+                if (button.matches('.uiMapPin, .uiMapLabel')) { if (event.detail === 0) activateMapMark(button); return; }
+                var action = button.dataset.mapAction, v = mapViewportSize(atlas);
+                if (action === 'close') closeMap();
+                if (action === 'sheet-close') closeMapSheet();
+                if (action === 'enter') enterMapEvent();
+                if (action === 'in') mapAnimate(atlas, mapZoomAt(atlas, v.w / 2, v.h / 2, atlas.view.s * 1.6), 220);
+                if (action === 'out') mapAnimate(atlas, mapZoomAt(atlas, v.w / 2, v.h / 2, atlas.view.s / 1.6), 220);
+                if (action === 'fit') mapAnimate(atlas, mapCentered(atlas, atlas.view.fit), 260);
+            });
+            on(viewport, 'pointerdown', function (event) {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                mapStopAnim(atlas);
+                if (!atlas.pointers.size) { atlas.moved = false; atlas.tapTarget = event.target.closest('button'); }
+                try { viewport.setPointerCapture(event.pointerId); } catch (_) {}
+                atlas.pointers.set(event.pointerId, point(event));
+                startGesture();
+            });
+            on(viewport, 'pointermove', function (event) {
+                if (!atlas.pointers.has(event.pointerId)) return;
+                atlas.pointers.set(event.pointerId, point(event));
+                var g = atlas.gesture;
+                if (!g) return;
+                if (g.pinch) {
+                    var list = Array.from(atlas.pointers.values()), a = list[0], b = list[1];
+                    var s = Math.max(atlas.view.fit, Math.min(mapMaxScale(atlas), g.s * Math.hypot(a.x - b.x, a.y - b.y) / g.d));
+                    var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+                    atlas.moved = true;
+                    mapApply(atlas, {s: s, tx: mx - (g.mx - g.tx) / g.s * s, ty: my - (g.my - g.ty) / g.s * s});
+                    return;
+                }
+                var p = atlas.pointers.get(event.pointerId), dx = p.x - g.x, dy = p.y - g.y;
+                if (Math.abs(dx) + Math.abs(dy) > 6) atlas.moved = true;
+                if (atlas.moved) {
+                    viewport.classList.add('is-dragging');
+                    mapApply(atlas, {s: atlas.view.s, tx: g.tx + dx, ty: g.ty + dy});
+                }
+            });
+            function release(event) {
+                if (!atlas.pointers.has(event.pointerId)) return;
+                var p = atlas.pointers.get(event.pointerId);
+                atlas.pointers.delete(event.pointerId);
+                startGesture();
+                if (atlas.pointers.size) return;
+                viewport.classList.remove('is-dragging');
+                var target = atlas.tapTarget;
+                atlas.tapTarget = null;
+                if (atlas.moved || event.type === 'pointercancel') return;
+                if (target) { atlas.lastTap = null; activateMapMark(target); return; }
+                // 点两下（300ms 内、距离 30px 内）：放大；已放到最大则回到全图。点一下：点到分区＝开说明，分区外＝收起。
+                var now = win.performance.now(), last = atlas.lastTap;
+                if (last && now - last.t < 300 && Math.hypot(p.x - last.x, p.y - last.y) < 30) {
+                    atlas.lastTap = null;
+                    mapAnimate(atlas, atlas.view.s >= mapMaxScale(atlas) - 1e-6 ? mapCentered(atlas, atlas.view.fit) : mapZoomAt(atlas, p.x, p.y, atlas.view.s * 2), 260);
+                    return;
+                }
+                atlas.lastTap = {t: now, x: p.x, y: p.y};
+                if (!mapImage) return;
+                var size = mapSize(), x = (p.x - atlas.view.tx) / (size.w * atlas.view.s), y = (p.y - atlas.view.ty) / (size.h * atlas.view.s);
+                var key = x >= 0 && x <= 1 && y >= 0 && y <= 1 ? mapDistrictAt(x, y) : null;
+                if (key) { if (key !== selectedMapDistrict || selectedMapEvent) selectMapDistrict(key); }
+                else closeMapSheet();
+            }
+            on(viewport, 'pointerup', release);
+            on(viewport, 'pointercancel', release);
+            on(viewport, 'dragstart', function (event) { event.preventDefault(); });
+            on(viewport, 'wheel', function (event) {
+                event.preventDefault();
+                mapStopAnim(atlas);
+                var p = point(event), k = Math.exp(-event.deltaY * (event.ctrlKey ? .012 : .0022));
+                mapApply(atlas, mapZoomAt(atlas, p.x, p.y, atlas.view.s * k));
+            }, {passive: false});
+            on(viewport, 'keydown', function (event) {
+                var v = mapViewportSize(atlas), s = atlas.view, step = 60, key = event.key;
+                if (key === '+' || key === '=') mapAnimate(atlas, mapZoomAt(atlas, v.w / 2, v.h / 2, s.s * 1.6), 200);
+                else if (key === '-' || key === '_') mapAnimate(atlas, mapZoomAt(atlas, v.w / 2, v.h / 2, s.s / 1.6), 200);
+                else if (key === 'ArrowLeft') mapApply(atlas, {s: s.s, tx: s.tx + step, ty: s.ty});
+                else if (key === 'ArrowRight') mapApply(atlas, {s: s.s, tx: s.tx - step, ty: s.ty});
+                else if (key === 'ArrowUp') mapApply(atlas, {s: s.s, tx: s.tx, ty: s.ty + step});
+                else if (key === 'ArrowDown') mapApply(atlas, {s: s.s, tx: s.tx, ty: s.ty - step});
+                else return;
+                event.preventDefault();
+            });
+            var resizeTimer = 0;
+            on(win, 'resize', function () {
+                win.clearTimeout(resizeTimer);
+                resizeTimer = win.setTimeout(function () { if (mapAtlas === atlas) mapRefit(atlas, true); }, 60);
+            });
+        }
+
+        // 进入探索时地图先留着（探索画面盖在上面、地图变暗），整备页可以用时才由 openExploration 呼叫 mapHandOff 关闭
+        // （2026-11-16 使用者决定）。载入失败或事件被拒时回到这张地图，缩放与位置不变。
         function enterMapEvent() {
             var event = findMapEvent(selectedMapEvent);
             if (!event || !canEnterMapEvent()) return;
             mapEnterError = '';
-            selectedMapEvent = null;
-            syncMapSelection();
-            closeMap(false);
             openExploration(null, event);
         }
 
-        // 探索页拒绝这个事件（例如敌人超出地图容量）：回到地图并显示原因。
+        // 整备页已经显示：关闭地图。之后关闭探索回到正文卡片（地图按钮），不回地图（使用者决定）。
+        function mapHandOff() {
+            selectedMapEvent = null;
+            mapEnterError = '';
+            closeMap(false);
+        }
+
+        // 地图关闭钮在画面上的位置：从地图进入探索、载入期间，探索的 × 叠在同一处。地图没开时回传 null。
+        function mapCloseSpot() {
+            var atlas = mapReadyAtlas();
+            if (!atlas) return null;
+            var r = atlas.box.querySelector('.uiMapClose').getBoundingClientRect();
+            return {top: r.top, right: atlas.win.innerWidth - r.right};
+        }
+
+        // 打开事件卡时先在背景下载探索页（同一个网址只下载一次），按「进入探索」时就不必再等。
+        function mapPrefetchExploration() {
+            var url = explorationUrl();
+            if (url) explorationHtml(explorationHost(), url).catch(function () {});
+        }
+
+        // 探索页拒绝这个事件（例如敌人超出地图容量）或载入失败：回到地图并显示原因。地图通常还开着（进入时没有关）；
+        // 已经关掉时重新打开，地图画面是非同步建立的，所以先记在状态里。
         function mapEnterFailed(result, id) {
             var issue = result && result.issues && result.issues[0];
             openMap();
             selectedMapEvent = findMapEvent(id) ? id : null;
+            if (selectedMapEvent) selectedMapDistrict = null;
             syncMapSelection();
-            mapEnterError = issue && issue.message || '这个事件暂时无法开启。';
-            root.querySelector('.uiMapEventError').textContent = mapEnterError;
-        }
-
-        function selectMapEvent(id) {
-            if (!mapEvents.some(function (entry) { return entry.id === id; })) return;
-            selectedMapEvent = selectedMapEvent === id ? null : id;
-            mapReadIds.add(id);
-            syncMapSelection();
-            syncMapNotice();
+            mapEnterError = selectedMapEvent ? issue && issue.message || '这个事件暂时无法开启。' : '';
+            renderMapSheet();
         }
 
         function initializeMap() {
-            mapDialog = root.querySelector('.uiMapDialog');
-            if (mapDialog.open) mapDialog.close();
-            var button = root.querySelector('.uiMapToggle'), title = root.querySelector('.uiMapDialogTitle');
-            mapDialog.id = skillViewId + '-map';
-            title.id = mapDialog.id + '-title';
-            mapDialog.setAttribute('aria-labelledby', title.id);
-            button.setAttribute('aria-controls', mapDialog.id);
+            var button = root.querySelector('.uiMapToggle');
             button.setAttribute('aria-expanded', 'false');
             listen(button, 'click', openMap);
-            listen(mapDialog, 'cancel', function (event) { event.preventDefault(); closeMap(); });
-            listen(mapDialog, 'close', function () {
-                if (mapDialog.open) return;
-                button.setAttribute('aria-expanded', 'false');
-                if (!destroyed && mapRestoreFocus && mapReturnFocus && mapReturnFocus.isConnected) mapReturnFocus.focus({preventScroll: true});
-                mapReturnFocus = null;
-            });
-            listen(mapDialog, 'click', function (event) {
-                var target = event.target.closest('button');
-                if (!target) return;
-                if (target.dataset.eventId !== undefined) {
-                    selectMapEvent(target.dataset.eventId);
-                    return;
-                }
-                if (target.dataset.district !== undefined) {
-                    if (!mapDragMoved) selectMapDistrict(target.dataset.district);
-                    return;
-                }
-                var action = target.dataset.mapAction;
-                if (action === 'close') closeMap();
-                if (action === 'district-close') selectMapDistrict(null);
-                if (action === 'deselect') { selectedMapEvent = null; syncMapSelection(); }
-                if (action === 'enter') enterMapEvent();
-                if (action === 'fit') zoomMap(1);
-                if (action === 'in') zoomMap(mapZoom * 1.5);
-                if (action === 'out') zoomMap(mapZoom / 1.5);
-            });
-            var viewport = root.querySelector('.uiMapViewport');
-            renderMapLabels();
-            // 点地图上的分区范围＝开该区说明；点分区以外＝收起。拖曳地图（滑鼠移动超过 5px）不算点选；触控卷动本来就不会触发 click。
-            listen(viewport, 'click', function (event) {
-                if (!mapImage || mapDragMoved || event.target.closest('button')) return;
-                var box = root.querySelector('.uiMapSurface').getBoundingClientRect();
-                var x = (event.clientX - box.left) / box.width, y = (event.clientY - box.top) / box.height;
-                var key = x >= 0 && x <= 1 && y >= 0 && y <= 1 ? mapDistrictAt(x, y) : null;
-                if (key !== selectedMapDistrict) selectMapDistrict(key);
-            });
-            listen(viewport, 'pointerdown', function (event) {
-                mapDragMoved = false;
-                // 区名标签上也可以开始拖曳（标签占的面积不小）；事件标记与其他按钮不行。
-                var hit = event.target.closest('button');
-                if (event.pointerType !== 'mouse' || event.button !== 0 || (hit && !hit.classList.contains('uiMapLabel'))) return;
-                mapDrag = {id: event.pointerId, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop};
-                viewport.setPointerCapture(event.pointerId);
-            });
-            listen(viewport, 'pointermove', function (event) {
-                if (!mapDrag || event.pointerId !== mapDrag.id) return;
-                if (Math.abs(event.clientX - mapDrag.x) + Math.abs(event.clientY - mapDrag.y) > 5) mapDragMoved = true;
-                viewport.classList.add('is-dragging');
-                viewport.scrollLeft = mapDrag.left + mapDrag.x - event.clientX;
-                viewport.scrollTop = mapDrag.top + mapDrag.y - event.clientY;
-            });
-            function endDrag() { mapDrag = null; viewport.classList.remove('is-dragging'); }
-            listen(viewport, 'pointerup', endDrag);
-            listen(viewport, 'pointercancel', endDrag);
-            listen(viewport, 'lostpointercapture', endDrag);
-            listen(viewport, 'dragstart', function (event) { event.preventDefault(); });
             listen(view, 'pagehide', function () { closeMap(false); });
         }
 
         function setMapSize(height, ratio) {
             if (destroyed) return false;
-            // Keep the existing API; the map dialog now uses the available viewport.
-            if (Number.isFinite(height)) root.style.setProperty('--ui-map-height', Math.max(96, Math.min(240, height)) + 'px');
+            // 保留旧介面：height 已不再使用（地图改为全萤幕）；ratio 用在还没有图片时。
             if (Number.isFinite(ratio) && ratio > 0) mapRatio = ratio;
-            fitMap();
+            var atlas = mapReadyAtlas();
+            if (atlas && !mapImage) applyMapImage(atlas);
             return true;
         }
 
@@ -7066,9 +7225,6 @@ var NewCardAlbumData = (function () {
                 var url = safeImageUrl(src);
                 if (!url) return false;
                 image = new view.Image();
-                image.alt = '伦敦地图';
-                image.className = 'uiMapImage';
-                image.draggable = false;
                 var loaded = await new Promise(function (resolve) {
                     function finish(ok) {
                         image.onload = image.onerror = null;
@@ -7088,17 +7244,12 @@ var NewCardAlbumData = (function () {
                     return false;
                 }
             }
-            if (mapImage) mapImage.remove();
             mapImage = image;
-            root.querySelector('.uiMapPlaceholder').hidden = !!image;
-            root.querySelector('.uiMapLabels').hidden = !image;
-            if (image) root.querySelector('.uiMapDistricts').before(image);
             if (!image) selectedMapDistrict = null;
-            setMapArea(mapArea);
             mapLoadError = '';
-            mapZoom = 1;
+            var atlas = mapReadyAtlas();
+            if (atlas) applyMapImage(atlas);
             syncMapSelection();
-            fitMap();
             return true;
         }
 
@@ -7113,52 +7264,20 @@ var NewCardAlbumData = (function () {
             });
             var signature = JSON.stringify(next);
             if (signature === mapEventSignature) return true;
-            var focused = doc.activeElement;
-            var focusId = focused && focused.dataset ? focused.dataset.eventId : undefined;
             mapEvents = next;
             mapEventSignature = signature;
             if (!ids.has(selectedMapEvent)) selectedMapEvent = null;
-            var pins = root.querySelector('.uiMapPins');
-            pins.replaceChildren();
-            mapEvents.forEach(function (data) {
-                var pin = create('button');
-                pin.type = 'button';
-                pin.className = 'uiMapPin';
-                pin.dataset.eventId = data.id;
-                pin.style.left = data.x * 100 + '%';
-                pin.style.top = data.y * 100 + '%';
-                pin.classList.toggle('is-fading', data.fading);
-                pin.setAttribute('aria-label', '事件地点：' + data.label);
-                var visual = create('span');
-                visual.className = 'uiMapPinVisual';
-                visual.setAttribute('aria-hidden', 'true');
-                visual.textContent = '✦';
-                pin.append(visual);
-                pins.append(pin);
-                if (data.icon) {
-                    var icon = new view.Image();
-                    icon.alt = '';
-                    listen(icon, 'load', function () {
-                        if (!pin.isConnected) return;
-                        visual.replaceChildren(icon);
-                        visual.classList.add('has-icon');
-                    }, {once: true});
-                    icon.src = data.icon;
-                }
-            });
-            if (mapDialog && mapDialog.open) markMapRead();
+            renderMapPins();
+            if (mapAtlas) markMapRead();
             else syncMapNotice();
             syncMapSelection();
-            if (mapDialog.open && focusId !== undefined) {
-                var candidates = root.querySelectorAll('.uiMapPin');
-                var replacement = Array.from(candidates).find(function (node) { return node.dataset.eventId === focusId; });
-                (replacement || root.querySelector('.uiMapClose')).focus({preventScroll: true});
-            }
             return true;
         }
 
         function getMapState() {
-            return {open: !!(mapDialog && mapDialog.open), count: mapEvents.length, unreadIds: mapUnreadIds(), zoom: mapZoom, selectedId: selectedMapEvent, selectedDistrict: selectedMapDistrict};
+            var atlas = mapReadyAtlas();
+            return {open: !!mapAtlas, count: mapEvents.length, unreadIds: mapUnreadIds(), zoom: atlas ? Number((atlas.view.s / atlas.view.fit).toFixed(2)) : 1,
+                selectedId: selectedMapEvent, selectedDistrict: selectedMapDistrict};
         }
         /* END_FRONTEND_MAP */
 
@@ -9606,9 +9725,13 @@ var NewCardAlbumData = (function () {
             if (musicUi) musicUi.leaveBattle();
             if (current.music) { current.music.destroy(); current.music = null; }
             current.host.clearInterval(current.watch);
+            current.host.clearTimeout(current.revealTimer);
+            current.host.clearTimeout(current.handOffTimer);
             try { if (current.game) current.game.dispose(); } catch (_) {}
             if (current.dialog.open) current.dialog.close();
             current.dialog.remove();
+            // 整备页已显示过（地图淡出中途就关闭也一样）：地图一并关闭，回到正文卡片。显示之前关闭则回到地图。
+            if (current.revealed && current.mapEvent) mapHandOff();
             if (current.trigger && current.trigger.isConnected) current.trigger.focus({preventScroll: true});
         }
         // 游戏中途关闭会放弃这一局（未完成的探索不会续玩），所以先确认。
@@ -9638,7 +9761,12 @@ var NewCardAlbumData = (function () {
         function wireExploration(current) {
             var game = null;
             try { game = current.frame.contentWindow.ExplorationPrototype; } catch (_) {}
-            if (!game || exploration !== current) { closeExploration(); return; }
+            if (!game || exploration !== current) {
+                var broken = exploration === current;
+                closeExploration();
+                if (broken && current.mapEvent) mapEnterFailed(null, current.mapEvent.id);
+                return;
+            }
             current.game = game;
             game.connect({sendPrompt: deliverExploration});
             var allies = explorationAllies();
@@ -9676,25 +9804,60 @@ var NewCardAlbumData = (function () {
                 // 出现结算（胜利、败北、撤离）就从地图移除，不论之后是否送回剧情。
                 if (map && !current.mapDone && state && state.phase === 'ended') { current.mapDone = true; removeMapEvent(map.id); }
             }, 400);
+            // 整备页可以用时才显示：等探索页自己的初始化（DOMContentLoaded，排好工具键）。
+            // 立体版的 DOMContentLoaded 要等 three.js 从 CDN 载完，最多等 1.5 秒就先显示（整备页在这之前已可操作）。
+            var page = null;
+            try { page = current.frame.contentDocument; } catch (_) {}
+            if (page && page.readyState === 'loading') {
+                page.addEventListener('DOMContentLoaded', function () { revealExploration(current); }, {once: true});
+                current.revealTimer = current.host.setTimeout(function () { revealExploration(current); }, 1500);
+            } else revealExploration(current);
+        }
+        // 从地图进入时，载入期间探索画面是透明的，地图留在下面变暗（2026-11-16 使用者决定）。
+        // 这时整备页淡入，淡入完成后关闭地图；之后关闭探索回到正文卡片的地图按钮。
+        function revealExploration(current) {
+            if (current.revealed || exploration !== current) return;
+            current.revealed = true;
+            current.host.clearTimeout(current.revealTimer);
+            if (!current.mapEvent) return;
+            current.frame.style.visibility = 'visible';
+            current.frame.style.opacity = '1';
+            current.dialog.style.backgroundColor = '#0b0d0f';
+            if (current.closeHome) { current.close.style.top = current.closeHome.top; current.close.style.right = current.closeHome.right; }
+            current.trigger = root.querySelector('.uiMapToggle');
+            current.handOffTimer = current.host.setTimeout(function () { if (exploration === current) mapHandOff(); }, current.reduceMotion ? 0 : 260);
         }
         function openExploration(record, mapEvent) {
             var url = explorationUrl();
             if (exploration || destroyed || !url) return;
             var host = explorationHost(), doc = host.document;
+            var reduceMotion = false;
+            try { reduceMotion = host.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+            // 从地图进入：载入期间底色半透明、探索页隐藏，地图留在下面变暗；整备页可以用时才显示（revealExploration）。
             var dialog = doc.createElement('dialog');
             dialog.setAttribute('aria-label', '探索');
-            dialog.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;padding:0;margin:0;border:0;background:#0b0d0f;overflow:hidden';
+            dialog.style.cssText = 'position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;padding:0;margin:0;border:0;overflow:hidden;background:' +
+                (mapEvent ? 'rgba(11,13,15,.55)' + (reduceMotion ? '' : ';transition:background-color .25s') : '#0b0d0f');
             var frame = doc.createElement('iframe');
             frame.title = '探索';
-            frame.style.cssText = 'display:block;width:100%;height:100%;border:0';
+            frame.style.cssText = 'display:block;width:100%;height:100%;border:0' +
+                (mapEvent ? ';visibility:hidden;opacity:0' + (reduceMotion ? '' : ';transition:opacity .25s') : '');
             var close = doc.createElement('button');
             close.type = 'button';
             close.setAttribute('aria-label', '关闭探索');
             close.textContent = '×';
             close.style.cssText = 'position:absolute;top:max(6px,env(safe-area-inset-top));right:max(6px,env(safe-area-inset-right));z-index:2;width:44px;height:44px;border:0;border-radius:50%;background:rgba(11,13,15,.55);color:#e8d4a4;font:24px/44px sans-serif;cursor:pointer';
+            // 从地图进入：载入期间 × 叠在地图关闭钮上（两者同为 44px 圆钮），整备页显示时回到右上角原位。
+            var closeHome = null, spot = mapEvent ? mapCloseSpot() : null;
+            if (spot) {
+                closeHome = {top: close.style.top, right: close.style.right};
+                close.style.top = spot.top + 'px';
+                close.style.right = spot.right + 'px';
+            }
             dialog.append(frame, close);
             doc.body.append(dialog);
-            var current = exploration = {host: host, dialog: dialog, frame: frame, close: close, record: record, mapEvent: mapEvent || null, mapDone: false, game: null, music: null, watch: null, trigger: doc.activeElement};
+            var current = exploration = {host: host, dialog: dialog, frame: frame, close: close, record: record, mapEvent: mapEvent || null, mapDone: false, game: null, music: null, watch: null, wired: false,
+                revealed: false, revealTimer: null, handOffTimer: null, reduceMotion: reduceMotion, closeHome: closeHome, trigger: doc.activeElement};
             close.addEventListener('click', requestCloseExploration);
             dialog.addEventListener('cancel', function (event) { event.preventDefault(); requestCloseExploration(); });
             // 浏览器在连按 Esc／返回时可能不给 cancel 直接关闭；这时也要释放游戏并移除对话框。
@@ -9704,10 +9867,27 @@ var NewCardAlbumData = (function () {
             if (musicUi) musicUi.enterBattle();
             explorationHtml(host, url).then(function (html) {
                 if (exploration !== current) return;
-                frame.addEventListener('load', function () { wireExploration(current); }, {once: true});
+                // iframe 的 load 要等所有图片载完（手机网路上要好几秒）；立体版的 DOMContentLoaded 也要等 three.js 模组从 CDN 载完。
+                // 这段时间整备页已经可以按，等它们才接上设定的话，玩家可能已按下出击：以预设设定开局，事件与剧情回传都没接上，
+                // 之后接上时又因「本局已锁定」被关掉。所以在页尾加一段：探索页的一般脚本都执行完时立刻通知卡片接上
+                // （探索页的介面在这时已可用，立体场景载入前的设定会先记下）；load 留作备用，两者只接一次。
+                var wire = function () {
+                    if (current.wired || exploration !== current) return;
+                    current.wired = true;
+                    wireExploration(current);
+                };
+                frame.addEventListener('newcard-exploration-ready', wire, {once: true});
+                frame.addEventListener('load', wire, {once: true});
                 var base = '<base href="' + url.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
-                frame.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (head) { return head + base; }) : base + html;
-            }, function () { if (exploration === current) closeExploration(); });
+                var ready = '<script>(function(){var f=window.frameElement;if(f)f.dispatchEvent(new Event("newcard-exploration-ready"));})();<\/script>';
+                html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (head) { return head + base; }) : base + html;
+                var end = html.search(/<\/body>(?![\s\S]*<\/body>)/i);
+                frame.srcdoc = end >= 0 ? html.slice(0, end) + ready + html.slice(end) : html + ready;
+            }, function () {
+                if (exploration !== current) return;
+                closeExploration();
+                if (mapEvent) mapEnterFailed(null, mapEvent.id);
+            });
         }
 
         // 多段正文：模型每段都闭合一次（<RPG>第一段</RPG>……<RPG>第二段</RPG>）时，取出所有完整的一组，
@@ -10180,8 +10360,6 @@ var NewCardAlbumData = (function () {
             listen(root, 'focusin', refreshDialogueIdentity);
             listen(view, 'focus', refreshDialogueIdentity);
             setDialogueCharacters(context.dialogueCharacters || FRONTEND_CONFIG.dialogue);
-            root.querySelectorAll('.uiMapImage').forEach(function (image) { image.remove(); });
-            root.querySelector('.uiMapPlaceholder').hidden = false;
             setMapSize(FRONTEND_CONFIG.map.height, FRONTEND_CONFIG.map.ratio);
             setMapEvents(FRONTEND_CONFIG.map.events);
             if (FRONTEND_CONFIG.map.image) setMapImage(FRONTEND_CONFIG.map.image);
@@ -10222,8 +10400,6 @@ var NewCardAlbumData = (function () {
                 resizeObserver.observe(root);
                 // Paper margins can resize the reading viewport without resizing root.
                 resizeObserver.observe(stageEl());
-                mapObserver = new view.ResizeObserver(fitMap);
-                mapObserver.observe(root.querySelector('.uiMapViewport'));
             }
             if (typeof view.MutationObserver === 'function') {
                 dialogObserver = new view.MutationObserver(syncDialogView);
@@ -10232,7 +10408,6 @@ var NewCardAlbumData = (function () {
             if (typeof context.onUpdate === 'function') unsubscribeContext = context.onUpdate(function (state) {
                 if (!state || !state.streaming) refreshDialogueIdentity();
             });
-            fitMap();
             reportHeight();
         }
 
@@ -10257,7 +10432,6 @@ var NewCardAlbumData = (function () {
             stRegex.destroy();
             stRegexInputs.clear();
             if (typeof unsubscribeContext === 'function') unsubscribeContext();
-            if (mapObserver) { mapObserver.disconnect(); mapObserver = null; }
             if (dialogObserver) { dialogObserver.disconnect(); dialogObserver = null; }
             if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
             failedAvatars.clear();
