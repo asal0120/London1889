@@ -8098,31 +8098,42 @@ var NewCardAlbumData = (function () {
         }
 
         // 卡片内的对话框（地图、相簿、留声机）以 fixed 定位在 iframe 里。卡片比画面长时（窄版 720px 常见），
-        // 把可见范围换算成 iframe 内的座标，让对话框出现在画面上；开着时跟着酒馆卷动更新。
-        var dialogViewAbort = null, dialogViewFrame = 0;
+        // 开启时决定一次位置与大小：高度＝卡片与聊天区可见高度中较小者；卡片只露出一部分时，把聊天区卷到能完整显示。
+        // 开着时不跟着卷动或网址列伸缩改变大小（2026-11-16 使用者回报会伸缩）；只有宽度改变（旋转）时重新决定。
+        var dialogViewAbort = null, dialogViewOpen = null, dialogViewWidth = 0;
+        function placeDialogView() {
+            var frame = cardHostFrame(), scroller = cardScroller();
+            var box = frame.getBoundingClientRect(), area = cardViewport(), height = frame.clientHeight;
+            var size = Math.max(0, Math.min(height, area.bottom - area.top));
+            var top = Math.max(0, Math.min(height - size, area.top - box.top));
+            var shift = Math.round(box.top + top - area.top);
+            if (shift && scroller) scroller.scrollTop += shift;
+            root.style.setProperty('--view-top', Math.round(top) + 'px');
+            root.style.setProperty('--view-bottom', Math.round(height - top - size) + 'px');
+            root.style.setProperty('--view-h', Math.round(size) + 'px');
+        }
         function syncDialogView() {
             if (destroyed) return;
             var frame = cardHostFrame();
             var open = frame && root.querySelector('dialog[open]');
             if (!open) {
                 if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
+                dialogViewOpen = null;
                 ['--view-top', '--view-bottom', '--view-h'].forEach(function (name) { root.style.removeProperty(name); });
                 return;
             }
-            var box = frame.getBoundingClientRect(), area = cardViewport(), height = frame.clientHeight;
-            var top = Math.max(0, Math.min(height, area.top - box.top)), bottom = Math.max(top, Math.min(height, area.bottom - box.top));
-            root.style.setProperty('--view-top', Math.round(top) + 'px');
-            root.style.setProperty('--view-bottom', Math.round(height - bottom) + 'px');
-            root.style.setProperty('--view-h', Math.round(bottom - top) + 'px');
+            if (open === dialogViewOpen) return;
+            dialogViewOpen = open;
+            placeDialogView();
             if (dialogViewAbort) return;
             var host = cardHostWindow();
+            dialogViewWidth = host.innerWidth;
             dialogViewAbort = new host.AbortController();
-            var update = function () {
-                if (dialogViewFrame) return;
-                dialogViewFrame = requestFrame(function () { dialogViewFrame = 0; syncDialogView(); });
-            };
-            host.addEventListener('scroll', update, {capture: true, passive: true, signal: dialogViewAbort.signal});
-            host.addEventListener('resize', update, {signal: dialogViewAbort.signal});
+            host.addEventListener('resize', function () {
+                if (host.innerWidth === dialogViewWidth) return;
+                dialogViewWidth = host.innerWidth;
+                requestFrame(function () { if (dialogViewOpen) placeDialogView(); });
+            }, {signal: dialogViewAbort.signal});
         }
 
         // 酒馆视窗大小改变（旋转、调整视窗）时，宽版重新取页高。正在输入时高度变矮多半是手机键盘，不跟着变。
