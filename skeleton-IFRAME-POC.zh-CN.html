@@ -37,11 +37,17 @@
        本文、状态面板、控制列共用，确保三者左右对齐。 */
     --contentMax: clamp(20rem, 82vw, 68rem);
 
-    /* 卡片高度。本文超出时在本文区内部滚动，不把卡片撑长。
-       独立开启时 100vh 就是整个视窗高；在 iframe 里则会收敛到
-       宿主设定的 iframe 高度（reportHeight 的下限 720px）。
-       使用者可在「显示设定 → 卡片高度」改成固定 px。 */
+    /* 卡片高度（2026-11-16 使用者决定）：
+       --cardBase 是分页用的高度，预设等于酒馆聊天区的可见高度（fitCard 前的 applyCardFit），
+       使用者可在「显示设定 → 卡片高度」改成自订 px。
+       --cardHeight 是实际高度＝--cardBase＋这一页放不下的部分。本文不在卡片内卷动，
+       放不下的页（全文模式、很长的对话、插图页）让卡片变长，改卷动酒馆视窗。 */
+    --cardBase: 100vh;
     --cardHeight: 100vh;
+    /* 卡片内对话框（地图、相簿、留声机）对准酒馆可见范围；卡片比画面长时由 syncDialogView 设定。 */
+    --view-top: 0px;
+    --view-bottom: 0px;
+    --view-h: 100dvh;
 }
 
 /* 卡片自己管高度与滚动，外层不要再产生一条卷轴 */
@@ -134,10 +140,8 @@
     --stat-b: #3b6fc2;          /* 状态条 B */
     --stat-c: #46a06a;          /* 状态条 C */
 
-    /* 卡片高度固定，不随本文长度增长。
-       本文超出时在 .stage 内部滚动，而不是把整张卡片撑长。
-       用 height 而非 min-height：min-height 只设下限，内容一长还是会撑高，
-       那正是「全文模式无限向下延伸」的原因。 */
+    /* 用 height 而非 min-height：卡片长度只由 fitCard 设定的 --cardHeight 决定，
+       分页时才能用 --cardBase 量出固定的页高。 */
     height: var(--cardHeight, 100vh);
     background: var(--bg);
     color: var(--ink);
@@ -774,7 +778,7 @@
     border-radius: var(--radius-2xl);
     padding: 10px;
     transition: background .45s ease, border-color .45s ease;
-    max-height: min(56vh, 460px);
+    max-height: min(calc(var(--cardBase) * .56), 460px);
     overflow-y: auto;
 }
 .rpg-v7-root .panelArea::-webkit-scrollbar { width: 6px; }
@@ -1858,7 +1862,7 @@
 /* Full-text bookends scroll with the document; gears stay in the fixed upper margin. */
 .rpg-v7-root.d-material-ui {
   --ui-map-height: 176px;
-  --ui-map-reserved: min(var(--ui-map-height), max(64px, calc(var(--cardHeight) - 600px)));
+  --ui-map-reserved: min(var(--ui-map-height), max(64px, calc(var(--cardBase) - 600px)));
   --ui-divider: url("./assets/ui/material/book-divider-174-brass.png");
   --ui-heading: url("./assets/ui/material/book-heading-190-brass.png");
   --ui-ending: url("./assets/ui/material/book-ending-193-brass.png");
@@ -1916,7 +1920,7 @@
 /* Keep a reading window when the status sheet and map are both present.
    The existing panel scroll handles longer character and settings content. */
 .rpg-v7-root.d-material-ui .panelArea {
-  max-height: max(48px, min(36vh, calc(var(--cardHeight) - var(--ui-map-reserved) - 470px)));
+  max-height: max(48px, min(calc(var(--cardBase) * .36), calc(var(--cardBase) - var(--ui-map-reserved) - 470px)));
 }
 .rpg-v7-root.d-material-ui .uiReadingTop,
 .rpg-v7-root.d-material-ui .uiReadingHead,
@@ -2309,8 +2313,8 @@
 
 /* 全萤幕检视：深色背景，原图完整显示，不裁切。 */
 .rpg-v7-root.d-material-ui .ncAlbumViewer {
-  position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(960px, calc(100% - 16px));
-  height: min(720px, calc(100dvh - 16px)); max-width: none; max-height: calc(100dvh - 16px);
+  position: fixed; inset: var(--view-top) 0 var(--view-bottom); margin: auto; box-sizing: border-box; width: min(960px, calc(100% - 16px));
+  height: min(720px, calc(var(--view-h) - 16px)); max-width: none; max-height: calc(var(--view-h) - 16px);
   padding: 0; border: 0; border-radius: var(--radius-xs); background: #0f0c0a; color: #e9dcc2; overflow: hidden;
 }
 .rpg-v7-root.d-material-ui .ncAlbumViewer[open] { display: flex; flex-direction: column; }
@@ -2359,8 +2363,8 @@
   /* 唱片 */
   --nc-groove: #141510;       /* 纹路暗色 */
   --nc-groove-lo: #191a14;    /* 纹路浅色／标签外圈 */
-  position: fixed; inset: 0; margin: auto; width: min(760px, calc(100% - 28px));
-  max-width: none; max-height: calc(100dvh - 28px); padding: 24px 26px 14px;
+  position: fixed; inset: var(--view-top) 0 var(--view-bottom); margin: auto; width: min(760px, calc(100% - 28px));
+  max-width: none; max-height: calc(var(--view-h) - 28px); padding: 24px 26px 14px;
   color: var(--nc-ink); border: 1px solid var(--nc-edge); border-radius: 10px;
   background: repeating-linear-gradient(92deg, #ffffff02 0 2px, #00000002 3px 7px), radial-gradient(ellipse at 15% 0, #574231, transparent 65%), var(--nc-panel);
   box-shadow: inset 0 0 0 5px #1b1815, inset 0 0 0 6px #b89d603e, 0 20px 80px var(--shade-60);
@@ -2465,7 +2469,7 @@
 .rpg-v7-root .nc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @keyframes nc-record-spin { to { transform: rotate(360deg); } }
 @media (max-width: 600px) {
-  .rpg-v7-root .nc-music { padding: 18px 18px 12px; width: calc(100% - 20px); max-height: calc(100dvh - 20px); }
+  .rpg-v7-root .nc-music { padding: 18px 18px 12px; width: calc(100% - 20px); max-height: calc(var(--view-h) - 20px); }
   .rpg-v7-root .nc-music-head { padding-bottom: 12px; }
   .rpg-v7-root .nc-music-head h2 { font-size: 23px; }
   .rpg-v7-root .nc-music-body { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-top: 15px; }
@@ -2504,8 +2508,8 @@
 .rpg-v7-root .uiMapToggleAction { display: flex; align-items: center; justify-content: center; min-height: 34px; padding: 4px 12px; border: 1px solid currentColor; white-space: nowrap; font-size: 12px; }
 .rpg-v7-root .uiMapToggleAction span { font-size: 20px; }
 .rpg-v7-root .uiMapDialog {
-  position: fixed; inset: 0; box-sizing: border-box; width: min(1200px, calc(100vw - 32px));
-  height: min(900px, calc(100dvh - 32px)); max-width: none; max-height: none; margin: auto;
+  position: fixed; inset: var(--view-top) 0 var(--view-bottom); box-sizing: border-box; width: min(1200px, calc(100vw - 32px));
+  height: min(900px, calc(var(--view-h) - 32px)); max-width: none; max-height: none; margin: auto;
   padding: 0; border: 1px solid var(--ds-stitch); border-radius: var(--radius-lg);
   background: var(--ds-panel); color: var(--card-fg); box-shadow: 0 18px 70px var(--shade-60);
   overflow: hidden; overscroll-behavior: contain; font-family: var(--sans);
@@ -2583,7 +2587,7 @@
   .rpg-v7-root .uiMapNotice:not(:empty) { padding-inline: 5px; }
 }
 @media (max-width: 560px) {
-  .rpg-v7-root .uiMapDialog { width: calc(100vw - 12px); height: calc(100dvh - 12px); border-radius: var(--radius-md); }
+  .rpg-v7-root .uiMapDialog { width: calc(100vw - 12px); height: calc(var(--view-h) - 12px); border-radius: var(--radius-md); }
   .rpg-v7-root .uiMapDialogHead { gap: 10px; padding: 10px 12px; }
   .rpg-v7-root .uiMapDialogTitle { font-size: 22px; }
   .rpg-v7-root .uiMapDialogCount { font-size: 12px; }
@@ -3756,8 +3760,12 @@
 
                 <div class="setSection">
                     <div class="setLabel">卡片高度</div>
+                    <div class="setBtnGroup" data-role="set-card-fit">
+                        <button class="setOptBtn active" data-fit="auto">跟着视窗</button>
+                        <button class="setOptBtn" data-fit="fixed">自订</button>
+                    </div>
                     <div class="setSliderRow">
-                        <input type="range" data-role="set-card-height" min="640" max="1200" step="20">
+                        <input type="range" data-role="set-card-height" min="480" max="1600" step="20">
                         <span class="setSliderVal" data-role="set-card-height-val"></span>
                     </div>
                 </div>
@@ -4290,7 +4298,7 @@ var NewCardMusic = (function () {
     var api = {mount: mount, mountGuest: mountGuest, css: ''};
     return api;
 })();
-NewCardMusic.css = "/* 留声机是卡片自己的原生 dialog，字体、样式与音讯不依赖外部套件。 */\n.rpg-v7-root .nc-music {\n  --nc-gold: #c5ad7d; --nc-muted: #b2a38c; --nc-ink: #e9dcc4;\n  /* 留声机固定色（日夜相同）：外框与面板 */\n  --nc-edge: #927548;         /* 外框、螺丝、卷轴滑块的黄铜色 */\n  --nc-panel: #241d18;        /* 面板底色（同时是卷轴轨道色） */\n  --nc-track: #6e6555;        /* 滑杆未填满的轨道 */\n  --nc-line-45: #b89d6045;    /* 淡金分隔线（标题下缘、圆钮边） */\n  --nc-line-35: #b89d6035;    /* 淡金分隔线（曲目库左／上缘） */\n  --nc-line-30: #b89d6030;    /* 滑杆头外圈的淡金光晕 */\n  --nc-focus: #e8d4a4;        /* 键盘聚焦外框 */\n  /* 滑杆头 */\n  --nc-thumb-dark: #3a2a12;   /* 边线与中心点 */\n  --nc-thumb-hi: #fff1c9;     /* 亮部 */\n  --nc-thumb-mid: #c9a24a;    /* 中段 */\n  --nc-thumb-lo: #6b4e1c;     /* 暗部 */\n  /* 按键组（播放键、模式键） */\n  --nc-key-hi: #d4bf8e;       /* 亮部 */\n  --nc-key-lo: #9b7c47;       /* 暗部 */\n  --nc-key-ink: #33291b;      /* 按键上的深色字／图示 */\n  --nc-key-edge: #b49a64;     /* 边线 */\n  /* 唱片 */\n  --nc-groove: #141510;       /* 纹路暗色 */\n  --nc-groove-lo: #191a14;    /* 纹路浅色／标签外圈 */\n  position: fixed; inset: 0; margin: auto; width: min(760px, calc(100% - 28px));\n  max-width: none; max-height: calc(100dvh - 28px); padding: 24px 26px 14px;\n  color: var(--nc-ink); border: 1px solid var(--nc-edge); border-radius: 10px;\n  background: repeating-linear-gradient(92deg, #ffffff02 0 2px, #00000002 3px 7px), radial-gradient(ellipse at 15% 0, #574231, transparent 65%), var(--nc-panel);\n  box-shadow: inset 0 0 0 5px #1b1815, inset 0 0 0 6px #b89d603e, 0 20px 80px var(--shade-60);\n  font-family: var(--sans); overflow: auto; overscroll-behavior: contain;\n  scrollbar-width: thin; scrollbar-color: var(--nc-edge) var(--nc-panel);\n}\n.rpg-v7-root .nc-music::backdrop { background: #090c10c9; backdrop-filter: blur(4px); }\n.rpg-v7-root .nc-music button { font: inherit; cursor: pointer; color: var(--nc-gold); touch-action: manipulation; }\n.rpg-v7-root .nc-music button:focus-visible, .rpg-v7-root .nc-music input:focus-visible { outline: 2px solid var(--nc-focus); outline-offset: 3px; }\n.rpg-v7-root .nc-music-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--nc-line-45); gap: 16px; }\n.rpg-v7-root .nc-music-eyebrow { font: 10px Georgia, serif; color: var(--nc-muted); letter-spacing: .25em; }\n.rpg-v7-root .nc-music-head h2 { font: 400 27px/1.6 var(--serif); letter-spacing: .15em; color: var(--nc-ink); margin: 3px 0 0; }\n.rpg-v7-root .nc-music-head > button { width: 44px; height: 44px; background: transparent; border: 1px solid var(--nc-line-45); border-radius: var(--radius-round); font: 25px Georgia, serif; }\n.rpg-v7-root .nc-music-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, .9fr); gap: 28px; padding-top: 22px; }\n.rpg-v7-root .nc-music-deck { min-width: 0; }\n.rpg-v7-root .nc-turntable { position: relative; width: min(100%, 285px); aspect-ratio: 1.16; margin: 0 auto; border: 1px solid #a48b585c; border-radius: var(--radius-md); background: radial-gradient(circle at 40% 48%, #665036, #302820 66%); box-shadow: inset 0 0 0 6px #1a171366, 0 7px 16px #0005; }\n.rpg-v7-root .nc-turntable-screw { position: absolute; width: 6px; height: 6px; border-radius: var(--radius-round); background: linear-gradient(135deg, var(--nc-edge) 40%, #242018 43% 56%, var(--nc-edge) 58%); }\n.rpg-v7-root .nc-turntable-screw.a { top: 9px; left: 9px; }\n.rpg-v7-root .nc-turntable-screw.b { bottom: 9px; right: 9px; }\n.rpg-v7-root .nc-record { width: 77%; aspect-ratio: 1; position: absolute; left: 5%; top: 6%; display: grid; place-items: center; border-radius: var(--radius-round); border: 2px solid #171511; background: conic-gradient(from 15deg, #121310aa, #73706825 35deg, #0a0b09bb 65deg, #6e6a5825 170deg, #060704aa 230deg, #7e776330 295deg, #080906bb), repeating-radial-gradient(circle, var(--nc-groove) 0 1px, #393931 2px, var(--nc-groove-lo) 3px, var(--nc-groove) 4px); box-shadow: 1px 3px 8px #000b; animation: nc-record-spin 4s linear infinite paused; }\n.rpg-v7-root .nc-music[data-playing=\"true\"] .nc-record { animation-play-state: running; }\n.rpg-v7-root .nc-record-label { width: 34%; aspect-ratio: 1; border-radius: var(--radius-round); border: 1px solid #b09c6f; box-shadow: 0 0 0 4px var(--nc-groove-lo), inset 0 0 0 3px #a994672a; background: #ad9562; color: #33291a; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; font: 6px Georgia, serif; letter-spacing: .12em; }\n.rpg-v7-root .nc-record-label b { font-size: 19px; line-height: 1.2; }\n.rpg-v7-root .nc-tonearm { position: absolute; right: 9%; top: 17%; width: 9px; height: 69%; border: 1px solid #614d30; border-radius: var(--radius-lg); background: linear-gradient(90deg, #625138, #c5b284 48%, #705e3d); transform-origin: 50% 7%; transform: rotate(-9deg); transition: transform 1s ease; box-shadow: 3px 2px 4px #0007; }\n.rpg-v7-root .nc-tonearm::before { content: ''; position: absolute; top: -6px; left: -8px; width: 23px; height: 23px; border-radius: var(--radius-round); background: radial-gradient(circle, #d9c694 9%, #7d6947 13% 40%, #332a1d 42% 48%, #ac935f 52% 66%, #352c1f 69%); }\n.rpg-v7-root .nc-tonearm::after { content: ''; position: absolute; bottom: -3px; left: -4px; width: 15px; height: 25px; border: 1px solid #8f7950; border-radius: var(--radius-md); background: linear-gradient(90deg, #3c3b32, #1b1c17); }\n.rpg-v7-root .nc-music[data-playing=\"true\"] .nc-tonearm { transform: rotate(23deg); }\n.rpg-v7-root .nc-now { text-align: center; padding-top: 15px; min-width: 0; }\n.rpg-v7-root .nc-now > span { color: var(--nc-muted); font-size: 12px; letter-spacing: .1em; }\n.rpg-v7-root .nc-now h3 { min-height: 1.8em; font: 400 19px/1.8 var(--serif); letter-spacing: .1em; margin: 2px 0 5px; overflow-wrap: anywhere; }\n.rpg-v7-root .nc-seek { display: block; height: 26px; }\n.rpg-v7-root .nc-music input[type=\"range\"] { -webkit-appearance: none; appearance: none; background: none; height: 26px; width: 100%; margin: 0; cursor: pointer; --fill: 0%; }\n/* 滑杆：轨道维持原本的细条与金色已播放段，只把圆钮换成黄铜旋钮。 */\n.rpg-v7-root .nc-music input[type=\"range\"]::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-xs); background: linear-gradient(90deg, var(--nc-gold) var(--fill), var(--nc-track) var(--fill)); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-moz-range-track { height: 4px; border-radius: var(--radius-xs); background: var(--nc-track); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-moz-range-progress { height: 4px; border-radius: var(--radius-xs); background: var(--nc-gold); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-webkit-slider-thumb { -webkit-appearance: none; width: 17px; height: 17px; margin-top: -6.5px; border: 1px solid var(--nc-thumb-dark); border-radius: var(--radius-round); background: radial-gradient(circle at 50% 50%, var(--nc-thumb-dark) 0 1.6px, transparent 2.2px), radial-gradient(circle at 34% 30%, var(--nc-thumb-hi), var(--nc-thumb-mid) 46%, var(--nc-thumb-lo)); box-shadow: 0 0 0 2px var(--nc-line-30), 0 1px 3px var(--shade-60); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-moz-range-thumb { width: 15px; height: 15px; border: 1px solid var(--nc-thumb-dark); border-radius: var(--radius-round); background: radial-gradient(circle at 50% 50%, var(--nc-thumb-dark) 0 1.6px, transparent 2.2px), radial-gradient(circle at 34% 30%, var(--nc-thumb-hi), var(--nc-thumb-mid) 46%, var(--nc-thumb-lo)); box-shadow: 0 0 0 2px var(--nc-line-30), 0 1px 3px var(--shade-60); }\n.rpg-v7-root .nc-music input[type=\"range\"]:disabled { cursor: default; }\n.rpg-v7-root .nc-music input[type=\"range\"]:disabled::-webkit-slider-thumb { filter: saturate(.35) brightness(.8); }\n.rpg-v7-root .nc-music input[type=\"range\"]:disabled::-moz-range-thumb { filter: saturate(.35) brightness(.8); }\n.rpg-v7-root .nc-music input[type=\"range\"]:focus-visible { outline: 2px solid var(--nc-focus); outline-offset: 2px; border-radius: var(--radius-md); }\n.rpg-v7-root .nc-times { display: flex; justify-content: space-between; color: var(--nc-muted); font: 12px Georgia, serif; margin-top: -2px; }\n.rpg-v7-root .nc-transport { display: flex; justify-content: center; align-items: center; gap: 18px; margin: 12px 0; }\n.rpg-v7-root .nc-transport button { border: 1px solid #b89d6055; border-radius: var(--radius-round); width: 44px; height: 44px; background: linear-gradient(145deg, #403522, #211e19); font-size: 15px; }\n.rpg-v7-root .nc-transport .nc-play { width: 54px; height: 54px; border-color: var(--nc-key-edge); color: var(--nc-key-ink); background: linear-gradient(135deg, var(--nc-key-hi), var(--nc-key-lo)); box-shadow: inset 0 0 0 3px #211e1940; }\n/* 播放方式：圆形图示为主，文字缩成小注记。 */\n.rpg-v7-root .nc-music-modes { display: flex; justify-content: center; gap: 26px; margin: 2px 0 4px; }\n.rpg-v7-root .nc-music-modes button { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 44px; min-height: 44px; padding: 0; font-size: 12px; letter-spacing: .06em; background: none; border: 0; color: var(--nc-muted); opacity: .72; }\n.rpg-v7-root .nc-music-modes svg { display: block; box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border: 1px solid #b89d6040; border-radius: var(--radius-round); background: #0000001f; transition: background-color .15s, border-color .15s; }\n.rpg-v7-root .nc-music-modes button:hover { opacity: 1; }\n.rpg-v7-root .nc-music-modes button:focus-visible { outline: none; }\n.rpg-v7-root .nc-music-modes button:focus-visible svg { outline: 2px solid var(--nc-focus); outline-offset: 2px; }\n.rpg-v7-root .nc-music-modes button[aria-pressed=\"true\"] { color: #f0dfb7; opacity: 1; }\n.rpg-v7-root .nc-music-modes button[aria-pressed=\"true\"] svg { color: var(--nc-key-ink); border-color: var(--nc-key-hi); background: radial-gradient(circle at 36% 30%, #e6d3a3, var(--nc-key-lo)); box-shadow: 0 0 0 3px #b89d6018, 0 2px 4px var(--shade-35); }\n.rpg-v7-root .nc-volume { display: flex; align-items: center; gap: 9px; font-size: 12px; margin-top: 12px; color: var(--nc-muted); }\n.rpg-v7-root .nc-volume > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; min-width: 52px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--nc-key-edge); border-radius: var(--radius-lg); background: linear-gradient(145deg, #51412a, #33291c); color: #f2dfb6; font-size: 12px; font-weight: 600; white-space: nowrap; }\n.rpg-v7-root .nc-volume > button:hover { border-color: #ead2a0; background: #59472e; }\n.rpg-v7-root .nc-volume > button[aria-pressed=\"true\"] { background: #ddc38f; color: #302519; border-color: #f0dcaf; opacity: 1; }\n.rpg-v7-root .nc-volume > button[aria-pressed=\"true\"]:hover { background: #ecd3a1; }\n.rpg-v7-root .nc-volume label { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; }\n.rpg-v7-root .nc-volume label > span { flex: none; }\n.rpg-v7-root .nc-volume output { flex: 0 0 32px; text-align: right; font-family: Georgia, serif; }\n.rpg-v7-root .nc-volume-icon { display: block; flex: none; width: 20px; height: 20px; }\n.rpg-v7-root .nc-volume-cross, .rpg-v7-root [aria-pressed=\"true\"] > .nc-volume-icon .nc-volume-waves { display: none; }\n.rpg-v7-root [aria-pressed=\"true\"] > .nc-volume-icon .nc-volume-cross { display: block; }\n.rpg-v7-root .nc-ambience { margin-top: 8px; }\n/* 正在下雨、雨声播放中：雨云亮起。 */\n.rpg-v7-root .nc-ambience > button.is-playing:not([aria-pressed=\"true\"]) { color: #f0dfb7; box-shadow: 0 0 0 3px #b89d6024, 0 0 10px #e6d3a355; }\n.rpg-v7-root .nc-library { min-width: 0; border-left: 1px solid var(--nc-line-35); padding-left: 24px; display: flex; flex-direction: column; }\n.rpg-v7-root .nc-library-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }\n/* 曲目分两组：战斗（只在小游戏中显示，曲目少，不撑高）与通用。 */\n.rpg-v7-root .nc-library-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }\n.rpg-v7-root .nc-library-group[hidden] { display: none; }\n.rpg-v7-root .nc-battle-group { flex: none; border-bottom: 1px solid var(--nc-line-35); margin-bottom: 8px; }\n.rpg-v7-root .nc-battle-group .nc-track-list { flex: none; min-height: 0; margin: 2px 0 10px; }\n.rpg-v7-root .nc-auto { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; color: var(--nc-muted); cursor: pointer; }\n.rpg-v7-root .nc-auto input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--nc-thumb-mid); cursor: pointer; }\n.rpg-v7-root .nc-library-head h3 { font: 400 17px/1.5 var(--serif); letter-spacing: .1em; margin: 0; }\n.rpg-v7-root .nc-track-list { list-style: none; padding: 0; margin: 10px 0 18px; flex: 1; min-height: 100px; max-height: 370px; overflow: auto; scrollbar-width: thin; }\n.rpg-v7-root .nc-track-list li { display: flex; min-width: 0; border-bottom: 1px solid #b89d602a; }\n.rpg-v7-root .nc-track { min-width: 0; flex: 1; display: flex; align-items: center; gap: 12px; min-height: 68px; text-align: left; border: 0; padding: 10px 8px; background: transparent; }\n.rpg-v7-root .nc-track[aria-pressed=\"true\"] { background: linear-gradient(90deg, #0000004a, #00000024); box-shadow: inset 2px 0 #bca26e; }\n.rpg-v7-root .nc-track[aria-pressed=\"true\"] strong { color: #f3e3bd; }\n.rpg-v7-root .nc-track[aria-pressed=\"true\"] .nc-track-number { opacity: 1; color: #d8bf86; }\n.rpg-v7-root .nc-track:hover { background-color: #ba9d5d0c; }\n.rpg-v7-root .nc-track-number { font: 12px Georgia, serif; opacity: .65; }\n.rpg-v7-root .nc-track > span:last-child { display: grid; gap: 5px; min-width: 0; }\n.rpg-v7-root .nc-track strong { font: 400 14px/1.6 var(--serif); color: var(--nc-ink); overflow-wrap: anywhere; }\n.rpg-v7-root .nc-track small { color: var(--nc-muted); font-size: 12px; }\n.rpg-v7-root .nc-music-message { font-size: 12px; line-height: 1.8; color: var(--nc-muted); margin: 9px 0 0; }\n.rpg-v7-root .nc-music-message:empty { display: none; }\n.rpg-v7-root .nc-music-message.is-error { color: #e7b69b; }\n.rpg-v7-root .nc-music-controls { display: inline-flex; flex-direction: column-reverse; align-items: center; flex: none; width: 34px; height: 56px; }\n.rpg-v7-root .ctrlRow .nc-music-controls button { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--radius-xs); background: transparent; box-shadow: none; color: var(--ds-cover-ink, var(--ctrl-fg)); touch-action: manipulation; }\n.rpg-v7-root .ctrlRow .nc-music-controls .music-toggle { width: 34px; min-width: 34px; height: 32px; min-height: 32px; }\n.rpg-v7-root .ctrlRow .nc-music-controls .music-open { width: 30px; min-width: 30px; height: 24px; min-height: 24px; border: 1px solid currentColor; border-radius: 0; }\n.rpg-v7-root .music-open svg { display: block; }\n.rpg-v7-root .nc-music-note { position: relative; display: inline-block; }\n.rpg-v7-root .ctrlRow .music-toggle.muted { opacity: .65; text-decoration: none; }\n.rpg-v7-root .music-toggle.muted .nc-music-note::after { content: ''; position: absolute; left: -3px; right: -3px; top: 50%; height: 1px; background: currentColor; transform: rotate(-45deg); }\n.rpg-v7-root .nc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }\n@keyframes nc-record-spin { to { transform: rotate(360deg); } }\n@media (max-width: 600px) {\n  .rpg-v7-root .nc-music { padding: 18px 18px 12px; width: calc(100% - 20px); max-height: calc(100dvh - 20px); }\n  .rpg-v7-root .nc-music-head { padding-bottom: 12px; }\n  .rpg-v7-root .nc-music-head h2 { font-size: 23px; }\n  .rpg-v7-root .nc-music-body { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-top: 15px; }\n  .rpg-v7-root .nc-turntable { width: 200px; }\n  .rpg-v7-root .nc-now { padding-top: 10px; }\n  .rpg-v7-root .nc-library { padding-left: 0; border-left: 0; border-top: 1px solid var(--nc-line-35); padding-top: 8px; }\n  .rpg-v7-root .nc-track-list { max-height: 200px; margin-top: 4px; }\n  .rpg-v7-root .nc-track { min-height: 58px; }\n}\n@media (prefers-reduced-motion: reduce) {\n  .rpg-v7-root .nc-record { animation: none; }\n  .rpg-v7-root .nc-tonearm { transition: none; }\n}\n";
+NewCardMusic.css = "/* 留声机是卡片自己的原生 dialog，字体、样式与音讯不依赖外部套件。 */\n.rpg-v7-root .nc-music {\n  --nc-gold: #c5ad7d; --nc-muted: #b2a38c; --nc-ink: #e9dcc4;\n  /* 留声机固定色（日夜相同）：外框与面板 */\n  --nc-edge: #927548;         /* 外框、螺丝、卷轴滑块的黄铜色 */\n  --nc-panel: #241d18;        /* 面板底色（同时是卷轴轨道色） */\n  --nc-track: #6e6555;        /* 滑杆未填满的轨道 */\n  --nc-line-45: #b89d6045;    /* 淡金分隔线（标题下缘、圆钮边） */\n  --nc-line-35: #b89d6035;    /* 淡金分隔线（曲目库左／上缘） */\n  --nc-line-30: #b89d6030;    /* 滑杆头外圈的淡金光晕 */\n  --nc-focus: #e8d4a4;        /* 键盘聚焦外框 */\n  /* 滑杆头 */\n  --nc-thumb-dark: #3a2a12;   /* 边线与中心点 */\n  --nc-thumb-hi: #fff1c9;     /* 亮部 */\n  --nc-thumb-mid: #c9a24a;    /* 中段 */\n  --nc-thumb-lo: #6b4e1c;     /* 暗部 */\n  /* 按键组（播放键、模式键） */\n  --nc-key-hi: #d4bf8e;       /* 亮部 */\n  --nc-key-lo: #9b7c47;       /* 暗部 */\n  --nc-key-ink: #33291b;      /* 按键上的深色字／图示 */\n  --nc-key-edge: #b49a64;     /* 边线 */\n  /* 唱片 */\n  --nc-groove: #141510;       /* 纹路暗色 */\n  --nc-groove-lo: #191a14;    /* 纹路浅色／标签外圈 */\n  position: fixed; inset: var(--view-top) 0 var(--view-bottom); margin: auto; width: min(760px, calc(100% - 28px));\n  max-width: none; max-height: calc(var(--view-h) - 28px); padding: 24px 26px 14px;\n  color: var(--nc-ink); border: 1px solid var(--nc-edge); border-radius: 10px;\n  background: repeating-linear-gradient(92deg, #ffffff02 0 2px, #00000002 3px 7px), radial-gradient(ellipse at 15% 0, #574231, transparent 65%), var(--nc-panel);\n  box-shadow: inset 0 0 0 5px #1b1815, inset 0 0 0 6px #b89d603e, 0 20px 80px var(--shade-60);\n  font-family: var(--sans); overflow: auto; overscroll-behavior: contain;\n  scrollbar-width: thin; scrollbar-color: var(--nc-edge) var(--nc-panel);\n}\n.rpg-v7-root .nc-music::backdrop { background: #090c10c9; backdrop-filter: blur(4px); }\n.rpg-v7-root .nc-music button { font: inherit; cursor: pointer; color: var(--nc-gold); touch-action: manipulation; }\n.rpg-v7-root .nc-music button:focus-visible, .rpg-v7-root .nc-music input:focus-visible { outline: 2px solid var(--nc-focus); outline-offset: 3px; }\n.rpg-v7-root .nc-music-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--nc-line-45); gap: 16px; }\n.rpg-v7-root .nc-music-eyebrow { font: 10px Georgia, serif; color: var(--nc-muted); letter-spacing: .25em; }\n.rpg-v7-root .nc-music-head h2 { font: 400 27px/1.6 var(--serif); letter-spacing: .15em; color: var(--nc-ink); margin: 3px 0 0; }\n.rpg-v7-root .nc-music-head > button { width: 44px; height: 44px; background: transparent; border: 1px solid var(--nc-line-45); border-radius: var(--radius-round); font: 25px Georgia, serif; }\n.rpg-v7-root .nc-music-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, .9fr); gap: 28px; padding-top: 22px; }\n.rpg-v7-root .nc-music-deck { min-width: 0; }\n.rpg-v7-root .nc-turntable { position: relative; width: min(100%, 285px); aspect-ratio: 1.16; margin: 0 auto; border: 1px solid #a48b585c; border-radius: var(--radius-md); background: radial-gradient(circle at 40% 48%, #665036, #302820 66%); box-shadow: inset 0 0 0 6px #1a171366, 0 7px 16px #0005; }\n.rpg-v7-root .nc-turntable-screw { position: absolute; width: 6px; height: 6px; border-radius: var(--radius-round); background: linear-gradient(135deg, var(--nc-edge) 40%, #242018 43% 56%, var(--nc-edge) 58%); }\n.rpg-v7-root .nc-turntable-screw.a { top: 9px; left: 9px; }\n.rpg-v7-root .nc-turntable-screw.b { bottom: 9px; right: 9px; }\n.rpg-v7-root .nc-record { width: 77%; aspect-ratio: 1; position: absolute; left: 5%; top: 6%; display: grid; place-items: center; border-radius: var(--radius-round); border: 2px solid #171511; background: conic-gradient(from 15deg, #121310aa, #73706825 35deg, #0a0b09bb 65deg, #6e6a5825 170deg, #060704aa 230deg, #7e776330 295deg, #080906bb), repeating-radial-gradient(circle, var(--nc-groove) 0 1px, #393931 2px, var(--nc-groove-lo) 3px, var(--nc-groove) 4px); box-shadow: 1px 3px 8px #000b; animation: nc-record-spin 4s linear infinite paused; }\n.rpg-v7-root .nc-music[data-playing=\"true\"] .nc-record { animation-play-state: running; }\n.rpg-v7-root .nc-record-label { width: 34%; aspect-ratio: 1; border-radius: var(--radius-round); border: 1px solid #b09c6f; box-shadow: 0 0 0 4px var(--nc-groove-lo), inset 0 0 0 3px #a994672a; background: #ad9562; color: #33291a; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; font: 6px Georgia, serif; letter-spacing: .12em; }\n.rpg-v7-root .nc-record-label b { font-size: 19px; line-height: 1.2; }\n.rpg-v7-root .nc-tonearm { position: absolute; right: 9%; top: 17%; width: 9px; height: 69%; border: 1px solid #614d30; border-radius: var(--radius-lg); background: linear-gradient(90deg, #625138, #c5b284 48%, #705e3d); transform-origin: 50% 7%; transform: rotate(-9deg); transition: transform 1s ease; box-shadow: 3px 2px 4px #0007; }\n.rpg-v7-root .nc-tonearm::before { content: ''; position: absolute; top: -6px; left: -8px; width: 23px; height: 23px; border-radius: var(--radius-round); background: radial-gradient(circle, #d9c694 9%, #7d6947 13% 40%, #332a1d 42% 48%, #ac935f 52% 66%, #352c1f 69%); }\n.rpg-v7-root .nc-tonearm::after { content: ''; position: absolute; bottom: -3px; left: -4px; width: 15px; height: 25px; border: 1px solid #8f7950; border-radius: var(--radius-md); background: linear-gradient(90deg, #3c3b32, #1b1c17); }\n.rpg-v7-root .nc-music[data-playing=\"true\"] .nc-tonearm { transform: rotate(23deg); }\n.rpg-v7-root .nc-now { text-align: center; padding-top: 15px; min-width: 0; }\n.rpg-v7-root .nc-now > span { color: var(--nc-muted); font-size: 12px; letter-spacing: .1em; }\n.rpg-v7-root .nc-now h3 { min-height: 1.8em; font: 400 19px/1.8 var(--serif); letter-spacing: .1em; margin: 2px 0 5px; overflow-wrap: anywhere; }\n.rpg-v7-root .nc-seek { display: block; height: 26px; }\n.rpg-v7-root .nc-music input[type=\"range\"] { -webkit-appearance: none; appearance: none; background: none; height: 26px; width: 100%; margin: 0; cursor: pointer; --fill: 0%; }\n/* 滑杆：轨道维持原本的细条与金色已播放段，只把圆钮换成黄铜旋钮。 */\n.rpg-v7-root .nc-music input[type=\"range\"]::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-xs); background: linear-gradient(90deg, var(--nc-gold) var(--fill), var(--nc-track) var(--fill)); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-moz-range-track { height: 4px; border-radius: var(--radius-xs); background: var(--nc-track); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-moz-range-progress { height: 4px; border-radius: var(--radius-xs); background: var(--nc-gold); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-webkit-slider-thumb { -webkit-appearance: none; width: 17px; height: 17px; margin-top: -6.5px; border: 1px solid var(--nc-thumb-dark); border-radius: var(--radius-round); background: radial-gradient(circle at 50% 50%, var(--nc-thumb-dark) 0 1.6px, transparent 2.2px), radial-gradient(circle at 34% 30%, var(--nc-thumb-hi), var(--nc-thumb-mid) 46%, var(--nc-thumb-lo)); box-shadow: 0 0 0 2px var(--nc-line-30), 0 1px 3px var(--shade-60); }\n.rpg-v7-root .nc-music input[type=\"range\"]::-moz-range-thumb { width: 15px; height: 15px; border: 1px solid var(--nc-thumb-dark); border-radius: var(--radius-round); background: radial-gradient(circle at 50% 50%, var(--nc-thumb-dark) 0 1.6px, transparent 2.2px), radial-gradient(circle at 34% 30%, var(--nc-thumb-hi), var(--nc-thumb-mid) 46%, var(--nc-thumb-lo)); box-shadow: 0 0 0 2px var(--nc-line-30), 0 1px 3px var(--shade-60); }\n.rpg-v7-root .nc-music input[type=\"range\"]:disabled { cursor: default; }\n.rpg-v7-root .nc-music input[type=\"range\"]:disabled::-webkit-slider-thumb { filter: saturate(.35) brightness(.8); }\n.rpg-v7-root .nc-music input[type=\"range\"]:disabled::-moz-range-thumb { filter: saturate(.35) brightness(.8); }\n.rpg-v7-root .nc-music input[type=\"range\"]:focus-visible { outline: 2px solid var(--nc-focus); outline-offset: 2px; border-radius: var(--radius-md); }\n.rpg-v7-root .nc-times { display: flex; justify-content: space-between; color: var(--nc-muted); font: 12px Georgia, serif; margin-top: -2px; }\n.rpg-v7-root .nc-transport { display: flex; justify-content: center; align-items: center; gap: 18px; margin: 12px 0; }\n.rpg-v7-root .nc-transport button { border: 1px solid #b89d6055; border-radius: var(--radius-round); width: 44px; height: 44px; background: linear-gradient(145deg, #403522, #211e19); font-size: 15px; }\n.rpg-v7-root .nc-transport .nc-play { width: 54px; height: 54px; border-color: var(--nc-key-edge); color: var(--nc-key-ink); background: linear-gradient(135deg, var(--nc-key-hi), var(--nc-key-lo)); box-shadow: inset 0 0 0 3px #211e1940; }\n/* 播放方式：圆形图示为主，文字缩成小注记。 */\n.rpg-v7-root .nc-music-modes { display: flex; justify-content: center; gap: 26px; margin: 2px 0 4px; }\n.rpg-v7-root .nc-music-modes button { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 44px; min-height: 44px; padding: 0; font-size: 12px; letter-spacing: .06em; background: none; border: 0; color: var(--nc-muted); opacity: .72; }\n.rpg-v7-root .nc-music-modes svg { display: block; box-sizing: border-box; width: 32px; height: 32px; padding: 7px; border: 1px solid #b89d6040; border-radius: var(--radius-round); background: #0000001f; transition: background-color .15s, border-color .15s; }\n.rpg-v7-root .nc-music-modes button:hover { opacity: 1; }\n.rpg-v7-root .nc-music-modes button:focus-visible { outline: none; }\n.rpg-v7-root .nc-music-modes button:focus-visible svg { outline: 2px solid var(--nc-focus); outline-offset: 2px; }\n.rpg-v7-root .nc-music-modes button[aria-pressed=\"true\"] { color: #f0dfb7; opacity: 1; }\n.rpg-v7-root .nc-music-modes button[aria-pressed=\"true\"] svg { color: var(--nc-key-ink); border-color: var(--nc-key-hi); background: radial-gradient(circle at 36% 30%, #e6d3a3, var(--nc-key-lo)); box-shadow: 0 0 0 3px #b89d6018, 0 2px 4px var(--shade-35); }\n.rpg-v7-root .nc-volume { display: flex; align-items: center; gap: 9px; font-size: 12px; margin-top: 12px; color: var(--nc-muted); }\n.rpg-v7-root .nc-volume > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; min-width: 52px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--nc-key-edge); border-radius: var(--radius-lg); background: linear-gradient(145deg, #51412a, #33291c); color: #f2dfb6; font-size: 12px; font-weight: 600; white-space: nowrap; }\n.rpg-v7-root .nc-volume > button:hover { border-color: #ead2a0; background: #59472e; }\n.rpg-v7-root .nc-volume > button[aria-pressed=\"true\"] { background: #ddc38f; color: #302519; border-color: #f0dcaf; opacity: 1; }\n.rpg-v7-root .nc-volume > button[aria-pressed=\"true\"]:hover { background: #ecd3a1; }\n.rpg-v7-root .nc-volume label { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; }\n.rpg-v7-root .nc-volume label > span { flex: none; }\n.rpg-v7-root .nc-volume output { flex: 0 0 32px; text-align: right; font-family: Georgia, serif; }\n.rpg-v7-root .nc-volume-icon { display: block; flex: none; width: 20px; height: 20px; }\n.rpg-v7-root .nc-volume-cross, .rpg-v7-root [aria-pressed=\"true\"] > .nc-volume-icon .nc-volume-waves { display: none; }\n.rpg-v7-root [aria-pressed=\"true\"] > .nc-volume-icon .nc-volume-cross { display: block; }\n.rpg-v7-root .nc-ambience { margin-top: 8px; }\n/* 正在下雨、雨声播放中：雨云亮起。 */\n.rpg-v7-root .nc-ambience > button.is-playing:not([aria-pressed=\"true\"]) { color: #f0dfb7; box-shadow: 0 0 0 3px #b89d6024, 0 0 10px #e6d3a355; }\n.rpg-v7-root .nc-library { min-width: 0; border-left: 1px solid var(--nc-line-35); padding-left: 24px; display: flex; flex-direction: column; }\n.rpg-v7-root .nc-library-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }\n/* 曲目分两组：战斗（只在小游戏中显示，曲目少，不撑高）与通用。 */\n.rpg-v7-root .nc-library-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }\n.rpg-v7-root .nc-library-group[hidden] { display: none; }\n.rpg-v7-root .nc-battle-group { flex: none; border-bottom: 1px solid var(--nc-line-35); margin-bottom: 8px; }\n.rpg-v7-root .nc-battle-group .nc-track-list { flex: none; min-height: 0; margin: 2px 0 10px; }\n.rpg-v7-root .nc-auto { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; color: var(--nc-muted); cursor: pointer; }\n.rpg-v7-root .nc-auto input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--nc-thumb-mid); cursor: pointer; }\n.rpg-v7-root .nc-library-head h3 { font: 400 17px/1.5 var(--serif); letter-spacing: .1em; margin: 0; }\n.rpg-v7-root .nc-track-list { list-style: none; padding: 0; margin: 10px 0 18px; flex: 1; min-height: 100px; max-height: 370px; overflow: auto; scrollbar-width: thin; }\n.rpg-v7-root .nc-track-list li { display: flex; min-width: 0; border-bottom: 1px solid #b89d602a; }\n.rpg-v7-root .nc-track { min-width: 0; flex: 1; display: flex; align-items: center; gap: 12px; min-height: 68px; text-align: left; border: 0; padding: 10px 8px; background: transparent; }\n.rpg-v7-root .nc-track[aria-pressed=\"true\"] { background: linear-gradient(90deg, #0000004a, #00000024); box-shadow: inset 2px 0 #bca26e; }\n.rpg-v7-root .nc-track[aria-pressed=\"true\"] strong { color: #f3e3bd; }\n.rpg-v7-root .nc-track[aria-pressed=\"true\"] .nc-track-number { opacity: 1; color: #d8bf86; }\n.rpg-v7-root .nc-track:hover { background-color: #ba9d5d0c; }\n.rpg-v7-root .nc-track-number { font: 12px Georgia, serif; opacity: .65; }\n.rpg-v7-root .nc-track > span:last-child { display: grid; gap: 5px; min-width: 0; }\n.rpg-v7-root .nc-track strong { font: 400 14px/1.6 var(--serif); color: var(--nc-ink); overflow-wrap: anywhere; }\n.rpg-v7-root .nc-track small { color: var(--nc-muted); font-size: 12px; }\n.rpg-v7-root .nc-music-message { font-size: 12px; line-height: 1.8; color: var(--nc-muted); margin: 9px 0 0; }\n.rpg-v7-root .nc-music-message:empty { display: none; }\n.rpg-v7-root .nc-music-message.is-error { color: #e7b69b; }\n.rpg-v7-root .nc-music-controls { display: inline-flex; flex-direction: column-reverse; align-items: center; flex: none; width: 34px; height: 56px; }\n.rpg-v7-root .ctrlRow .nc-music-controls button { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--radius-xs); background: transparent; box-shadow: none; color: var(--ds-cover-ink, var(--ctrl-fg)); touch-action: manipulation; }\n.rpg-v7-root .ctrlRow .nc-music-controls .music-toggle { width: 34px; min-width: 34px; height: 32px; min-height: 32px; }\n.rpg-v7-root .ctrlRow .nc-music-controls .music-open { width: 30px; min-width: 30px; height: 24px; min-height: 24px; border: 1px solid currentColor; border-radius: 0; }\n.rpg-v7-root .music-open svg { display: block; }\n.rpg-v7-root .nc-music-note { position: relative; display: inline-block; }\n.rpg-v7-root .ctrlRow .music-toggle.muted { opacity: .65; text-decoration: none; }\n.rpg-v7-root .music-toggle.muted .nc-music-note::after { content: ''; position: absolute; left: -3px; right: -3px; top: 50%; height: 1px; background: currentColor; transform: rotate(-45deg); }\n.rpg-v7-root .nc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }\n@keyframes nc-record-spin { to { transform: rotate(360deg); } }\n@media (max-width: 600px) {\n  .rpg-v7-root .nc-music { padding: 18px 18px 12px; width: calc(100% - 20px); max-height: calc(var(--view-h) - 20px); }\n  .rpg-v7-root .nc-music-head { padding-bottom: 12px; }\n  .rpg-v7-root .nc-music-head h2 { font-size: 23px; }\n  .rpg-v7-root .nc-music-body { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-top: 15px; }\n  .rpg-v7-root .nc-turntable { width: 200px; }\n  .rpg-v7-root .nc-now { padding-top: 10px; }\n  .rpg-v7-root .nc-library { padding-left: 0; border-left: 0; border-top: 1px solid var(--nc-line-35); padding-top: 8px; }\n  .rpg-v7-root .nc-track-list { max-height: 200px; margin-top: 4px; }\n  .rpg-v7-root .nc-track { min-height: 58px; }\n}\n@media (prefers-reduced-motion: reduce) {\n  .rpg-v7-root .nc-record { animation: none; }\n  .rpg-v7-root .nc-tonearm { transition: none; }\n}\n";
 /* Shared ambience state and playback. The rain loop plays through Web Audio, so the join has no gap. */
 var NewCardAmbience = (function () {
   'use strict';
@@ -5296,7 +5304,7 @@ var NewCardAlbumData = (function () {
         var pluginBridge = context.pluginBridge || {};
         var timers = new Set();
         var rafs = new Set();
-        var resizeObserver = null;
+        var resizeObserver = null, fitObserver = null, dialogObserver = null;
         var destroyed = false;
         var skillPresentation = null;
         var skillTree = null;
@@ -5624,7 +5632,7 @@ var NewCardAlbumData = (function () {
             if (context.bbi?.subscribe) unsubscribe = context.bbi.subscribe(refresh);
             return {
                 hydrate: hydrate, replaceHtml: replaceHtml, patchTail: patchTail, refresh: refresh,
-                resize: function () { root.style.setProperty('--bbi-image-height', Math.max(96, stageEl().clientHeight * 0.55) + 'px'); },
+                resize: function () { root.style.setProperty('--bbi-image-height', Math.max(96, stageBaseHeight() * 0.55) + 'px'); },
                 destroy: function () {
                     closed = true;
                     if (unsubscribe) unsubscribe();
@@ -8005,13 +8013,177 @@ var NewCardAlbumData = (function () {
             reportHeight();
         }
 
+        // ── 卡片高度（2026-11-16 使用者决定）──────────────────────────
+        // 分页用的页高（cardBase）预设跟着酒馆聊天区的可见高度，没有下限（取代 2026-10-06 的最小 640px）；
+        // 使用者可改成自订 px。本文不在卡片内卷动：这一页放不下时，卡片变长 cardExtra，改卷动酒馆视窗。
+        // 分页只看 cardBase，卡片因为放不下而变长时不会重新分页。
+        var cardBase = 720, cardExtra = 0, cardFixed = 0, hostDefaultHeight = 720, lastAutoHeight = 0;
+        var CARD_FIXED_MIN = 480, CARD_FIXED_MAX = 1600;
+        // 防止版面坏掉的保护，不是舒适度的下限：卡片上的固定元件（地点牌、地图、页签、控制列）约占 360px，
+        // 聊天区很矮时正文区会只剩几十 px，每一段都放不下、每一页都变长。正文区至少保留这个高度（约三、四行）。
+        var CARD_MIN_READING = 120;
+
         function applyCardHeight(px) {
-            px = Math.max(640, Math.round(Number(px) || 720));  // 最小卡片高度 640px（2026-10-06）
-            root.style.setProperty('--cardHeight', px + 'px');
+            px = Math.max(240, Math.round(Number(px) || 720));
+            cardBase = px;
+            root.style.setProperty('--cardBase', px + 'px');
+            root.style.setProperty('--cardHeight', (px + cardExtra) + 'px');
             $('set-card-height-val').textContent = px + 'px';
             $('set-card-height').value = px;
             repaginateSoon();
             reportHeight();
+        }
+
+        // fixed：自订高度（px）；0 或不合法＝跟着视窗。
+        function applyCardFit(fixed) {
+            cardFixed = inRange(fixed, CARD_FIXED_MIN, CARD_FIXED_MAX) ? Math.round(fixed) : 0;
+            markActive('set-card-fit', 'fit', cardFixed ? 'fixed' : 'auto');
+            if (!cardFixed) lastAutoHeight = autoCardHeight();
+            applyCardHeight(cardFixed || lastAutoHeight);
+            ensureReadingArea();
+        }
+        // 正文区不足 CARD_MIN_READING 时加高卡片。加高后地图区的高度规则可能跟着变，所以最多补两次。
+        // 卡片还没显示（载入器挂上时外框先隐藏）或面板展开时量不准，不补；之后卡片尺寸改变时（resizeObserver）再检查。
+        function ensureReadingArea() {
+            for (var i = 0; i < 2 && root.getClientRects().length && !root.classList.contains('sheet-open'); i++) {
+                var short = CARD_MIN_READING - stageBaseHeight();
+                if (short <= 0) break;
+                applyCardHeight(cardBase + short);
+            }
+        }
+
+        // 卡片所在的 iframe（同来源）。独立开启或 DIV 版没有，回传 null。
+        function cardHostFrame() {
+            try { return view.frameElement || null; } catch (_) { return null; }
+        }
+        // 酒馆里包住卡片、可以上下卷动的区域（聊天区 #chat）。只看 overflow 设定，不看目前能不能卷：
+        // 第一楼时聊天区还卷不动，仍要用它的高度。
+        function cardScroller() {
+            var frame = cardHostFrame(), el = frame ? frame.parentElement : root.parentElement;
+            // 先找酒馆的聊天区；找不到（其他宿主）才往外找第一个可卷动的区域。
+            // 布景主题可能在讯息上加 overflow-x: hidden，算出来的 overflow-y 也会是 auto，所以不能只靠往外找。
+            var chat = el && el.closest ? el.closest('#chat') : null;
+            if (chat && chat.clientHeight > 0) return chat;
+            for (; el && el.nodeType === 1; el = el.parentElement) {
+                var style = el.ownerDocument.defaultView.getComputedStyle(el);
+                if (/(auto|scroll)/.test(style.overflowY) && el.clientHeight > 0) return el;
+            }
+            return null;
+        }
+        function cardHostWindow() {
+            var frame = cardHostFrame();
+            return frame ? frame.ownerDocument.defaultView : view;
+        }
+        // 可见范围（宿主座标）：聊天区的上下缘；找不到聊天区时用整个视窗。
+        function cardViewport() {
+            var scroller = cardScroller();
+            if (scroller) { var box = scroller.getBoundingClientRect(); return {top: box.top, bottom: box.top + scroller.clientHeight}; }
+            return {top: 0, bottom: cardHostWindow().innerHeight};
+        }
+        // 量不到（还没排版、被隐藏）时用载入器给的高度。
+        function autoCardHeight() {
+            var area = cardViewport(), height = Math.round(area.bottom - area.top);
+            return height > 0 ? height - 10 : hostDefaultHeight;
+        }
+
+        // 这一页的内容需要多高（正文区内）。内容超出时 scrollHeight 就是答案；没超出时看最后一个子元素的底部。
+        function stageNeed(stage) {
+            if (stage.scrollHeight > stage.clientHeight + 1) return stage.scrollHeight;
+            var top = stage.getBoundingClientRect().top - stage.scrollTop, bottom = top;
+            for (var child = stage.firstElementChild; child; child = child.nextElementSibling) {
+                if (!child.getClientRects().length) continue;
+                var end = child.getBoundingClientRect().bottom + (parseFloat(view.getComputedStyle(child).marginBottom) || 0);
+                if (end > bottom) bottom = end;
+            }
+            return bottom - top + (parseFloat(view.getComputedStyle(stage).paddingBottom) || 0);
+        }
+        // 让卡片刚好放得下这一页：放得下就回到 cardBase，放不下就加长。面板展开时不加长。
+        // 纸张区变高时四周的装饰（花饰、齿轮、页标）也会跟着变大（容器查询），正文区不会和卡片等量变长，
+        // 所以先用基本高度算出差额，再补上仍然超出的部分（最多三次）。
+        var fitRaw = 0;
+        function fitCard() {
+            if (destroyed) return;
+            var stage = stageEl(), extra = 0;
+            if (!root.classList.contains('sheet-open') && stage.clientHeight > 0) {
+                extra = Math.max(0, Math.ceil(stageNeed(stage) - stageBaseHeight()));
+            }
+            if (Math.abs(extra - fitRaw) <= 1 && !extra === !cardExtra) return;
+            fitRaw = cardExtra = extra;
+            root.style.setProperty('--cardHeight', (cardBase + cardExtra) + 'px');
+            for (var i = 0; i < 3 && cardExtra; i++) {
+                var left = stage.scrollHeight - stage.clientHeight;
+                if (left <= 1) break;
+                cardExtra += left;
+                root.style.setProperty('--cardHeight', (cardBase + cardExtra) + 'px');
+            }
+            reportHeight();
+        }
+        // 正文区的基本高度（卡片等于 cardBase 时），给分页、插图大小、正文区保护使用。
+        // 卡片加长时暂时改回 cardBase 量一次（同一段程式内改回，画面不会闪），版面条件没变就沿用上次的结果。
+        var stageBaseKey = '', stageBaseValue = 0;
+        function stageBaseHeight() {
+            var stage = stageEl(), key = cardBase + '|' + root.clientWidth + '|' + root.className + '|' + pages.length;
+            if (!cardExtra) { stageBaseKey = key; return (stageBaseValue = stage.clientHeight); }
+            if (key === stageBaseKey) return stageBaseValue;
+            root.style.setProperty('--cardHeight', cardBase + 'px');
+            stageBaseValue = stage.clientHeight;
+            stageBaseKey = key;
+            root.style.setProperty('--cardHeight', (cardBase + cardExtra) + 'px');
+            return stageBaseValue;
+        }
+
+        // 翻页后，如果正文区的开头在可见范围上方，把卡片顶端卷回可见范围。
+        function revealCardTop() {
+            var frame = cardHostFrame(), offset = frame ? frame.getBoundingClientRect().top : 0;
+            if (stageEl().getBoundingClientRect().top + offset >= cardViewport().top) return;
+            try { (frame || root).scrollIntoView({block: 'start'}); } catch (_) {}
+        }
+
+        // 卡片内的对话框（地图、相簿、留声机）以 fixed 定位在 iframe 里。卡片比画面长时，
+        // 把可见范围换算成 iframe 内的座标，让对话框出现在画面上；开着时跟着酒馆卷动更新。
+        var dialogViewAbort = null, dialogViewFrame = 0;
+        function syncDialogView() {
+            if (destroyed) return;
+            var frame = cardHostFrame();
+            var open = frame && root.querySelector('dialog[open]');
+            if (!open) {
+                if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
+                ['--view-top', '--view-bottom', '--view-h'].forEach(function (name) { root.style.removeProperty(name); });
+                return;
+            }
+            var box = frame.getBoundingClientRect(), area = cardViewport(), height = frame.clientHeight;
+            var top = Math.max(0, Math.min(height, area.top - box.top)), bottom = Math.max(top, Math.min(height, area.bottom - box.top));
+            root.style.setProperty('--view-top', Math.round(top) + 'px');
+            root.style.setProperty('--view-bottom', Math.round(height - bottom) + 'px');
+            root.style.setProperty('--view-h', Math.round(bottom - top) + 'px');
+            if (dialogViewAbort) return;
+            var host = cardHostWindow();
+            dialogViewAbort = new host.AbortController();
+            var update = function () {
+                if (dialogViewFrame) return;
+                dialogViewFrame = requestFrame(function () { dialogViewFrame = 0; syncDialogView(); });
+            };
+            host.addEventListener('scroll', update, {capture: true, passive: true, signal: dialogViewAbort.signal});
+            host.addEventListener('resize', update, {signal: dialogViewAbort.signal});
+        }
+
+        // 酒馆视窗大小改变（旋转、调整视窗）时重新取页高。正在输入时高度变矮多半是手机键盘，不跟着变。
+        var hostResizeTimer = null, hostResizeWidth = 0;
+        function onHostResize() {
+            hostResizeTimer = clearTimer(hostResizeTimer);
+            hostResizeTimer = setTimer(function () {
+                hostResizeTimer = null;
+                if (cardFixed) return;
+                var host = cardHostWindow(), width = host.innerWidth, next = autoCardHeight();
+                var active = host.document.activeElement;
+                var typing = active && active.matches && active.matches('textarea, input, [contenteditable="true"]');
+                var sameWidth = width === hostResizeWidth;
+                hostResizeWidth = width;
+                // 和上一次量到的可见高度比（cardBase 可能被保护加高过）。
+                if (Math.abs(next - lastAutoHeight) < 24 && sameWidth) return;
+                if (typing && sameWidth && next < lastAutoHeight) return;
+                applyCardFit(0);
+            }, 250);
         }
 
         // 显示设定（主题、纸张、纸纹浓度、行宽、卡片高度）：和字体一样存在最外层视窗的 localStorage。
@@ -8037,16 +8209,17 @@ var NewCardAlbumData = (function () {
             if (typeof value.texUrl === 'string' && value.texUrl.length <= 2000) { $('set-tex-url').value = value.texUrl; applyTexUrl(value.texUrl); }
             if (inRange(value.texOpacity, 0, 100)) applyTexOpacity(value.texOpacity);
             if (inRange(value.contentMax, 36, 100)) applyContentMax(value.contentMax);
-            if (inRange(value.cardHeight, 640, 1200)) applyCardHeight(value.cardHeight);
+            // 旧的 cardHeight（640–1200 固定高度）不再读取：改版后预设跟着视窗，使用者要再选一次「自订」。
+            if (typeof value.cardHeightFixed === 'number') applyCardFit(value.cardHeightFixed);
             if (value.explore === 'flat' || value.explore === '3d') applyExplorePage(value.explore);
         }
         // 探索画面：下次开启探索时生效（已开着的不切换）。
         var explorePage = 'flat';
         function applyExplorePage(mode) { explorePage = mode; markActive('set-explore', 'explore', mode); }
-        // 宿主（载入器）给的卡片高度只是预设；使用者调过就用使用者的。
+        // 宿主（载入器）给的卡片高度只在量不到酒馆可见范围时使用；使用者选了自订就用自订。
         function hostCardHeight(px) {
-            var saved = savedDisplay().cardHeight;
-            applyCardHeight(inRange(saved, 640, 1200) ? saved : px);
+            if (inRange(px, 240, 4096)) hostDefaultHeight = Math.round(px);
+            applyCardFit(savedDisplay().cardHeightFixed);
         }
         function setReadingMode(paged) {
             if (root.classList.contains('paged-mode') === paged) return;
@@ -8071,7 +8244,7 @@ var NewCardAlbumData = (function () {
             if (open) {
                 var box = paper.getBoundingClientRect();
                 sheetReadingState = {top: stage.scrollTop, page: currPage, paragraphs: allParas,
-                    width: stage.clientWidth, height: stage.clientHeight, paged: root.classList.contains('paged-mode')};
+                    width: stage.clientWidth, height: stageBaseHeight(), paged: root.classList.contains('paged-mode')};
                 root.style.setProperty('--reading-width', box.width + 'px');
                 root.style.setProperty('--reading-height', box.height + 'px');
             }
@@ -8099,14 +8272,16 @@ var NewCardAlbumData = (function () {
                 requestFrame(function () {
                     if (destroyed || root.classList.contains('sheet-open')) return;
                     var same = previous && previous.paragraphs === allParas && previous.paged === root.classList.contains('paged-mode');
-                    var resized = previous && (previous.width !== stage.clientWidth || previous.height !== stage.clientHeight);
+                    var resized = previous && (previous.width !== stage.clientWidth || previous.height !== stageBaseHeight());
                     if (sheetPageDirty || resized) paginate();
                     sheetPageDirty = false;
                     if (same) stage.scrollTop = previous.top;
                     syncPageControls();
+                    syncMoreHint();
                 });
             }
             syncPageControls();
+            fitCard();
             reportHeight();
         }
 
@@ -8409,6 +8584,7 @@ var NewCardAlbumData = (function () {
         // 分页模式下这一页还没卷到底时加上 stage-more（底部淡出＋向下箭头）。
         // 箭头放在正文区外面（正文区有淡出遮罩，放在里面会一起变淡），位置对齐正文区底部。
         function syncMoreHint() {
+            fitCard();
             var stage = stageEl(), hint = $('more-hint');
             var more = root.classList.contains('paged-mode') && stage.scrollHeight - stage.clientHeight - stage.scrollTop > 4;
             root.classList.toggle('stage-more', more);
@@ -8571,7 +8747,8 @@ var NewCardAlbumData = (function () {
             var start = from > 0 ? pageStarts[from] : 0, startOffset = from > 0 ? (pageOffsets[from] || 0) : 0;
             var stage = stageEl();
             var computed = view.getComputedStyle(stage);
-            var available = stage.clientHeight - parseFloat(computed.paddingTop) - parseFloat(computed.paddingBottom);
+            // 用基本页高分页：目前这一页放不下而加长的部分（cardExtra）不算。
+            var available = stageBaseHeight() - parseFloat(computed.paddingTop) - parseFloat(computed.paddingBottom);
             if (!(available > 0)) available = 400;
             var measure = create('div');
             measure.className = textEl().className + ' rpg-page-measure';
@@ -8721,6 +8898,8 @@ var NewCardAlbumData = (function () {
             if (!canTurnPages() || !Number.isInteger(index) || index === currPage || index < 0 || index > pages.length - 1) return;
             currPage = index;
             renderPage();
+            // 等载入器套用新的卡片高度（reportHeight 的下一个画面）再卷，否则卡片缩短后卷动位置会被截掉。
+            requestFrame(revealCardTop);
         }
 
         function repaginateSoon() {
@@ -9624,10 +9803,18 @@ var NewCardAlbumData = (function () {
             // 拖动时只改这一楼；放开（change）才保存并通知其他楼层，避免每一步都让所有楼层重新分页。
             listen($('set-tex-opacity'), 'input', function (event) { applyTexOpacity(Number(event.currentTarget.value)); });
             listen($('set-content-max'), 'input', function (event) { applyContentMax(Number(event.currentTarget.value)); });
-            listen($('set-card-height'), 'input', function (event) { applyCardHeight(Number(event.currentTarget.value)); });
+            // 拖动滑杆就改成自订高度；按「跟着视窗」回到预设。
+            listen($('set-card-height'), 'input', function (event) { applyCardFit(Number(event.currentTarget.value)); });
+            listen($('set-card-fit'), 'click', function (event) {
+                var button = event.target.closest('button[data-fit]');
+                if (!button) return;
+                var fixed = button.dataset.fit === 'fixed' ? Math.min(CARD_FIXED_MAX, Math.max(CARD_FIXED_MIN, cardBase)) : 0;
+                applyCardFit(fixed);
+                saveDisplay({cardHeightFixed: fixed});
+            });
             listen($('set-tex-opacity'), 'change', function (event) { saveDisplay({texOpacity: Number(event.currentTarget.value)}); });
             listen($('set-content-max'), 'change', function (event) { saveDisplay({contentMax: Number(event.currentTarget.value)}); });
-            listen($('set-card-height'), 'change', function (event) { saveDisplay({cardHeight: Number(event.currentTarget.value)}); });
+            listen($('set-card-height'), 'change', function (event) { saveDisplay({cardHeightFixed: Number(event.currentTarget.value)}); });
             Object.keys(textRules).forEach(function (kind) {
                 listen($('rule-add-' + kind), 'click', function () {
                     var row = ruleRow({open: '', close: ''});
@@ -9715,21 +9902,39 @@ var NewCardAlbumData = (function () {
             applyTexMode('local');
             applyTexOpacity(34);
             applyContentMax(68);
-            applyCardHeight(Math.max(640, Math.round(root.offsetHeight || view.innerHeight || 720)));
+            applyCardFit(0);
             applyDisplay(savedDisplay());
             paginate();
+            hostResizeWidth = cardHostWindow().innerWidth;
+            listen(cardHostWindow(), 'resize', onHostResize);
 
             if (typeof view.ResizeObserver === 'function') {
+                // 卡片因为这一页放不下而变长（cardExtra）时，正文区的基本尺寸没变，不重新分页。
+                var layoutKey = '';
                 resizeObserver = new view.ResizeObserver(function () {
+                    ensureReadingArea();
                     bbiViews.resize();
+                    // 版面改变时正文区四周的装饰大小也可能改变，重新决定卡片长度。
+                    syncMoreHint();
                     reportHeight();
+                    var key = root.clientWidth + '|' + stageEl().clientWidth + '|' + stageBaseHeight();
+                    if (key === layoutKey) return;
+                    layoutKey = key;
                     repaginateSoon();
                 });
                 resizeObserver.observe(root);
                 // Paper margins can resize the reading viewport without resizing root.
                 resizeObserver.observe(stageEl());
+                // 正文内容的高度改变（插图载入、串流长出文字、外挂画面展开）时，重新决定卡片长度。
+                // 正文区内的每一块都观察（正文、首尾花饰、插图提示）。
+                fitObserver = new view.ResizeObserver(function () { syncMoreHint(); });
+                Array.prototype.forEach.call(stageEl().children, function (child) { fitObserver.observe(child); });
                 mapObserver = new view.ResizeObserver(fitMap);
                 mapObserver.observe(root.querySelector('.uiMapViewport'));
+            }
+            if (typeof view.MutationObserver === 'function') {
+                dialogObserver = new view.MutationObserver(syncDialogView);
+                dialogObserver.observe(root, {subtree: true, attributes: true, attributeFilter: ['open']});
             }
             if (typeof context.onUpdate === 'function') unsubscribeContext = context.onUpdate(function (state) {
                 if (!state || !state.streaming) refreshDialogueIdentity();
@@ -9760,6 +9965,9 @@ var NewCardAlbumData = (function () {
             stRegexInputs.clear();
             if (typeof unsubscribeContext === 'function') unsubscribeContext();
             if (mapObserver) { mapObserver.disconnect(); mapObserver = null; }
+            if (fitObserver) { fitObserver.disconnect(); fitObserver = null; }
+            if (dialogObserver) { dialogObserver.disconnect(); dialogObserver = null; }
+            if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
             failedAvatars.clear();
             timers.forEach(function (id) { view.clearTimeout(id); });
             timers.clear();
