@@ -37,11 +37,9 @@
        本文、状态面板、控制列共用，确保三者左右对齐。 */
     --contentMax: clamp(20rem, 82vw, 68rem);
 
-    /* 卡片高度（2026-11-16 使用者决定）：
-       --cardBase 是分页用的高度，预设等于酒馆聊天区的可见高度（fitCard 前的 applyCardFit），
-       使用者可在「显示设定 → 卡片高度」改成自订 px。
-       --cardHeight 是实际高度＝--cardBase＋这一页放不下的部分。本文不在卡片内卷动，
-       放不下的页（全文模式、很长的对话、插图页）让卡片变长，改卷动酒馆视窗。 */
+    /* 卡片高度（2026-11-16 使用者决定）：固定高度，本文放不下时在正文区内卷动。
+       宽版（卡片宽度 600px 以上）预设等于酒馆聊天区的可见高度；窄版预设 720px（最小 640px）。
+       使用者可在「显示设定 → 卡片高度」改成自订 px。由 applyCardFit 设定，--cardBase 与 --cardHeight 相同。 */
     --cardBase: 100vh;
     --cardHeight: 100vh;
     /* 卡片内对话框（地图、相簿、留声机）对准酒馆可见范围；卡片比画面长时由 syncDialogView 设定。 */
@@ -140,8 +138,8 @@
     --stat-b: #3b6fc2;          /* 状态条 B */
     --stat-c: #46a06a;          /* 状态条 C */
 
-    /* 用 height 而非 min-height：卡片长度只由 fitCard 设定的 --cardHeight 决定，
-       分页时才能用 --cardBase 量出固定的页高。 */
+    /* 卡片高度固定，不随本文长度增长。本文超出时在 .stage 内部滚动。
+       用 height 而非 min-height：min-height 只设下限，内容一长还是会撑高。 */
     height: var(--cardHeight, 100vh);
     background: var(--bg);
     color: var(--ink);
@@ -2155,7 +2153,7 @@
 }
 .rpg-v7-root.d-material-ui.sheet-open .panelArea {
   flex: 1 1 0; min-height: 0; max-height: none; padding: clamp(12px, 2.5%, 24px);
-  overscroll-behavior-y: contain; scrollbar-gutter: stable both-edges; container: status-panel / size;
+  scrollbar-gutter: stable both-edges; container: status-panel / size;
 }
 .rpg-v7-root.d-material-ui.sheet-open .tabRow { margin-top: 0; padding-bottom: 6px; }
 .rpg-v7-root.d-material-ui {
@@ -2735,9 +2733,9 @@
 @container status-panel (min-height: 320px) {
   .rpg-v7-root.skill-page-card [data-panel="skills"].active:has(> .skillEntrySummary:not(.is-inline)) { height: 100%; }
   .rpg-v7-root.skill-page-card .skillEntrySummary:not(.is-inline) { height: 100%; display: flex; flex-direction: column; }
-  .rpg-v7-root.skill-page-card .skillEntrySummary:not(.is-inline) .skillOverviewDetail { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: var(--skill-accent) transparent; }
+  .rpg-v7-root.skill-page-card .skillEntrySummary:not(.is-inline) .skillOverviewDetail { flex: 0 1 auto; min-height: 0; overflow-y: auto;scrollbar-width: thin; scrollbar-color: var(--skill-accent) transparent; }
   .rpg-v7-root.skill-page-card .skillEntrySummary:not(.is-inline) .skillCatalogue { display: flex; flex-direction: column; flex: 1; min-height: 160px; }
-  .rpg-v7-root.skill-page-card .skillEntrySummary:not(.is-inline) .skillCatalogueList { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: var(--skill-accent) transparent; }
+  .rpg-v7-root.skill-page-card .skillEntrySummary:not(.is-inline) .skillCatalogueList { flex: 1; min-height: 0; overflow-y: auto;scrollbar-width: thin; scrollbar-color: var(--skill-accent) transparent; }
 }
 
 /* 手机（.is-inline，由 skills.js 依宽度切换）：没有上方详情框，整页一起卷；
@@ -3397,7 +3395,7 @@
   /* 注记：填满剩下的高度，文字多时在框内卷动。 */
   .rpg-v7-root.d-material-ui .dpNotes { display: flex; flex-direction: column; min-height: 0; contain: size; margin-bottom: 4px; }
   .rpg-v7-root.d-material-ui .dpSheet .charDesc {
-    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px;
+    flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px;
     scrollbar-width: thin; scrollbar-color: var(--status-rule) transparent;
   }
 }
@@ -3761,11 +3759,12 @@
                 <div class="setSection">
                     <div class="setLabel">卡片高度</div>
                     <div class="setBtnGroup" data-role="set-card-fit">
-                        <button class="setOptBtn active" data-fit="auto">跟着视窗</button>
+                        <button class="setOptBtn active" data-fit="auto">自动</button>
                         <button class="setOptBtn" data-fit="fixed">自订</button>
                     </div>
+                    <div class="setHint">自动：卡片宽度 600px 以上时跟着视窗高度；较窄时固定 720px。</div>
                     <div class="setSliderRow">
-                        <input type="range" data-role="set-card-height" min="480" max="1600" step="20">
+                        <input type="range" data-role="set-card-height" min="640" max="1600" step="20">
                         <span class="setSliderVal" data-role="set-card-height-val"></span>
                     </div>
                 </div>
@@ -5304,7 +5303,7 @@ var NewCardAlbumData = (function () {
         var pluginBridge = context.pluginBridge || {};
         var timers = new Set();
         var rafs = new Set();
-        var resizeObserver = null, fitObserver = null, dialogObserver = null;
+        var resizeObserver = null, dialogObserver = null;
         var destroyed = false;
         var skillPresentation = null;
         var skillTree = null;
@@ -8013,34 +8012,41 @@ var NewCardAlbumData = (function () {
             reportHeight();
         }
 
-        // ── 卡片高度（2026-11-16 使用者决定）──────────────────────────
-        // 分页用的页高（cardBase）预设跟着酒馆聊天区的可见高度，没有下限（取代 2026-10-06 的最小 640px）；
-        // 使用者可改成自订 px。本文不在卡片内卷动：这一页放不下时，卡片变长 cardExtra，改卷动酒馆视窗。
-        // 分页只看 cardBase，卡片因为放不下而变长时不会重新分页。
-        var cardBase = 720, cardExtra = 0, cardFixed = 0, hostDefaultHeight = 720, lastAutoHeight = 0;
-        var CARD_FIXED_MIN = 480, CARD_FIXED_MAX = 1600;
-        // 防止版面坏掉的保护，不是舒适度的下限：卡片上的固定元件（地点牌、地图、页签、控制列）约占 360px，
-        // 聊天区很矮时正文区会只剩几十 px，每一段都放不下、每一页都变长。正文区至少保留这个高度（约三、四行）。
+        // ── 卡片高度（2026-11-16 使用者决定，同日修订）──────────────────
+        // 卡片高度固定；本文放不下时在正文区内卷动（全文模式也是），卡片不会变长。
+        // 自动：宽版（卡片宽度 600px 以上）跟着酒馆聊天区的可见高度；
+        //       窄版回到原本的固定高度（载入器给的 720px，最小 640px，2026-10-06）。
+        // 使用者可改成自订 px。--cardBase 与 --cardHeight 相同（CSS 里两个名称都有用到）。
+        var cardBase = 720, cardFixed = 0, hostDefaultHeight = 720, lastAutoHeight = 0, cardNarrow = false;
+        var CARD_FIXED_MIN = 640, CARD_FIXED_MAX = 1600, CARD_NARROW_WIDTH = 600, CARD_NARROW_MIN = 640;
+        // 防止版面坏掉的保护，不是舒适度的下限：卡片上的固定元件（地点牌、地图、页签、控制列）约占 360–416px，
+        // 宽版的聊天区很矮时正文区会只剩几十 px。正文区至少保留这个高度（约三、四行）。
         var CARD_MIN_READING = 120;
 
         function applyCardHeight(px) {
             px = Math.max(240, Math.round(Number(px) || 720));
             cardBase = px;
             root.style.setProperty('--cardBase', px + 'px');
-            root.style.setProperty('--cardHeight', (px + cardExtra) + 'px');
+            root.style.setProperty('--cardHeight', px + 'px');
             $('set-card-height-val').textContent = px + 'px';
             $('set-card-height').value = px;
             repaginateSoon();
             reportHeight();
         }
 
-        // fixed：自订高度（px）；0 或不合法＝跟着视窗。
+        // 卡片还没排版（载入器挂上时外框先隐藏，宽度 0）时当作宽版；排版后 resizeObserver 会再判断一次。
+        function isNarrowCard() {
+            var width = root.clientWidth;
+            return width > 0 && width < CARD_NARROW_WIDTH;
+        }
+        // fixed：自订高度（px）；0 或不合法＝自动。
         function applyCardFit(fixed) {
             cardFixed = inRange(fixed, CARD_FIXED_MIN, CARD_FIXED_MAX) ? Math.round(fixed) : 0;
             markActive('set-card-fit', 'fit', cardFixed ? 'fixed' : 'auto');
-            if (!cardFixed) lastAutoHeight = autoCardHeight();
+            cardNarrow = isNarrowCard();
+            if (!cardFixed) lastAutoHeight = cardNarrow ? Math.max(CARD_NARROW_MIN, hostDefaultHeight) : autoCardHeight();
             applyCardHeight(cardFixed || lastAutoHeight);
-            ensureReadingArea();
+            if (!cardFixed && !cardNarrow) ensureReadingArea();
         }
         // 正文区不足 CARD_MIN_READING 时加高卡片。加高后地图区的高度规则可能跟着变，所以最多补两次。
         // 卡片还没显示（载入器挂上时外框先隐藏）或面板展开时量不准，不补；之后卡片尺寸改变时（resizeObserver）再检查。
@@ -8086,60 +8092,12 @@ var NewCardAlbumData = (function () {
             return height > 0 ? height - 10 : hostDefaultHeight;
         }
 
-        // 这一页的内容需要多高（正文区内）。内容超出时 scrollHeight 就是答案；没超出时看最后一个子元素的底部。
-        function stageNeed(stage) {
-            if (stage.scrollHeight > stage.clientHeight + 1) return stage.scrollHeight;
-            var top = stage.getBoundingClientRect().top - stage.scrollTop, bottom = top;
-            for (var child = stage.firstElementChild; child; child = child.nextElementSibling) {
-                if (!child.getClientRects().length) continue;
-                var end = child.getBoundingClientRect().bottom + (parseFloat(view.getComputedStyle(child).marginBottom) || 0);
-                if (end > bottom) bottom = end;
-            }
-            return bottom - top + (parseFloat(view.getComputedStyle(stage).paddingBottom) || 0);
-        }
-        // 让卡片刚好放得下这一页：放得下就回到 cardBase，放不下就加长。面板展开时不加长。
-        // 纸张区变高时四周的装饰（花饰、齿轮、页标）也会跟着变大（容器查询），正文区不会和卡片等量变长，
-        // 所以先用基本高度算出差额，再补上仍然超出的部分（最多三次）。
-        var fitRaw = 0;
-        function fitCard() {
-            if (destroyed) return;
-            var stage = stageEl(), extra = 0;
-            if (!root.classList.contains('sheet-open') && stage.clientHeight > 0) {
-                extra = Math.max(0, Math.ceil(stageNeed(stage) - stageBaseHeight()));
-            }
-            if (Math.abs(extra - fitRaw) <= 1 && !extra === !cardExtra) return;
-            fitRaw = cardExtra = extra;
-            root.style.setProperty('--cardHeight', (cardBase + cardExtra) + 'px');
-            for (var i = 0; i < 3 && cardExtra; i++) {
-                var left = stage.scrollHeight - stage.clientHeight;
-                if (left <= 1) break;
-                cardExtra += left;
-                root.style.setProperty('--cardHeight', (cardBase + cardExtra) + 'px');
-            }
-            reportHeight();
-        }
-        // 正文区的基本高度（卡片等于 cardBase 时），给分页、插图大小、正文区保护使用。
-        // 卡片加长时暂时改回 cardBase 量一次（同一段程式内改回，画面不会闪），版面条件没变就沿用上次的结果。
-        var stageBaseKey = '', stageBaseValue = 0;
+        // 正文区高度，给分页、插图大小、正文区保护使用。
         function stageBaseHeight() {
-            var stage = stageEl(), key = cardBase + '|' + root.clientWidth + '|' + root.className + '|' + pages.length;
-            if (!cardExtra) { stageBaseKey = key; return (stageBaseValue = stage.clientHeight); }
-            if (key === stageBaseKey) return stageBaseValue;
-            root.style.setProperty('--cardHeight', cardBase + 'px');
-            stageBaseValue = stage.clientHeight;
-            stageBaseKey = key;
-            root.style.setProperty('--cardHeight', (cardBase + cardExtra) + 'px');
-            return stageBaseValue;
+            return stageEl().clientHeight;
         }
 
-        // 翻页后，如果正文区的开头在可见范围上方，把卡片顶端卷回可见范围。
-        function revealCardTop() {
-            var frame = cardHostFrame(), offset = frame ? frame.getBoundingClientRect().top : 0;
-            if (stageEl().getBoundingClientRect().top + offset >= cardViewport().top) return;
-            try { (frame || root).scrollIntoView({block: 'start'}); } catch (_) {}
-        }
-
-        // 卡片内的对话框（地图、相簿、留声机）以 fixed 定位在 iframe 里。卡片比画面长时，
+        // 卡片内的对话框（地图、相簿、留声机）以 fixed 定位在 iframe 里。卡片比画面长时（窄版 720px 常见），
         // 把可见范围换算成 iframe 内的座标，让对话框出现在画面上；开着时跟着酒馆卷动更新。
         var dialogViewAbort = null, dialogViewFrame = 0;
         function syncDialogView() {
@@ -8167,13 +8125,14 @@ var NewCardAlbumData = (function () {
             host.addEventListener('resize', update, {signal: dialogViewAbort.signal});
         }
 
-        // 酒馆视窗大小改变（旋转、调整视窗）时重新取页高。正在输入时高度变矮多半是手机键盘，不跟着变。
+        // 酒馆视窗大小改变（旋转、调整视窗）时，宽版重新取页高。正在输入时高度变矮多半是手机键盘，不跟着变。
+        // 卡片宽度跨过 600px（宽、窄版切换）由 resizeObserver 处理。
         var hostResizeTimer = null, hostResizeWidth = 0;
         function onHostResize() {
             hostResizeTimer = clearTimer(hostResizeTimer);
             hostResizeTimer = setTimer(function () {
                 hostResizeTimer = null;
-                if (cardFixed) return;
+                if (cardFixed || cardNarrow) return;
                 var host = cardHostWindow(), width = host.innerWidth, next = autoCardHeight();
                 var active = host.document.activeElement;
                 var typing = active && active.matches && active.matches('textarea, input, [contenteditable="true"]');
@@ -8209,14 +8168,14 @@ var NewCardAlbumData = (function () {
             if (typeof value.texUrl === 'string' && value.texUrl.length <= 2000) { $('set-tex-url').value = value.texUrl; applyTexUrl(value.texUrl); }
             if (inRange(value.texOpacity, 0, 100)) applyTexOpacity(value.texOpacity);
             if (inRange(value.contentMax, 36, 100)) applyContentMax(value.contentMax);
-            // 旧的 cardHeight（640–1200 固定高度）不再读取：改版后预设跟着视窗，使用者要再选一次「自订」。
+            // 旧的 cardHeight（640–1200 固定高度）不再读取：改版后预设为「自动」，使用者要再选一次「自订」。
             if (typeof value.cardHeightFixed === 'number') applyCardFit(value.cardHeightFixed);
             if (value.explore === 'flat' || value.explore === '3d') applyExplorePage(value.explore);
         }
         // 探索画面：下次开启探索时生效（已开着的不切换）。
         var explorePage = 'flat';
         function applyExplorePage(mode) { explorePage = mode; markActive('set-explore', 'explore', mode); }
-        // 宿主（载入器）给的卡片高度只在量不到酒馆可见范围时使用；使用者选了自订就用自订。
+        // 宿主（载入器）给的卡片高度：窄版的预设，以及宽版量不到酒馆可见范围时使用；使用者选了自订就用自订。
         function hostCardHeight(px) {
             if (inRange(px, 240, 4096)) hostDefaultHeight = Math.round(px);
             applyCardFit(savedDisplay().cardHeightFixed);
@@ -8277,11 +8236,9 @@ var NewCardAlbumData = (function () {
                     sheetPageDirty = false;
                     if (same) stage.scrollTop = previous.top;
                     syncPageControls();
-                    syncMoreHint();
                 });
             }
             syncPageControls();
-            fitCard();
             reportHeight();
         }
 
@@ -8584,7 +8541,6 @@ var NewCardAlbumData = (function () {
         // 分页模式下这一页还没卷到底时加上 stage-more（底部淡出＋向下箭头）。
         // 箭头放在正文区外面（正文区有淡出遮罩，放在里面会一起变淡），位置对齐正文区底部。
         function syncMoreHint() {
-            fitCard();
             var stage = stageEl(), hint = $('more-hint');
             var more = root.classList.contains('paged-mode') && stage.scrollHeight - stage.clientHeight - stage.scrollTop > 4;
             root.classList.toggle('stage-more', more);
@@ -8747,7 +8703,6 @@ var NewCardAlbumData = (function () {
             var start = from > 0 ? pageStarts[from] : 0, startOffset = from > 0 ? (pageOffsets[from] || 0) : 0;
             var stage = stageEl();
             var computed = view.getComputedStyle(stage);
-            // 用基本页高分页：目前这一页放不下而加长的部分（cardExtra）不算。
             var available = stageBaseHeight() - parseFloat(computed.paddingTop) - parseFloat(computed.paddingBottom);
             if (!(available > 0)) available = 400;
             var measure = create('div');
@@ -8898,8 +8853,6 @@ var NewCardAlbumData = (function () {
             if (!canTurnPages() || !Number.isInteger(index) || index === currPage || index < 0 || index > pages.length - 1) return;
             currPage = index;
             renderPage();
-            // 等载入器套用新的卡片高度（reportHeight 的下一个画面）再卷，否则卡片缩短后卷动位置会被截掉。
-            requestFrame(revealCardTop);
         }
 
         function repaginateSoon() {
@@ -9803,7 +9756,7 @@ var NewCardAlbumData = (function () {
             // 拖动时只改这一楼；放开（change）才保存并通知其他楼层，避免每一步都让所有楼层重新分页。
             listen($('set-tex-opacity'), 'input', function (event) { applyTexOpacity(Number(event.currentTarget.value)); });
             listen($('set-content-max'), 'input', function (event) { applyContentMax(Number(event.currentTarget.value)); });
-            // 拖动滑杆就改成自订高度；按「跟着视窗」回到预设。
+            // 拖动滑杆就改成自订高度；按「自动」回到预设。
             listen($('set-card-height'), 'input', function (event) { applyCardFit(Number(event.currentTarget.value)); });
             listen($('set-card-fit'), 'click', function (event) {
                 var button = event.target.closest('button[data-fit]');
@@ -9909,26 +9862,17 @@ var NewCardAlbumData = (function () {
             listen(cardHostWindow(), 'resize', onHostResize);
 
             if (typeof view.ResizeObserver === 'function') {
-                // 卡片因为这一页放不下而变长（cardExtra）时，正文区的基本尺寸没变，不重新分页。
-                var layoutKey = '';
                 resizeObserver = new view.ResizeObserver(function () {
-                    ensureReadingArea();
+                    // 卡片宽度跨过 600px（宽、窄版切换，或挂上后第一次排版）时重新取自动高度。
+                    if (!cardFixed && isNarrowCard() !== cardNarrow) applyCardFit(0);
+                    else if (!cardFixed && !cardNarrow) ensureReadingArea();
                     bbiViews.resize();
-                    // 版面改变时正文区四周的装饰大小也可能改变，重新决定卡片长度。
-                    syncMoreHint();
                     reportHeight();
-                    var key = root.clientWidth + '|' + stageEl().clientWidth + '|' + stageBaseHeight();
-                    if (key === layoutKey) return;
-                    layoutKey = key;
                     repaginateSoon();
                 });
                 resizeObserver.observe(root);
                 // Paper margins can resize the reading viewport without resizing root.
                 resizeObserver.observe(stageEl());
-                // 正文内容的高度改变（插图载入、串流长出文字、外挂画面展开）时，重新决定卡片长度。
-                // 正文区内的每一块都观察（正文、首尾花饰、插图提示）。
-                fitObserver = new view.ResizeObserver(function () { syncMoreHint(); });
-                Array.prototype.forEach.call(stageEl().children, function (child) { fitObserver.observe(child); });
                 mapObserver = new view.ResizeObserver(fitMap);
                 mapObserver.observe(root.querySelector('.uiMapViewport'));
             }
@@ -9965,7 +9909,6 @@ var NewCardAlbumData = (function () {
             stRegexInputs.clear();
             if (typeof unsubscribeContext === 'function') unsubscribeContext();
             if (mapObserver) { mapObserver.disconnect(); mapObserver = null; }
-            if (fitObserver) { fitObserver.disconnect(); fitObserver = null; }
             if (dialogObserver) { dialogObserver.disconnect(); dialogObserver = null; }
             if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
             failedAvatars.clear();
