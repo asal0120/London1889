@@ -2097,6 +2097,12 @@
 .rpg-v7-root .rpg-bbi-anchor [hidden], .rpg-v7-root .rpg-bbi-notice[hidden] { display: none !important; }
 .rpg-v7-root .text-display.show-drop-cap > p:first-child:has(.rpg-bbi-anchor)::first-letter { font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit; font-family: inherit; }
 .rpg-v7-root .text-display p:has(> .rpg-bbi-anchor) { margin: 0; text-indent: 0; }
+/* 小白X、chatu8 的图卡放在单独一页；图片高度不超过一页（同 BBI）。插件还没处理前显示原文标记（淡色小字）。 */
+.rpg-v7-root .text-display p:has(> .rpg-xb-anchor), .rpg-v7-root .text-display p:has(> .rpg-chatu8-anchor) { margin: 0; text-indent: 0; }
+.rpg-v7-root .rpg-xb-anchor, .rpg-v7-root .rpg-chatu8-anchor { display: block; text-align: center; text-indent: 0; color: var(--ink-dim); font: 12px/1.6 var(--sans, sans-serif); letter-spacing: normal; overflow-wrap: anywhere; }
+.rpg-v7-root .rpg-xb-anchor .xb-nd-img { margin: 0 auto; }
+.rpg-v7-root .rpg-xb-anchor .xb-nd-img img, .rpg-v7-root .rpg-chatu8-anchor img, .rpg-v7-root .rpg-chatu8-anchor video { max-width: 100%; max-height: var(--bbi-image-height, 330px); width: auto; height: auto; margin: 0 auto; }
+.rpg-v7-root .text-display.show-drop-cap > p:first-child:has(.rpg-xb-anchor, .rpg-chatu8-anchor)::first-letter { font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit; font-family: inherit; }
 @media (pointer: coarse) { .rpg-v7-root .rpg-bbi-fab { width: 40px; height: 40px; } .rpg-v7-root .rpg-bbi-page { width: 36px; height: 36px; } .rpg-v7-root .rpg-bbi-pager:not([hidden]) ~ .rpg-bbi-status { right: 128px; } .rpg-v7-root .rpg-bbi-bar { min-height: 44px; } .rpg-v7-root .rpg-bbi-pill { min-height: 40px; } .rpg-v7-root .rpg-bbi-ghost { min-height: 36px; } }
 @media (prefers-reduced-motion: reduce) { .rpg-v7-root .rpg-bbi-spin { animation: none; } }
 
@@ -5101,7 +5107,7 @@ var NewCardAlbumData = (function () {
     var EDGE_TURN_RATIO = 0.15;
     var EDGE_TURN_SKIP = 'a,button,input,textarea,select,option,label,summary,img,picture,video,audio,canvas,iframe,' +
         '[role="button"],[role="link"],[role="slider"],[role="textbox"],' +
-        '[contenteditable]:not([contenteditable="false"]),[data-no-edge-turn],[data-bbi-slot],[data-ld-hash],.rpg-plugin-anchor,.rpg-bbi-anchor';
+        '[contenteditable]:not([contenteditable="false"]),[data-no-edge-turn],[data-bbi-slot],[data-ld-hash],.rpg-plugin-anchor,.rpg-bbi-anchor,.xb-nd-img,.xb-nd-more-menu';
 
     // 仅供版面示意：暂定六阶，以第一阶展示未锁定状态；不推算角色的正式阶梯。
     var SKILL_TIER_LABELS = ['一', '二', '三', '四', '五', '六'];
@@ -5796,7 +5802,24 @@ var NewCardAlbumData = (function () {
                     form.elements.prompt.focus();
                 });
             }
+            // 小白X：正文元素交给它一次（之后正文变动由它自己侦测），卡片关闭时释放。
+            var xbMount = null;
+            function syncXb() {
+                if (closed || xbMount || !context.xb || !context.xb.ready() || !textEl().querySelector('.rpg-xb-anchor')) return;
+                try {
+                    xbMount = context.xb.mount(textEl());
+                    if (xbMount && xbMount.refresh) xbMount.refresh().catch(function (error) { console.warn('[手札] 小白X图卡更新失败', error); });
+                } catch (error) { xbMount = null; console.warn('[手札] 小白X图卡挂载失败', error); }
+            }
+            // chatu8 会在处理过的元素记下 data-chatu8-processed，之后只补图不再找新标记；正文重画后清掉，让它重新找。
+            function resetChatu() {
+                if (!context.chatu8) return;
+                doc.querySelectorAll('[data-chatu8-processed]').forEach(function (element) {
+                    delete element.dataset.chatu8Processed; delete element.dataset.chatu8ContentLength;
+                });
+            }
             function hydrate() {
+                syncXb(); resetChatu();
                 if (closed || !context.bbi) return;
                 textEl().querySelectorAll('[data-rpg-bbi-token]').forEach(function (placeholder) {
                     var token = placeholder.dataset.rpgBbiToken;
@@ -5835,6 +5858,7 @@ var NewCardAlbumData = (function () {
                     nodes.push(node);
                     return node;
                 });
+                syncXb();
                 if (context.bbi) {
                     var hydratedAny = false;
                     added.forEach(function (node) {
@@ -5935,6 +5959,7 @@ var NewCardAlbumData = (function () {
                     closed = true;
                     if (unsubscribe) unsubscribe();
                     if (bbiScreen) bbiScreen.close();
+                    if (xbMount) { try { xbMount.destroy(); } catch (_) {} xbMount = null; }
                     cards.forEach(function (card) { releaseImage(card.pending); releaseImage(card.image); });
                     cards.clear(); notice.remove();
                 }
@@ -7638,10 +7663,21 @@ var NewCardAlbumData = (function () {
                 var prompt = decodeEntities(inner).trim();
                 return stash(anchorHtml('bbi', bbiHash(prompt), prompt, bbiOrder++));
             });
-            output = output.replace(/\[image:([^\]\r\n]+)\]/gi, function (full, id) {
-                var key = decodeEntities(id).trim();
-                return stash(anchorHtml('lwb', key, '', null));
+            // 小白X：图片位置（[image:编号]）与还没分配编号的生图标签（[img:…]）原文留在一个单独的段落里，
+            // 由 createBbiViews 交给小白X的 mountMessageImages 换成它的原生图卡。小白X不可用时照旧不显示。
+            var xbReady = !!(context.xb && context.xb.ready && context.xb.ready());
+            output = output.replace(/\[image\s*:\s*([a-z0-9_-]+)\]|\[(?:img|图片)\s*:\s*[^\]\r\n]+\]/gi, function (full, id) {
+                if (!xbReady) return id ? stash(anchorHtml('lwb', decodeEntities(id).trim(), '', null)) : full;
+                return '\n\n' + stash('<span class="rpg-xb-anchor" data-rpg-xb-slot="' + esc(id || '') + '" data-no-edge-turn>' + escapeHtml(full) + '</span>') + '\n\n';
             });
+            // chatu8：「开始标记＋提示词＋结束标记」原文留在单独的段落里，chatu8 扫描到后在这里放生成按钮与图片。
+            var chatu = context.chatu8;
+            if (chatu && chatu.start && chatu.end) {
+                var quote = function (value) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+                output = output.replace(new RegExp(quote(chatu.start) + '[\\s\\S]*?' + quote(chatu.end), 'g'), function (full) {
+                    return '\n\n' + stash('<span class="rpg-chatu8-anchor" data-rpg-chatu8="" data-no-edge-turn>' + escapeHtml(full) + '</span>') + '\n\n';
+                });
+            }
             output = output.replace(/<img\b[^>]*\bdata-ld-hash\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)[^>]*>/gi, function (tag) {
                 var template = create('template');
                 template.innerHTML = tag;
@@ -7651,7 +7687,7 @@ var NewCardAlbumData = (function () {
                 var prompt = img.getAttribute('data-ld-prompt') || img.getAttribute('prompt') || img.getAttribute('alt') || '';
                 return stash(anchorHtml('ld', key, prompt, null));
             });
-            output = output.replace(/<image\b[^>]*>([\s\S]*?)<\/image>/gi, function (full, inner) {
+            if (!chatu) output = output.replace(/<image\b[^>]*>([\s\S]*?)<\/image>/gi, function (full, inner) {
                 var prompt = decodeEntities(inner).trim();
                 return stash(anchorHtml('chatu8', '', prompt, null));
             });
@@ -9501,7 +9537,7 @@ var NewCardAlbumData = (function () {
                 for (var i = start; i < allParas.length; i++) {
                     var paragraph = allParas[i];
                     // Keep each illustration and its controls together on a dedicated page.
-                    if (paragraph.includes('data-rpg-bbi-token=')) {
+                    if (isImagePara(paragraph)) {
                         if (buffer.length) flush();
                         next.push(paragraph); starts.push(i); offsets.push(0); continue;
                     }
@@ -9571,7 +9607,8 @@ var NewCardAlbumData = (function () {
         // 柏宝绘在正文写完后才把图片插进原文：读者所在页之前多了图片段落，或一段文字被图片切成两段。
         // 这时略过图片、只比对文字（不计空白）：读者所在位置之前的文字都没变，就停在同一个文字位置；
         // 读者原本在图片页，就停在同一位置的图片。文字有任何不同（换了回复、改了前面的段落），回传 first（原本的规则）。
-        function isImagePara(html) { return html.indexOf('data-rpg-bbi-token=') >= 0; }
+        // 图片段落（BBI、小白X、chatu8）各自占一页。
+        function isImagePara(html) { return /data-rpg-(?:bbi-token|xb-slot|chatu8)=/.test(html); }
         function squeeze(text) { return text.replace(/\s+/g, ''); }
         function imageShiftedAnchor(anchor, offset, first) {
             if (!pageParas.some(isImagePara) && !allParas.some(isImagePara)) return first;
