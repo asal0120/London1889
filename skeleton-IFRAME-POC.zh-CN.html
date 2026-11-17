@@ -2098,11 +2098,13 @@
 .rpg-v7-root .text-display.show-drop-cap > p:first-child:has(.rpg-bbi-anchor)::first-letter { font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit; font-family: inherit; }
 .rpg-v7-root .text-display p:has(> .rpg-bbi-anchor) { margin: 0; text-indent: 0; }
 /* 小白X、chatu8 的图卡放在单独一页；图片高度不超过一页（同 BBI）。插件还没处理前显示原文标记（淡色小字）。 */
-.rpg-v7-root .text-display p:has(> .rpg-xb-anchor), .rpg-v7-root .text-display p:has(> .rpg-chatu8-anchor) { margin: 0; text-indent: 0; }
-.rpg-v7-root .rpg-xb-anchor, .rpg-v7-root .rpg-chatu8-anchor { display: block; text-align: center; text-indent: 0; color: var(--ink-dim); font: 12px/1.6 var(--sans, sans-serif); letter-spacing: normal; overflow-wrap: anywhere; }
+.rpg-v7-root .text-display p:has(> .rpg-xb-anchor), .rpg-v7-root .text-display p:has(> .rpg-chatu8-anchor), .rpg-v7-root .text-display p:has(> .rpg-ld-anchor) { margin: 0; text-indent: 0; }
+/* LocalDream 原生样式：圆角 12px、淡阴影、点两下开操作面板。 */
+.rpg-v7-root .rpg-ld-anchor img { display: block; max-width: 100%; max-height: var(--bbi-image-height, 330px); width: auto; height: auto; margin: 0 auto; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.1); cursor: pointer; -webkit-touch-callout: none; }
+.rpg-v7-root .rpg-xb-anchor, .rpg-v7-root .rpg-chatu8-anchor, .rpg-v7-root .rpg-ld-anchor { display: block; text-align: center; text-indent: 0; color: var(--ink-dim); font: 12px/1.6 var(--sans, sans-serif); letter-spacing: normal; overflow-wrap: anywhere; }
 .rpg-v7-root .rpg-xb-anchor .xb-nd-img { margin: 0 auto; }
 .rpg-v7-root .rpg-xb-anchor .xb-nd-img img, .rpg-v7-root .rpg-chatu8-anchor img, .rpg-v7-root .rpg-chatu8-anchor video { max-width: 100%; max-height: var(--bbi-image-height, 330px); width: auto; height: auto; margin: 0 auto; }
-.rpg-v7-root .text-display.show-drop-cap > p:first-child:has(.rpg-xb-anchor, .rpg-chatu8-anchor)::first-letter { font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit; font-family: inherit; }
+.rpg-v7-root .text-display.show-drop-cap > p:first-child:has(.rpg-xb-anchor, .rpg-chatu8-anchor, .rpg-ld-anchor)::first-letter { font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit; font-family: inherit; }
 @media (pointer: coarse) { .rpg-v7-root .rpg-bbi-fab { width: 40px; height: 40px; } .rpg-v7-root .rpg-bbi-page { width: 36px; height: 36px; } .rpg-v7-root .rpg-bbi-pager:not([hidden]) ~ .rpg-bbi-status { right: 128px; } .rpg-v7-root .rpg-bbi-bar { min-height: 44px; } .rpg-v7-root .rpg-bbi-pill { min-height: 40px; } .rpg-v7-root .rpg-bbi-ghost { min-height: 36px; } }
 @media (prefers-reduced-motion: reduce) { .rpg-v7-root .rpg-bbi-spin { animation: none; } }
 
@@ -5107,7 +5109,7 @@ var NewCardAlbumData = (function () {
     var EDGE_TURN_RATIO = 0.15;
     var EDGE_TURN_SKIP = 'a,button,input,textarea,select,option,label,summary,img,picture,video,audio,canvas,iframe,' +
         '[role="button"],[role="link"],[role="slider"],[role="textbox"],' +
-        '[contenteditable]:not([contenteditable="false"]),[data-no-edge-turn],[data-bbi-slot],[data-ld-hash],.rpg-plugin-anchor,.rpg-bbi-anchor,.xb-nd-img,.xb-nd-more-menu';
+        '[contenteditable]:not([contenteditable="false"]),[data-no-edge-turn],[data-bbi-slot],[data-ld-hash],.rpg-plugin-anchor,.rpg-bbi-anchor,.xb-nd-img,.xb-nd-more-menu,.rpg-ld-anchor';
 
     // 仅供版面示意：暂定六阶，以第一阶展示未锁定状态；不推算角色的正式阶梯。
     var SKILL_TIER_LABELS = ['一', '二', '三', '四', '五', '六'];
@@ -5818,8 +5820,41 @@ var NewCardAlbumData = (function () {
                     delete element.dataset.chatu8Processed; delete element.dataset.chatu8ContentLength;
                 });
             }
+            // LocalDream：从它的图库读图放进位置；同一张图重画时会先回到 <local_img>，所以看到未完成的标记就丢掉旧图。
+            var ldUrls = new Map(), ldClicks = false;
+            function ldKey(prompt) { var hash = 0; for (var i = 0; i < prompt.length; i++) hash = ((hash << 5) - hash) + prompt.charCodeAt(i) | 0; return 'ld_' + Math.abs(hash).toString(16); }
+            function syncLd() {
+                if (closed || !context.ld) return;
+                textEl().querySelectorAll('.rpg-ld-pending').forEach(function (node) {
+                    var key = ldKey(node.textContent.trim()), url = ldUrls.get(key);
+                    if (url) { URL.revokeObjectURL(url); ldUrls.delete(key); }
+                });
+                textEl().querySelectorAll('.rpg-ld-anchor[data-rpg-ld]:not(.rpg-ld-pending):not(.rpg-ld-missing):not(:has(img))').forEach(function (node) {
+                    var hash = node.dataset.rpgLd;
+                    var show = function (url) {
+                        if (!url || !node.isConnected || node.querySelector('img')) return;
+                        var img = create('img'); img.src = url; img.alt = ''; img.draggable = false; node.append(img);
+                    };
+                    if (ldUrls.has(hash)) { show(ldUrls.get(hash)); return; }
+                    context.ld.image(hash).then(function (blob) {
+                        if (closed) return;
+                        // 图库里没有这张图（例如 LocalDream 自动清掉旧楼层的图）：说明原因，不留一页空白。
+                        if (!blob) { node.classList.add('rpg-ld-missing'); node.textContent = 'LocalDream 图库里已没有这张图'; return; }
+                        if (!ldUrls.has(hash)) ldUrls.set(hash, URL.createObjectURL(blob));
+                        show(ldUrls.get(hash));
+                    }).catch(function (error) { console.warn('[手札] LocalDream 图片读取失败', error); });
+                });
+                if (!ldClicks) {
+                    ldClicks = true;
+                    textEl().addEventListener('click', function (event) {
+                        var img = event.target.closest && event.target.closest('.rpg-ld-anchor img');
+                        if (img && context.ld.click(img.parentNode.dataset.rpgLd)) event.preventDefault();
+                    });
+                    textEl().addEventListener('contextmenu', function (event) { if (event.target.closest && event.target.closest('.rpg-ld-anchor img')) event.preventDefault(); });
+                }
+            }
             function hydrate() {
-                syncXb(); resetChatu();
+                syncXb(); resetChatu(); syncLd();
                 if (closed || !context.bbi) return;
                 textEl().querySelectorAll('[data-rpg-bbi-token]').forEach(function (placeholder) {
                     var token = placeholder.dataset.rpgBbiToken;
@@ -5858,7 +5893,7 @@ var NewCardAlbumData = (function () {
                     nodes.push(node);
                     return node;
                 });
-                syncXb();
+                syncXb(); syncLd();
                 if (context.bbi) {
                     var hydratedAny = false;
                     added.forEach(function (node) {
@@ -5960,6 +5995,7 @@ var NewCardAlbumData = (function () {
                     if (unsubscribe) unsubscribe();
                     if (bbiScreen) bbiScreen.close();
                     if (xbMount) { try { xbMount.destroy(); } catch (_) {} xbMount = null; }
+                    ldUrls.forEach(function (url) { URL.revokeObjectURL(url); }); ldUrls.clear();
                     cards.forEach(function (card) { releaseImage(card.pending); releaseImage(card.image); });
                     cards.clear(); notice.remove();
                 }
@@ -7684,8 +7720,13 @@ var NewCardAlbumData = (function () {
                 var img = template.content.querySelector('img[data-ld-hash]');
                 if (!img) return tag;
                 var key = img.getAttribute('data-ld-hash') || '';
-                var prompt = img.getAttribute('data-ld-prompt') || img.getAttribute('prompt') || img.getAttribute('alt') || '';
-                return stash(anchorHtml('ld', key, prompt, null));
+                if (!context.ld || !/^[a-z0-9_-]+$/i.test(key)) return '';
+                return '\n\n' + stash('<span class="rpg-ld-anchor" data-rpg-ld="' + esc(key) + '" data-no-edge-turn></span>') + '\n\n';
+            });
+            // LocalDream 还没画完的 <local_img>提示词</local_img>（串流中可能还没有结束标签）：提示词以淡色小字单独一页，画完后换成图。
+            if (context.ld) output = output.replace(/<local_img>([\s\S]*?)(?:<\/local_img>|$)/gi, function (full, inner) {
+                var prompt = decodeEntities(inner).trim();
+                return '\n\n' + stash('<span class="rpg-ld-anchor rpg-ld-pending" data-rpg-ld="" data-no-edge-turn>' + escapeHtml(prompt) + '</span>') + '\n\n';
             });
             if (!chatu) output = output.replace(/<image\b[^>]*>([\s\S]*?)<\/image>/gi, function (full, inner) {
                 var prompt = decodeEntities(inner).trim();
@@ -9608,7 +9649,7 @@ var NewCardAlbumData = (function () {
         // 这时略过图片、只比对文字（不计空白）：读者所在位置之前的文字都没变，就停在同一个文字位置；
         // 读者原本在图片页，就停在同一位置的图片。文字有任何不同（换了回复、改了前面的段落），回传 first（原本的规则）。
         // 图片段落（BBI、小白X、chatu8）各自占一页。
-        function isImagePara(html) { return /data-rpg-(?:bbi-token|xb-slot|chatu8)=/.test(html); }
+        function isImagePara(html) { return /data-rpg-(?:bbi-token|xb-slot|chatu8|ld)=/.test(html); }
         function squeeze(text) { return text.replace(/\s+/g, ''); }
         function imageShiftedAnchor(anchor, offset, first) {
             if (!pageParas.some(isImagePara) && !allParas.some(isImagePara)) return first;
@@ -9732,7 +9773,7 @@ var NewCardAlbumData = (function () {
             return extractBody(input)
                 .replace(/<Encounter>[\s\S]*?<\/Encounter>/gi, '')
                 .replace(/<Encounter>[\s\S]*$/i, '')
-                .replace(/<\/?(?!(?:bbi_image|image)>)[A-Za-z][\w-]*>/g, '');
+                .replace(/<\/?(?!(?:bbi_image|image|local_img)>)[A-Za-z][\w-]*>/g, '');
         }
 
         // ── 遭遇入口 ──
