@@ -2037,23 +2037,68 @@
 .rpg-v7-root .encEntry.is-done .encFoes { color: var(--ink-dim); }
 @media (prefers-reduced-motion: reduce) { .rpg-v7-root .encWait::after { animation: none; } }
 
-/* BBI cards belong to the journal document. Native plugin UI stays in the host. */
-.rpg-v7-root .rpg-bbi-anchor { display: block; margin: 10px 0; padding: 12px; border: 1px solid var(--dlg-border, #79674b); border-radius: var(--radius-2xl); background: var(--dlg-bg, rgba(80,65,40,.1)); color: var(--ink); font: 14px/1.5 var(--sans, sans-serif); text-indent: 0; letter-spacing: normal; }
-.rpg-v7-root .rpg-bbi-picture { display: flex; justify-content: center; align-items: center; min-height: 48px; }
-.rpg-v7-root .rpg-bbi-picture img { display: block; max-width: 100%; width: auto; height: auto; max-height: var(--bbi-image-height, 330px); object-fit: contain; border-radius: var(--radius-md); }
-.rpg-v7-root .rpg-bbi-empty { color: var(--ink-dim, #968977); }
-.rpg-v7-root .rpg-bbi-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
-.rpg-v7-root .rpg-bbi-anchor button { min-height: 32px; padding: 5px 9px; border: 1px solid var(--dlg-border, #79674b); border-radius: var(--radius-md); background: transparent; color: inherit; cursor: pointer; font: inherit; }
-.rpg-v7-root .rpg-bbi-anchor button:hover { background: rgba(138,112,65,.18); }
-.rpg-v7-root .rpg-bbi-anchor button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.rpg-v7-root .rpg-bbi-anchor button:disabled { opacity: .5; cursor: default; }
-.rpg-v7-root .rpg-bbi-status, .rpg-v7-root .rpg-bbi-prompt { display: block; margin-top: 8px; overflow-wrap: anywhere; }
-.rpg-v7-root .rpg-bbi-prompt { padding-top: 8px; border-top: 1px solid var(--dlg-border, #79674b); }
-.rpg-v7-root .rpg-bbi-prompt-text { display: block; white-space: pre-wrap; margin-bottom: 8px; user-select: text; }
+/* BBI cards belong to the journal document. Native plugin UI stays in the host.
+   版面参考柏宝绘原生图卡（2026-11-17）：没有外框和底色；图片照原比例放到正文宽度，高度不超过正文区（--bbi-image-height），
+   超过时连图带框一起收窄、置中。操作收进图片右上角的「⋯」：触控点开，滑鼠移过去就出现。生成中是盖在图上的遮罩。
+   --bbi-ratio（宽÷高）在图片载入后由程式设定；没有图时照提示词的直式／横式预留位置，出图时版面不跳动。 */
+.rpg-v7-root .rpg-bbi-anchor { display: block; margin: 0; padding: 0; color: var(--ink); font: 13px/1.6 var(--sans, sans-serif); text-indent: 0; letter-spacing: normal; text-align: center; }
+.rpg-v7-root .rpg-bbi-stage { --bbi-ratio: 0.6667; position: relative; display: block; width: min(100%, max(140px, calc(var(--bbi-image-height, 330px) * var(--bbi-ratio)))); margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden; }
+.rpg-v7-root .rpg-bbi-stage[data-size="landscape"] { --bbi-ratio: 1.5; }
+.rpg-v7-root .rpg-bbi-stage[data-placeholder="1"] { aspect-ratio: var(--bbi-ratio); background: var(--line-soft); }
+.rpg-v7-root .rpg-bbi-picture { display: block; }
+.rpg-v7-root .rpg-bbi-picture img { display: block; width: 100%; height: auto; }
+.rpg-v7-root .rpg-bbi-pending, .rpg-v7-root .rpg-bbi-busy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; }
+.rpg-v7-root .rpg-bbi-busy { background: color-mix(in srgb, var(--paper) 55%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.rpg-v7-root .rpg-bbi-hint, .rpg-v7-root .rpg-bbi-busy-text { max-width: 24em; color: var(--ink-dim); font-size: 12px; }
+.rpg-v7-root .rpg-bbi-spin { width: 22px; height: 22px; border: 2px solid var(--line); border-top-color: var(--brass); border-radius: var(--radius-round); animation: rpg-bbi-spin .8s linear infinite; }
+@keyframes rpg-bbi-spin { to { transform: rotate(360deg); } }
+.rpg-v7-root .rpg-bbi-anchor button { font: inherit; cursor: pointer; }
+.rpg-v7-root .rpg-bbi-anchor button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.rpg-v7-root .rpg-bbi-anchor button:disabled { opacity: .45; cursor: default; }
+.rpg-v7-root .rpg-bbi-pill { min-height: 34px; padding: 0 18px; border: 1px solid var(--brass); border-radius: 999px; background: var(--brass); color: var(--paper); font-size: 13px; }
+.rpg-v7-root .rpg-bbi-ghost { min-height: 28px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 12px; }
+.rpg-v7-root .rpg-bbi-ghost:hover:not(:disabled) { border-color: var(--brass); color: var(--brass); }
+.rpg-v7-root .rpg-bbi-tools { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 6px; max-width: calc(100% - 16px); }
+.rpg-v7-root .rpg-bbi-menu { display: none; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.rpg-v7-root .rpg-bbi-tools[data-open="1"] .rpg-bbi-menu { display: flex; }
+@media (hover: hover) { .rpg-v7-root .rpg-bbi-tools:hover .rpg-bbi-menu, .rpg-v7-root .rpg-bbi-tools:focus-within .rpg-bbi-menu { display: flex; } }
+/* 压在图上的圆钮用半透明黑底，任何图、任何主题都看得清楚。 */
+.rpg-v7-root .rpg-bbi-fab { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--radius-round); background: rgba(0,0,0,.55); color: rgba(255,255,255,.92); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.rpg-v7-root .rpg-bbi-fab:hover:not(:disabled) { background: rgba(0,0,0,.72); color: #fff; }
+.rpg-v7-root .rpg-bbi-fab[aria-pressed="true"] { background: var(--brass); color: var(--paper); }
+.rpg-v7-root .rpg-bbi-fab svg { width: 16px; height: 16px; }
+.rpg-v7-root .rpg-bbi-more { opacity: .7; }
+.rpg-v7-root .rpg-bbi-stage:hover .rpg-bbi-more, .rpg-v7-root .rpg-bbi-tools[data-open="1"] .rpg-bbi-more, .rpg-v7-root .rpg-bbi-tools:focus-within .rpg-bbi-more { opacity: 1; }
+/* 错误与警告叠在图片底部，不另占一行（图片高度已经算满一页）；不接收点击，也不盖到右上角的「⋯」。 */
+.rpg-v7-root .rpg-bbi-status { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 2; max-height: calc(100% - 56px); overflow: hidden; pointer-events: none; display: block; padding: 4px 10px; border-radius: var(--radius-md); background: rgba(0,0,0,.62); color: rgba(255,255,255,.92); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.rpg-v7-root .rpg-bbi-prompt { position: relative; display: block; margin-top: 6px; padding: 9px 64px 9px 10px; border-radius: var(--radius-md); background: var(--line-soft); text-align: left; }
+.rpg-v7-root .rpg-bbi-prompt-text { display: block; max-height: 220px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; user-select: text; }
+.rpg-v7-root .rpg-bbi-prompt .rpg-bbi-ghost { position: absolute; top: 6px; right: 6px; }
+.rpg-v7-root .rpg-bbi-body { display: block; }
+.rpg-v7-root .rpg-bbi-picture img { cursor: zoom-in; }
+.rpg-v7-root .rpg-bbi-fab.rpg-bbi-danger:hover:not(:disabled) { background: #b4513e; color: #fff; }
+/* 只剩旧提示词的图：左上角标签（同柏宝绘原生图卡）。 */
+.rpg-v7-root .rpg-bbi-badge { position: absolute; top: 8px; left: 8px; z-index: 2; padding: 2px 9px; border-radius: 999px; background: rgba(180,120,40,.88); color: #fff; font-size: 11px; line-height: 1.6; pointer-events: none; }
+/* 同一位置有多张图：右下角翻页。 */
+.rpg-v7-root .rpg-bbi-pager { position: absolute; right: 8px; bottom: 8px; z-index: 3; display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 999px; background: rgba(0,0,0,.55); color: rgba(255,255,255,.92); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.rpg-v7-root .rpg-bbi-page { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-round); background: transparent; color: inherit; }
+.rpg-v7-root .rpg-bbi-page svg { width: 15px; height: 15px; }
+.rpg-v7-root .rpg-bbi-page:hover:not(:disabled) { background: rgba(255,255,255,.16); }
+.rpg-v7-root .rpg-bbi-count { min-width: 3em; font-size: 12px; font-variant-numeric: tabular-nums; }
+.rpg-v7-root .rpg-bbi-pager:not([hidden]) ~ .rpg-bbi-status { right: 112px; }
+/* 收合后的细条：点一下展开。 */
+.rpg-v7-root .rpg-bbi-bar { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 0 12px; border: 1px dashed var(--line); border-radius: var(--radius-lg); background: var(--line-soft); color: var(--ink-dim); font-size: 12px; text-align: left; }
+.rpg-v7-root .rpg-bbi-bar:hover { border-color: var(--brass); color: var(--ink); }
+.rpg-v7-root .rpg-bbi-bar svg { flex: none; width: 16px; height: 16px; }
+.rpg-v7-root .rpg-bbi-bar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpg-v7-root .rpg-bbi-bar-text[data-error="1"] { color: #c0634f; }
+.rpg-v7-root .rpg-bbi-bar-count { flex: none; }
 .rpg-v7-root .rpg-bbi-notice { padding: 8px 12px; border: 1px solid var(--dlg-border, #79674b); color: var(--ink); font: 14px/1.5 var(--sans, sans-serif); }
 .rpg-v7-root .rpg-bbi-anchor [hidden], .rpg-v7-root .rpg-bbi-notice[hidden] { display: none !important; }
 .rpg-v7-root .text-display.show-drop-cap > p:first-child:has(.rpg-bbi-anchor)::first-letter { font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit; font-family: inherit; }
-@media (pointer: coarse) { .rpg-v7-root .rpg-bbi-anchor button { min-height: 40px; } }
+.rpg-v7-root .text-display p:has(> .rpg-bbi-anchor) { margin: 0; text-indent: 0; }
+@media (pointer: coarse) { .rpg-v7-root .rpg-bbi-fab { width: 40px; height: 40px; } .rpg-v7-root .rpg-bbi-page { width: 36px; height: 36px; } .rpg-v7-root .rpg-bbi-pager:not([hidden]) ~ .rpg-bbi-status { right: 128px; } .rpg-v7-root .rpg-bbi-bar { min-height: 44px; } .rpg-v7-root .rpg-bbi-pill { min-height: 40px; } .rpg-v7-root .rpg-bbi-ghost { min-height: 36px; } }
+@media (prefers-reduced-motion: reduce) { .rpg-v7-root .rpg-bbi-spin { animation: none; } }
 
 /* 正则选择面板沿用手札主题，所有选择器限定在卡片内。 */
 .rpg-v7-root .st-regex-section .filter-toggle-label { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:40px; color:var(--brass); font:12px/1.5 var(--sans); cursor:pointer; }
@@ -5408,49 +5453,120 @@ var NewCardAlbumData = (function () {
                 image.onload = image.onerror = null;
                 image.removeAttribute('src');
             }
+            // 功能比照柏宝绘原生图卡（2026-11-17）：同一位置的历史图可翻页；只有旧提示词的图时标示「旧提示词」；
+            // 「⋯」里有收合、重新生成、下载、删除、改提示词、提示词；点图放大。数据与原生共用（见载入脚本 createBbiService）。
             function make(token) {
                 var node = create('span');
                 node.className = 'rpg-bbi-anchor';
                 node.dataset.rpgBbiToken = token;
                 node.setAttribute('role', 'group');
                 node.setAttribute('aria-label', '柏宝绘图片');
+                // 收合时整张图换成一条细条，点一下展开。
+                var bar = bbiButton('expand', '展开图片', 'rpg-bbi-bar');
+                var barText = create('span'); barText.className = 'rpg-bbi-bar-text';
+                var barCount = create('span'); barCount.className = 'rpg-bbi-bar-count';
+                bar.innerHTML = bbiIcon('image');
+                bar.append(barText, barCount);
+                bar.insertAdjacentHTML('beforeend', bbiIcon('down'));
+                bar.hidden = true;
+                var body = create('span'); body.className = 'rpg-bbi-body';
+                // 舞台：图片、没有图时的生成入口、生成中遮罩、右上角「⋯」、翻页器都叠在这里。
+                var stage = create('span'); stage.className = 'rpg-bbi-stage'; stage.dataset.placeholder = '1';
                 var picture = create('span'); picture.className = 'rpg-bbi-picture';
-                var empty = create('span'); empty.className = 'rpg-bbi-empty'; empty.textContent = '图片尚未生成。';
-                picture.append(empty);
-                var actions = create('span'); actions.className = 'rpg-bbi-actions';
+                var waiting = create('span'); waiting.className = 'rpg-bbi-pending';
+                var hint = create('span'); hint.className = 'rpg-bbi-hint';
+                var start = bbiButton('generate', '生成图片', 'rpg-bbi-pill'); start.textContent = '生成图片';
+                waiting.append(hint, start);
+                var busy = create('span'); busy.className = 'rpg-bbi-busy'; busy.hidden = true;
+                var spin = create('span'); spin.className = 'rpg-bbi-spin';
+                var busyText = create('span'); busyText.className = 'rpg-bbi-busy-text';
+                busyText.setAttribute('role', 'status'); busyText.setAttribute('aria-live', 'polite');
+                var cancel = bbiButton('cancel', '取消生成', 'rpg-bbi-ghost'); cancel.textContent = '取消';
+                busy.append(spin, busyText, cancel);
+                var badge = create('span'); badge.className = 'rpg-bbi-badge'; badge.textContent = '旧提示词'; badge.hidden = true;
+                var tools = create('span'); tools.className = 'rpg-bbi-tools';
+                var more = bbiButton('menu', '更多操作', 'rpg-bbi-fab rpg-bbi-more', 'more');
+                more.setAttribute('aria-expanded', 'false');
+                var menu = create('span'); menu.className = 'rpg-bbi-menu';
+                tools.append(more, menu);
+                var pager = create('span'); pager.className = 'rpg-bbi-pager'; pager.hidden = true;
+                var prev = bbiButton('prev', '上一张', 'rpg-bbi-page', 'prev');
+                var count = create('span'); count.className = 'rpg-bbi-count';
+                var next = bbiButton('next', '下一张', 'rpg-bbi-page', 'next');
+                pager.append(prev, count, next);
                 var status = create('span'); status.className = 'rpg-bbi-status';
                 status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+                stage.append(picture, waiting, busy, badge, tools, pager, status);
                 var panel = create('span'); panel.className = 'rpg-bbi-prompt'; panel.hidden = true;
                 var prompt = create('span'); prompt.className = 'rpg-bbi-prompt-text';
-                var copy = create('button'); copy.type = 'button'; copy.dataset.bbiAction = 'copy'; copy.textContent = '复制';
+                var copy = bbiButton('copy', '复制提示词', 'rpg-bbi-ghost'); copy.textContent = '复制';
                 panel.append(prompt, copy);
-                var card = {token: token, node: node, picture: picture, empty: empty, status: status,
-                    panel: panel, prompt: prompt, copy: copy, buttons: {}, state: {}, error: '', imageError: '',
-                    requestedUrl: '', url: '', image: null, pending: null, restoring: false};
-                [['generate', '生成图片'], ['cancel', '取消'], ['download', '下载'], ['prompt', '提示词'], ['restore', '使用原生图']]
+                body.append(stage, panel);
+                var card = {token: token, node: node, bar: bar, barText: barText, barCount: barCount, body: body, stage: stage,
+                    picture: picture, waiting: waiting, hint: hint, start: start, busy: busy, busyText: busyText, badge: badge,
+                    tools: tools, more: more, pager: pager, prev: prev, count: count, next: next, status: status,
+                    panel: panel, prompt: prompt, copy: copy, buttons: {cancel: cancel}, state: {}, error: '', imageError: '',
+                    requestedUrl: '', url: '', image: null, pending: null, index: 0, length: -1, item: null};
+                [['collapse', '收合图片', 'up'], ['generate', '重新生成', 'redraw'], ['download', '下载这张图', 'download'],
+                    ['remove', '删除这张图', 'trash'], ['edit', '修改提示词', 'edit'], ['prompt', '查看提示词', 'prompt']]
                     .forEach(function (entry) {
-                        var button = create('button'); button.type = 'button';
-                        button.dataset.bbiAction = entry[0]; button.textContent = entry[1];
-                        actions.append(button); card.buttons[entry[0]] = button;
+                        var button = bbiButton(entry[0], entry[1], 'rpg-bbi-fab', entry[2]);
+                        menu.append(button); card.buttons[entry[0]] = button;
                     });
-                card.buttons.prompt.setAttribute('aria-expanded', 'false');
-                node.append(picture, actions, status, panel);
+                card.buttons.remove.classList.add('rpg-bbi-danger');
+                card.buttons.prompt.setAttribute('aria-pressed', 'false');
+                node.append(bar, body);
                 cards.set(token, card);
                 return card;
+            }
+            // 图卡按钮；有 icon 时只画图示，名称放在 title 与 aria-label。
+            var BBI_ICONS = {
+                more: '<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>',
+                redraw: '<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/>',
+                download: '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>',
+                prompt: '<path d="M5 6h14"/><path d="M5 11h14"/><path d="M5 16h9"/>',
+                edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+                trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
+                up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
+                prev: '<path d="M15 6l-6 6 6 6"/>', next: '<path d="M9 6l6 6-6 6"/>',
+                image: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>',
+                close: '<path d="M6 6l12 12M18 6L6 18"/>'
+            };
+            function bbiIcon(name) {
+                return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + BBI_ICONS[name] + '</svg>';
+            }
+            function bbiButton(action, label, className, icon) {
+                var button = create('button'); button.type = 'button';
+                button.className = className; button.dataset.bbiAction = action;
+                button.title = label;
+                if (icon) { button.setAttribute('aria-label', label); button.innerHTML = bbiIcon(icon); }
+                return button;
+            }
+            function closeMenu(card) {
+                card.tools.dataset.open = '';
+                card.more.setAttribute('aria-expanded', 'false');
             }
             function paint(card, next) {
                 if (closed) return;
                 card.state = next;
-                var address = next.url || '';
+                var history = Array.isArray(next.history) ? next.history : [];
+                // 新图存好（或删掉一张）时跳到最新的一张。
+                if (history.length !== card.length) { card.length = history.length; card.index = Math.max(0, history.length - 1); }
+                card.index = Math.min(card.index, Math.max(0, history.length - 1));
+                var stale = !history.length && next.stale ? next.stale : null;
+                card.item = history[card.index] || stale;
+                var address = card.item?.url || '';
                 if (address !== card.requestedUrl) {
                     card.requestedUrl = address; card.imageError = '';
                     releaseImage(card.pending); card.pending = null;
                     if (!address) {
                         releaseImage(card.image); card.image = null; card.url = '';
-                        card.picture.replaceChildren(card.empty);
+                        card.picture.replaceChildren();
+                        card.stage.style.removeProperty('--bbi-ratio');
                     } else {
                         var image = create('img'); image.className = 'rpg-bbi-image';
                         image.alt = next.promptText || '柏宝绘图片';
+                        image.dataset.bbiAction = 'zoom';
                         card.pending = image;
                         image.onload = function () {
                             if (closed || card.pending !== image) return;
@@ -5459,6 +5575,9 @@ var NewCardAlbumData = (function () {
                             card.image = image; card.url = address;
                             image.setAttribute('width', image.naturalWidth);
                             image.setAttribute('height', image.naturalHeight);
+                            if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+                                card.stage.style.setProperty('--bbi-ratio', String(image.naturalWidth / image.naturalHeight));
+                            }
                             card.picture.replaceChildren(image);
                             paint(card, card.state);
                             reportHeight();
@@ -5466,25 +5585,54 @@ var NewCardAlbumData = (function () {
                         image.onerror = function () {
                             if (closed || card.pending !== image) return;
                             card.pending = null;
-                            card.imageError = '图片载入失败，请重新生成或使用原生图。';
+                            card.imageError = '图片载入失败，请重新生成。';
+                            // 文件若已从图库删除，就从清单拿掉（载入脚本会确认是 404 才拿掉）。
+                            try { context.bbi?.reportMissing?.(card.token, address); } catch (_) {}
                             paint(card, card.state);
                         };
                         image.src = new URL(address, context.rootWin?.location?.href || doc.baseURI).href;
                     }
                 }
-                card.buttons.generate.hidden = !next.available;
-                card.buttons.generate.textContent = next.url ? '重新生成' : '生成图片';
-                card.buttons.generate.disabled = !next.canGenerate || next.busy || card.restoring;
-                card.buttons.generate.title = next.reason || '';
+                var shown = !!card.image, working = !!next.busy || !!next.nativeBusy;
+                var folded = !!next.collapsed;
+                card.bar.hidden = !folded; card.body.hidden = folded;
+                card.barText.textContent = working ? (next.busy ? progressText(next.progress) : '柏宝绘正在生成…') :
+                    card.error || (history.length ? '图片已收合' : stale ? '图片已收合（旧提示词）' : '图片尚未生成');
+                card.barText.dataset.error = card.error && !working ? '1' : '';
+                card.barCount.textContent = history.length > 1 ? history.length + ' 张' : '';
+                card.stage.dataset.placeholder = shown ? '' : '1';
+                card.stage.dataset.size = next.size === 'landscape' ? 'landscape' : 'portrait';
+                // 没有图：舞台中央是生成入口；不能生成时写出原因。
+                card.waiting.hidden = shown || working || !!card.item;
+                card.start.hidden = !next.available;
+                card.start.disabled = !next.canGenerate || working;
+                card.hint.textContent = next.canGenerate || next.nativeBusy ? '' : next.reason || '';
+                card.hint.hidden = !card.hint.textContent;
+                // 生成中：遮罩盖住舞台（旧图留在底下）。柏宝绘原生图卡在生成时只显示状态，不能从这里取消。
+                card.busy.hidden = !working;
+                card.busyText.textContent = next.busy ? progressText(next.progress) : '柏宝绘正在生成…';
                 card.buttons.cancel.hidden = !next.busy;
                 card.buttons.cancel.disabled = next.canCancel === false;
+                card.tools.hidden = working;
+                if (working) closeMenu(card);
+                card.badge.hidden = !stale || working;
+                card.pager.hidden = history.length < 2 || working;
+                card.count.textContent = (card.index + 1) + '/' + history.length;
+                card.prev.disabled = card.index <= 0;
+                card.next.disabled = card.index >= history.length - 1;
+                card.buttons.generate.hidden = !next.available || !card.item;
+                card.buttons.generate.disabled = !next.canGenerate || working;
+                card.buttons.generate.title = next.canGenerate ? '重新生成' : next.reason || '重新生成';
                 card.buttons.download.hidden = !card.url;
-                card.buttons.restore.hidden = !next.hasOverride || !next.nativeUrl;
-                card.buttons.restore.disabled = next.busy || card.restoring;
+                // 只能删画面上正在显示的那张（新图还在载入或载入失败时先不给删）。
+                card.buttons.remove.hidden = !shownItem(card);
+                card.buttons.edit.hidden = !next.editable;
+                card.buttons.prompt.hidden = !next.promptText;
                 card.prompt.textContent = next.promptText || '';
-                card.status.textContent = card.restoring ? '正在切回原生图…' : next.busy ? progressText(next.progress) :
-                    card.error || card.imageError || next.warning || (!next.canGenerate ? next.reason : '');
-                card.status.hidden = !card.status.textContent;
+                // 状态条只放错误与警告，平时隐藏；生成中由遮罩显示进度。
+                card.status.textContent = card.error || card.imageError || next.warning ||
+                    (stale ? '提示词已修改，这张是旧提示词的图；按「重新生成」用新提示词出图。' : '');
+                card.status.hidden = !card.status.textContent || working;
                 card.node.setAttribute('aria-busy', String(!!next.busy));
             }
             function refresh() {
@@ -5497,8 +5645,155 @@ var NewCardAlbumData = (function () {
                     catch (error) {
                         if (!card.node.isConnected) {
                             releaseImage(card.pending); releaseImage(card.image); cards.delete(token);
-                        } else paint(card, {available: false, canGenerate: false, url: card.url, reason: error.message});
+                        } else paint(card, Object.assign({}, card.state, {available: false, canGenerate: false, busy: false, nativeBusy: '',
+                            reason: error.message}));
                     }
+                });
+            }
+            function shownItem(card) { return card.item && card.url && card.item.url === card.url ? card.item : null; }
+            function absoluteUrl(url) { return new URL(url, context.rootWin?.location?.href || doc.baseURI).href; }
+            function downloadImage(card) {
+                if (!card.url) return;
+                var link = create('a'); link.href = absoluteUrl(card.url);
+                var mime = card.url.match(/^data:image\/([\w+-]+)[;,]/i)?.[1];
+                var extension = mime === 'jpeg' ? 'jpg' : mime || card.url.match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/)?.[1] || 'png';
+                // 档名同柏宝绘：bbi_角色名_生成编号。
+                var item = shownItem(card), id = item?.generationId || item?.id?.replace(/^\w:/, '') || Date.now().toString(36);
+                var name = String(card.state.character || '').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40);
+                link.download = 'bbi_' + (name ? name + '_' : '') + id + '.' + extension;
+                link.rel = 'noopener'; doc.body.append(link); link.click(); link.remove();
+            }
+            // 放大检视、改提示词、删除确认：开在酒馆最外层的全萤幕画面（同留声机、地图），不受卡片高度限制。
+            var bbiScreen = null;
+            function openBbiScreen(label, build) {
+                if (bbiScreen) bbiScreen.close();
+                var palette = view.getComputedStyle(root), built = false;
+                var current = {close: function () {
+                    if (bbiScreen === current) bbiScreen = null;
+                    current.screen?.close();
+                }};
+                bbiScreen = current;
+                current.screen = NewCardFullscreen.open({window: view, className: 'nc-bbi-shell', label: label,
+                    background: 'rgba(8,10,14,.9)', onCancel: current.close,
+                    onLoad: function (guest) {
+                        if (built || bbiScreen !== current) return;
+                        built = true;
+                        var gdoc = guest.document, style = gdoc.createElement('style');
+                        style.textContent = ':root{--paper:' + (palette.getPropertyValue('--paper').trim() || '#171b22') +
+                            ';--ink:' + (palette.getPropertyValue('--ink').trim() || '#c3bfb4') +
+                            ';--ink-dim:' + (palette.getPropertyValue('--ink-dim').trim() || '#8b8578') +
+                            ';--brass:' + (palette.getPropertyValue('--brass').trim() || '#c9a227') +
+                            ';--line:' + (palette.getPropertyValue('--line').trim() || 'rgba(201,162,39,.28)') + '}' + BBI_SCREEN_CSS;
+                        gdoc.head.append(style);
+                        NewCardFullscreen.copyFonts(doc, gdoc);
+                        // 焦点在画面里时，Esc 不会传到外框的 dialog，要在这里处理。
+                        gdoc.addEventListener('keydown', function (event) {
+                            if (event.key === 'Escape') { event.preventDefault(); current.close(); }
+                        });
+                        build(gdoc, current.close);
+                    }});
+                return current;
+            }
+            var BBI_SCREEN_CSS = '*{box-sizing:border-box}body{font:14px/1.6 "Noto Sans SC", "Noto Sans TC",sans-serif;color:var(--ink)}' +
+                'button{font:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}' +
+                '.btn{min-height:40px;padding:0 16px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink)}' +
+                '.btn:hover:not(:disabled){border-color:var(--brass);color:var(--brass)}.btn:disabled{opacity:.45;cursor:default}' +
+                '.btn.main{border-color:var(--brass);background:var(--brass);color:var(--paper)}.btn.danger{border-color:#c0634f;background:#c0634f;color:#fff}' +
+                '.lb{position:fixed;inset:0;display:flex;flex-direction:column}' +
+                '.lb-top{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:max(10px,env(safe-area-inset-top)) 12px 10px}' +
+                '.lb-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 12px 12px}' +
+                '.lb-stage img{display:block;max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;touch-action:auto}' +
+                '.lb-prompt{flex:none;max-height:40%;overflow:auto;margin:0 12px max(12px,env(safe-area-inset-bottom));padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.06);white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;user-select:text}' +
+                '.sheet{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}' +
+                '.panel{width:min(560px,100%);max-height:100%;overflow:auto;padding:18px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}' +
+                '.panel h2{margin:0 0 12px;font:500 17px/1.5 inherit;color:var(--ink)}.panel p{margin:0 0 12px;color:var(--ink-dim)}' +
+                '.panel label{display:block;margin:0 0 10px;font-size:12px;color:var(--ink-dim)}' +
+                '.panel textarea,.panel select{display:block;width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:rgba(0,0,0,.25);color:var(--ink);font:13px/1.6 ui-monospace,Consolas,monospace;resize:vertical}' +
+                '.panel select{font-family:inherit}.panel .err{color:#e7a08f}.row{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:14px}';
+            function openLightbox(card) {
+                if (!card.url) return;
+                var item = shownItem(card), url = absoluteUrl(card.url);
+                openBbiScreen('柏宝绘图片', function (gdoc, close) {
+                    var wrap = gdoc.createElement('div'); wrap.className = 'lb';
+                    var top = gdoc.createElement('div'); top.className = 'lb-top';
+                    var stage = gdoc.createElement('div'); stage.className = 'lb-stage';
+                    var img = gdoc.createElement('img'); img.src = url; img.alt = card.state.promptText || '柏宝绘图片';
+                    var text = gdoc.createElement('div'); text.className = 'lb-prompt'; text.hidden = true;
+                    text.textContent = card.state.promptText || '';
+                    function action(label, fn, cls) {
+                        var button = gdoc.createElement('button'); button.type = 'button'; button.className = 'btn' + (cls ? ' ' + cls : '');
+                        button.textContent = label; button.addEventListener('click', fn); top.append(button); return button;
+                    }
+                    if (card.state.promptText) action('提示词', function () { text.hidden = !text.hidden; });
+                    action('下载', function () { downloadImage(card); });
+                    if (item) action('删除', function () { close(); confirmRemove(card, item); });
+                    var closeButton = action('关闭', close, 'main');
+                    // 点图片以外的地方关闭；图片本身不拦截触控，手机可长按存图。
+                    stage.addEventListener('click', function (event) { if (event.target === stage) close(); });
+                    stage.append(img); wrap.append(top, stage, text); gdoc.body.append(wrap);
+                    closeButton.focus();
+                });
+            }
+            function confirmRemove(card, item) {
+                openBbiScreen('删除图片', function (gdoc, close) {
+                    var sheet = gdoc.createElement('div'); sheet.className = 'sheet';
+                    sheet.innerHTML = '<div class="panel" role="alertdialog" aria-labelledby="t"><h2 id="t">删除这张图？</h2>' +
+                        '<p>会从这则讯息的图片纪录移除，图库里的文件也一并删除，无法复原。</p><p class="err" hidden></p>' +
+                        '<div class="row"><button type="button" class="btn" data-k="no">取消</button><button type="button" class="btn danger" data-k="yes">删除</button></div></div>';
+                    var err = sheet.querySelector('.err');
+                    sheet.querySelector('[data-k="no"]').addEventListener('click', close);
+                    sheet.querySelector('[data-k="yes"]').addEventListener('click', async function (event) {
+                        event.currentTarget.disabled = true;
+                        try { await context.bbi.remove(card.token, item.id); close(); }
+                        catch (error) { err.hidden = false; err.textContent = error?.message || '删除失败，请稍后重试。'; event.currentTarget.disabled = false; }
+                        finally { refresh(); }
+                    });
+                    gdoc.body.append(sheet);
+                    sheet.querySelector('[data-k="no"]').focus();
+                });
+            }
+            function openEditor(card) {
+                var content = card.state.content || {};
+                openBbiScreen('修改提示词', function (gdoc, close) {
+                    var sheet = gdoc.createElement('div'); sheet.className = 'sheet';
+                    sheet.innerHTML = '<form class="panel" aria-labelledby="t"><h2 id="t">修改提示词</h2>' +
+                        '<label>正向提示词（tag）<textarea name="prompt" rows="4" required></textarea></label>' +
+                        '<label>自然语言描述（nl，可空）<textarea name="nl" rows="3"></textarea></label>' +
+                        '<label>负面提示词（negative，可空）<textarea name="negative" rows="2"></textarea></label>' +
+                        '<label>画幅<select name="size"><option value="portrait">直式</option><option value="landscape">横式</option></select></label>' +
+                        (content.characters ? '<p>这张图另有 ' + content.characters + ' 位角色的提示，保留不变。</p>' : '') +
+                        '<p>存档后正文里的标签会一起改写；原本的图会标示为「旧提示词」。</p><p class="err" hidden></p>' +
+                        '<div class="row"><button type="button" class="btn" data-k="no">取消</button><button type="submit" class="btn" data-k="save">存档</button>' +
+                        '<button type="submit" class="btn main" name="regen" data-k="regen">存档并重新生成</button></div></form>';
+                    var form = sheet.querySelector('form'), err = sheet.querySelector('.err');
+                    form.elements.prompt.value = content.prompt || ''; form.elements.nl.value = content.nl || '';
+                    form.elements.negative.value = content.negative || ''; form.elements.size.value = content.size === 'landscape' ? 'landscape' : 'portrait';
+                    form.elements.regen.disabled = !card.state.available;
+                    sheet.querySelector('[data-k="no"]').addEventListener('click', close);
+                    form.addEventListener('submit', async function (event) {
+                        event.preventDefault();
+                        var regenerate = event.submitter?.dataset.k === 'regen';
+                        var buttons = form.querySelectorAll('button');
+                        buttons.forEach(function (button) { button.disabled = true; });
+                        try {
+                            var result = await context.bbi.editPrompt(card.token, {prompt: form.elements.prompt.value, nl: form.elements.nl.value,
+                                negative: form.elements.negative.value, size: form.elements.size.value}, regenerate);
+                            close();
+                            // 改完标签后是新的图卡，生成失败的讯息写在新图卡上。
+                            if (result?.work) result.work.catch(function (error) {
+                                var fresh = cards.get(result.token);
+                                if (closed || !fresh) { console.warn('[手札] 改提示词后生成失败', error); return; }
+                                fresh.error = error?.code === 'aborted' ? '已取消生成。' : error?.message || '生成失败，请稍后重试。';
+                                refresh();
+                            });
+                        } catch (error) {
+                            err.hidden = false; err.textContent = error?.message || '存档失败，请稍后重试。';
+                            buttons.forEach(function (button) { button.disabled = false; });
+                            form.elements.regen.disabled = !card.state.available;
+                        }
+                    });
+                    gdoc.body.append(sheet);
+                    form.elements.prompt.focus();
                 });
             }
             function hydrate() {
@@ -5584,24 +5879,36 @@ var NewCardAlbumData = (function () {
                 var card = cards.get(node.dataset.rpgBbiToken);
                 if (!card) return;
                 var action = button.dataset.bbiAction;
+                if (action === 'menu') {
+                    var open = card.tools.dataset.open !== '1';
+                    card.tools.dataset.open = open ? '1' : '';
+                    button.setAttribute('aria-expanded', String(open));
+                    return;
+                }
+                closeMenu(card);
                 if (action === 'prompt') {
                     card.panel.hidden = !card.panel.hidden;
-                    button.setAttribute('aria-expanded', String(!card.panel.hidden));
-                    reportHeight(); return;
+                    button.setAttribute('aria-pressed', String(!card.panel.hidden));
+                    syncMoreHint(); reportHeight(); return;
                 }
                 if (action === 'copy') {
                     try { await view.navigator.clipboard.writeText(card.state.promptText || ''); button.textContent = '已复制'; }
                     catch { button.textContent = '请选取文字复制'; }
                     return;
                 }
-                if (action === 'download') {
-                    if (!card.url) return;
-                    var link = create('a'); link.href = new URL(card.url, context.rootWin?.location?.href || doc.baseURI).href;
-                    var mime = card.url.match(/^data:image\/([\w+-]+)[;,]/i)?.[1];
-                    var extension = mime === 'jpeg' ? 'jpg' : mime || 'png';
-                    link.download = /^(data|blob):/i.test(card.url) ? 'bbi-image.' + extension :
-                        card.url.split('/').pop().split('?')[0] || 'bbi-image.png';
-                    link.rel = 'noopener'; doc.body.append(link); link.click(); link.remove(); return;
+                if (action === 'download') { downloadImage(card); return; }
+                if (action === 'zoom') { openLightbox(card); return; }
+                if (action === 'remove') { if (shownItem(card)) confirmRemove(card, shownItem(card)); return; }
+                if (action === 'edit') { openEditor(card); return; }
+                if (action === 'prev' || action === 'next') {
+                    card.index += action === 'prev' ? -1 : 1; paint(card, card.state); return;
+                }
+                if (action === 'collapse' || action === 'expand') {
+                    var folding = action === 'collapse';
+                    context.bbi.setCollapsed?.(card.token, folding);
+                    // 收合／展开后焦点放在对应的按钮上，键盘操作不会掉到页首。
+                    view.requestAnimationFrame(function () { (folding ? card.bar : card.more).focus({preventScroll: true}); reportHeight(); });
+                    return;
                 }
                 card.error = '';
                 try {
@@ -5609,23 +5916,25 @@ var NewCardAlbumData = (function () {
                     if (action === 'generate') {
                         var work = context.bbi.generate(card.token); refresh(); await work;
                     }
-                    if (action === 'restore') {
-                        card.restoring = true; refresh(); await context.bbi.restore(card.token);
-                    }
                 } catch (error) {
                     if (!closed) card.error = error?.code === 'aborted' ? '已取消生成。' : error?.message || '操作失败，请稍后重试。';
                 } finally {
-                    card.restoring = false;
                     if (!closed) refresh();
                 }
             });
             if (context.bbi?.subscribe) unsubscribe = context.bbi.subscribe(refresh);
             return {
                 hydrate: hydrate, replaceHtml: replaceHtml, patchTail: patchTail, refresh: refresh,
-                resize: function () { root.style.setProperty('--bbi-image-height', Math.max(96, stageBaseHeight() * 0.55) + 'px'); },
+                // 图片在分页模式自己占一页：高度上限＝正文区扣掉上下内距（再留一点空隙），一张图刚好放满一页。
+                resize: function () {
+                    var computed = view.getComputedStyle(stageEl());
+                    var available = stageBaseHeight() - (parseFloat(computed.paddingTop) || 0) - (parseFloat(computed.paddingBottom) || 0);
+                    root.style.setProperty('--bbi-image-height', Math.max(96, Math.floor(available - 8)) + 'px');
+                },
                 destroy: function () {
                     closed = true;
                     if (unsubscribe) unsubscribe();
+                    if (bbiScreen) bbiScreen.close();
                     cards.forEach(function (card) { releaseImage(card.pending); releaseImage(card.image); });
                     cards.clear(); notice.remove();
                 }
@@ -9245,12 +9554,54 @@ var NewCardAlbumData = (function () {
             if (pageParas === allParas) return {para: anchor, offset: offset};
             if (!pageParas) return {para: 0, offset: 0};
             var limit = Math.min(anchor, allParas.length);
-            for (var i = 0; i < limit; i++) if (pageParas[i] !== allParas[i]) return {para: 0, offset: 0};
+            for (var i = 0; i < limit; i++) if (pageParas[i] !== allParas[i]) return imageShiftedAnchor(anchor, offset, {para: 0, offset: 0});
+            // 图片刚好插在页首段落的位置：不要改停在图片页。
+            if (limit === anchor && pageParas[anchor] !== allParas[anchor] && anchor < allParas.length &&
+                isImagePara(allParas[anchor]) !== isImagePara(pageParas[anchor] || '')) {
+                return imageShiftedAnchor(anchor, offset, {para: anchor, offset: 0});
+            }
             if (limit < anchor || !offset) return {para: limit, offset: 0};
             // 页首在段落中间：这一段在起点之前的文字没变（例如串流中往后长）才沿用段内位置。
-            var same = pageParas[anchor] === allParas[anchor] ||
-                textOf(pageParas[anchor]).slice(0, offset) === textOf(allParas[anchor]).slice(0, offset);
-            return {para: anchor, offset: same ? offset : 0};
+            // 新的这一段在起点之后要还有字：图片把这一段切开时，前半段刚好在起点结束。
+            var nextText = pageParas[anchor] === allParas[anchor] ? null : textOf(allParas[anchor]);
+            var same = nextText === null ||
+                (nextText.length > offset && textOf(pageParas[anchor]).slice(0, offset) === nextText.slice(0, offset));
+            return same ? {para: anchor, offset: offset} : imageShiftedAnchor(anchor, offset, {para: anchor, offset: 0});
+        }
+        // 柏宝绘在正文写完后才把图片插进原文：读者所在页之前多了图片段落，或一段文字被图片切成两段。
+        // 这时略过图片、只比对文字（不计空白）：读者所在位置之前的文字都没变，就停在同一个文字位置；
+        // 读者原本在图片页，就停在同一位置的图片。文字有任何不同（换了回复、改了前面的段落），回传 first（原本的规则）。
+        function isImagePara(html) { return html.indexOf('data-rpg-bbi-token=') >= 0; }
+        function squeeze(text) { return text.replace(/\s+/g, ''); }
+        function imageShiftedAnchor(anchor, offset, first) {
+            if (!pageParas.some(isImagePara) && !allParas.some(isImagePara)) return first;
+            var onImage = anchor < pageParas.length && isImagePara(pageParas[anchor]);
+            var before = '';
+            for (var i = 0; i < anchor && i < pageParas.length; i++) if (!isImagePara(pageParas[i])) before += squeeze(textOf(pageParas[i]));
+            if (offset && !onImage && anchor < pageParas.length) before += squeeze(textOf(pageParas[anchor]).slice(0, offset));
+            var seen = '';
+            for (var j = 0; j < allParas.length; j++) {
+                if (isImagePara(allParas[j])) {
+                    if (onImage && seen.length === before.length) return seen === before ? {para: j, offset: 0} : first;
+                    continue;
+                }
+                if (seen.length === before.length) return seen === before ? {para: j, offset: 0} : first;
+                var text = textOf(allParas[j]), plain = squeeze(text);
+                if (seen.length + plain.length > before.length) {
+                    var need = before.length - seen.length;
+                    if (seen + plain.slice(0, need) !== before) return first;
+                    // 换算成这一段的字元位置（跳过空白）。
+                    var count = 0, k = 0;
+                    for (; k < text.length; k++) {
+                        if (/\s/.test(text[k])) continue;
+                        if (count === need) break;
+                        count++;
+                    }
+                    return {para: j, offset: k};
+                }
+                seen += plain;
+            }
+            return first;
         }
         function textOf(html) {
             var holder = create('div');
