@@ -3074,27 +3074,47 @@ window.ExplorationSceneFootprints = {"gable":{"cols":3,"rows":2},"pub":{"cols":3
       {id:'gather',name:'收束回声',description:'本局攻击 ＋2。',effects:[{type:'power',amount:2}]}
     ]}
   };
-  // 送回正文的提示词只有一行固定格式：【遭遇结果：{类型}／{结果}】。详细指示由世界书的关键字条目负责。
-  // 类型与结果用字集中在这里（日后要改成简体只改这两个表）；RESULT_WORDS 的键同时是合法的结果代码。
-  // 撤退不记录、不送回正文：只有胜利与战败有短句。OUTCOMES 是引擎状态与旧存档可能出现的全部结果代码（含 retreat）。
+  // 送回正文的提示词：第一行【标题】，下面写内容。不写玩家从哪里开启（剧情或地图），只写情节需要的时间、地点与结果。
+  // 详细指示由世界书的关键字条目负责。用字集中在 RESULT_WORDS／PROMPT_WORDS；RESULT_WORDS 的键同时是合法的结果代码。
+  // 撤退不记录、不送回正文：只有成功与失败有提示词。OUTCOMES 是引擎状态与旧存档可能出现的全部结果代码（含 retreat）。
   var OUTCOMES=['victory','defeat','retreat'];
-  var RESULT_WORDS={victory:'胜利',defeat:'战败'};
-  var KIND_WORDS={battle:'单次遭遇战',explore:'探索搜查',map:'地图探索'};
-  // 保留的历练另成一行：【历练：保留{N}次（胜利{a}、战败{b}）／{时间}】，放在结果短句之前；没有历练就不输出。
-  // 括号内两种结果直接用 RESULT_WORDS 的词（胜利、战败），不另建词表；旧存档的撤退纪录不计入、不列出。
-  var HISTORY_WORDS={title:'历练',keep:'保留',times:'次',span:{unspecified:'不指定',days:'数日',weeks:'数周',months:'数个月'}};
-  function historyLine(history){
-    if(!history||!history.count)return'';
-    if(!has(HISTORY_WORDS.span,history.timeSpan))throw new Error('Invalid history span');
-    var parts=['victory','defeat'].filter(function(key){return history.outcomes[key]>0;}).map(function(key){return RESULT_WORDS[key]+history.outcomes[key];});
-    var total=(history.outcomes.victory||0)+(history.outcomes.defeat||0);
-    if(!total)return'';
-    return'【'+HISTORY_WORDS.title+'：'+HISTORY_WORDS.keep+total+HISTORY_WORDS.times+'（'+parts.join('、')+'）／'+HISTORY_WORDS.span[history.timeSpan]+'】';
+  var RESULT_WORDS={victory:'成功',defeat:'失败'};
+  var PROMPT_WORDS={result:'遭遇结果',history:'历练',time:'时间',place:'地点',outcome:'结果',
+    during:'在',within:'内',met:'遭遇了',times:'次',events:'事件',among:'其中',all:'全部',last:'最后一次',at:'在',
+    span:{unspecified:'一段时间',days:'数日',weeks:'数周',months:'数个月'}};
+  // 地图事件的时间与地点由宿主提供（例如 1889年10月15日 21:30、伦敦城东）；各最多 40 字，不合格的值当作没有。
+  function resultContext(value){
+    var text=function(v){return typeof v==='string'&&v.length<=40&&!/[\u0000-\u001f\u007f]/.test(v)?v.trim():'';};
+    return{time:text(value&&value.time),place:text(value&&value.place)};
   }
-  function resultKind(source,battleOnly){return source==='map'?'map':battleOnly?'battle':'explore';}
-  function resultLine(kind,outcome){
-    if(!has(KIND_WORDS,kind)||!has(RESULT_WORDS,outcome))throw new Error('Invalid result line');
-    return'【遭遇结果：'+KIND_WORDS[kind]+'／'+RESULT_WORDS[outcome]+'】';
+  // 正文遭遇（context 为 null）：【遭遇结果】＋结果。前文已经写了这场战斗，只需要结果。
+  // 地图事件：【遭遇结果】＋时间、地点、结果各一行；没有的项目不写。
+  function resultText(outcome,context){
+    if(!has(RESULT_WORDS,outcome))throw new Error('Invalid result');
+    var W=PROMPT_WORDS,lines=['【'+W.result+'】'];
+    if(!context)return lines.concat(RESULT_WORDS[outcome]).join('\n');
+    context=resultContext(context);
+    if(context.time)lines.push(W.time+'：'+context.time);
+    if(context.place)lines.push(W.place+'：'+context.place);
+    lines.push(W.outcome+'：'+RESULT_WORDS[outcome]);
+    return lines.join('\n');
+  }
+  // 有保留的历练时，取代上面的结果，整则只送这一段（次数包含最后一次）：
+  //   【历练】
+  //   在{时间}内遭遇了{N}次事件，其中{a}次成功、{b}次失败；最后一次在{地点}，{结果}
+  // 只有一种结果时写「全部成功」／「全部失败」；没有地点时写「最后一次{结果}」。旧存档的撤退纪录不计入、不列出。
+  // history 是之前保留的局（不含本局）；没有保留的局时回传空字串，改用 resultText。
+  function historyText(history,outcome,place){
+    if(!history||!history.count)return'';
+    if(!has(PROMPT_WORDS.span,history.timeSpan))throw new Error('Invalid history span');
+    if(!has(RESULT_WORDS,outcome))throw new Error('Invalid result');
+    var W=PROMPT_WORDS,counts={victory:history.outcomes.victory||0,defeat:history.outcomes.defeat||0};
+    if(!counts.victory&&!counts.defeat)return'';
+    counts[outcome]++;
+    var keys=['victory','defeat'].filter(function(key){return counts[key]>0;}),total=counts.victory+counts.defeat;
+    var tail=keys.length===1?W.all+RESULT_WORDS[keys[0]]:W.among+keys.map(function(key){return counts[key]+W.times+RESULT_WORDS[key];}).join('、');
+    place=resultContext({place:place}).place;
+    return'【'+W.history+'】\n'+W.during+W.span[history.timeSpan]+W.within+W.met+total+W.times+W.events+'，'+tail+'；'+W.last+(place?W.at+place+'，':'')+RESULT_WORDS[outcome];
   }
   function has(obj,key){return Object.prototype.hasOwnProperty.call(obj,key);}
   function clone(value){return JSON.parse(JSON.stringify(value));}
@@ -4041,7 +4061,7 @@ window.ExplorationSceneFootprints = {"gable":{"cols":3,"rows":2},"pub":{"cols":3
       return true;
     }catch(_){return false;}
   }
-  root.ExplorationRules={VERSION:VERSION,CONFIG:CONFIG,SUMMON:SUMMON,enemyLabel:enemyLabel,SHIELD_KEEP:SHIELD_KEEP,eventsEnabled:function(){return EVENTS_ENABLED;},setEventsEnabled:setEventsEnabled,DIFFICULTIES:DIFFICULTIES,GROUPS_BY_SIZE:GROUPS_BY_SIZE,MAX_GROUP_ENEMIES:MAX_GROUP_ENEMIES,groupRange:function(config){return groupRange(normalize(config));},SPECTRA:SPECTRA,SUPPORTS:SUPPORTS,SKILLS:SKILLS,ENEMY_SKILLS:ENEMY_SKILLS,CLASSES:CLASSES,SPECIES:SPECIES,EVENTS:EVENTS,OUTCOMES:OUTCOMES,RESULT_WORDS:RESULT_WORDS,KIND_WORDS:KIND_WORDS,resultKind:resultKind,resultLine:resultLine,HISTORY_WORDS:HISTORY_WORDS,historyLine:historyLine,
+  root.ExplorationRules={VERSION:VERSION,CONFIG:CONFIG,SUMMON:SUMMON,enemyLabel:enemyLabel,SHIELD_KEEP:SHIELD_KEEP,eventsEnabled:function(){return EVENTS_ENABLED;},setEventsEnabled:setEventsEnabled,DIFFICULTIES:DIFFICULTIES,GROUPS_BY_SIZE:GROUPS_BY_SIZE,MAX_GROUP_ENEMIES:MAX_GROUP_ENEMIES,groupRange:function(config){return groupRange(normalize(config));},SPECTRA:SPECTRA,SUPPORTS:SUPPORTS,SKILLS:SKILLS,ENEMY_SKILLS:ENEMY_SKILLS,CLASSES:CLASSES,SPECIES:SPECIES,EVENTS:EVENTS,OUTCOMES:OUTCOMES,RESULT_WORDS:RESULT_WORDS,PROMPT_WORDS:PROMPT_WORDS,resultContext:resultContext,resultText:resultText,historyText:historyText,
     CYAN_TRIAL:CYAN_TRIAL,CYAN_LAYOUTS:CYAN_LAYOUTS,cyanRun:cyanRun,cyanState:cyanState,cyanVisibleSkills:cyanVisibleSkills,cyanUpkeep:cyanUpkeep,cyanRefund:cyanRefund,cyanForecast:cyanForecast,
     SPECTRUM_TRIAL:SPECTRUM_TRIAL,YELLOW_TRIAL:YELLOW_TRIAL,GREEN_TRIAL:GREEN_TRIAL,greenCaps:greenCaps,PURPLE_TRIAL:PURPLE_TRIAL,PURPLE_MEMBERS:PURPLE_MEMBERS,purpleMember:purpleMember,purpleReady:purpleReady,purpleTarget:purpleTarget,purpleVisibleSkills:purpleVisibleSkills,assignPurpleTarget:assignPurpleTarget,skillPlan:skillPlan,describeSkill:describeSkill,hasBoost:hasBoost,enemyPreview:enemyPreview,
     clone:clone,normalize:normalize,create:create,playerStats:playerStats,playerSkills:playerSkills,commandGroups:commandGroups,entryReason:entryReason,effectAmount:effectAmount,dotSummary:dotSummary,dimensions:dimensions,coord:coord,adjacent:adjacent,neighbors:neighbors,reachable:reachable,tileView:tileView,encounter:encounter,living:living,
@@ -7132,7 +7152,7 @@ window.ExplorationResourceIcons = {"momentum":"./assets/ui/resource/red-buff4.we
   'use strict';
   var mapOverride = false;
   function setMapOverride(value) { mapOverride = value === true; }
-  var generationVersion = '4349941312454b023f891e69f418834cfa671c1f9efea3614d111fd0d1a17a9e';
+  var generationVersion = '63e2da8cce88d4be16c367aa4f73a358ef0574018b01e1aeca21986fd9e9fa5a';
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function accepted(state, meta) {
     var a = meta && meta.accepted;
@@ -10248,6 +10268,8 @@ window.SceneEnvironment=(()=>{
   var unlockedSupports=null,lockReasons={},scenePrior=null,musicControl=null;
   // 整备封面便条与探索页顶的日期、地点由宿主提供（正文前端读 MVU）；没有数据时不显示，避免出现与剧情不符的文字。
   var prepPlace={when:'',where:''};
+  // 地图事件的时间与地点（宿主以 setResultContext 提供），开局时记进 meta.context，送出结果时使用。
+  var mapContext={time:'',place:''};
   function renderPlace(){var note=$('prep-place');note.querySelector('.when').textContent=prepPlace.when;note.querySelector('.where').textContent=prepPlace.where;note.hidden=!prepPlace.when&&!prepPlace.where;$('run-place').textContent=prepPlace.where;}
   var historySpans={unspecified:'一段时间',days:'数日',weeks:'数周',months:'数个月'};
   var selectedSpend=0;
@@ -10916,12 +10938,20 @@ window.SceneEnvironment=(()=>{
     $('event-budget-note').textContent='进入时已使用 1 次额度，离开不退还。本局还可进入 '+state.eventRemaining+' 次事件。';
     if(!$('event-dialog').open)$('event-dialog').showModal();
   }
+  // 撤退没有提示词。地图事件：有保留的历练时只送历练（含本局），否则送本局的时间、地点与结果；正文遭遇只送结果。
+  function resultPrompt(history){
+    var outcome=P.outcome(state,meta);
+    if(outcome==='retreat')return'';
+    if(meta.source!=='map')return R.resultText(outcome,null);
+    var context=R.resultContext(meta.context);
+    return R.historyText(history,outcome,context.place)||R.resultText(outcome,context);
+  }
   function resultPayload(){
     if(!state||state.phase!=='ended'||!meta)return null;
     if(meta.submission)return R.clone(meta.submission);
     var history=historySummary(meta.source==='map'?savedRuns.filter(function(entry){return entry.resultId!==meta.id;}):[]);
     history.timeSpan=history.count?meta.historyTime:null;
-    var payload={version:R.VERSION,resultId:meta.id,source:meta.source,outcome:state.outcome,prompt:P.outcome(state,meta)==='retreat'?'':[R.historyLine(history),R.resultLine(R.resultKind(meta.source,state.config.battleOnly===true),P.outcome(state,meta))].filter(Boolean).join('\n'),history:history,
+    var payload={version:R.VERSION,resultId:meta.id,source:meta.source,outcome:state.outcome,prompt:resultPrompt(history),history:history,
       seed:state.config.seed,tier:state.config.tier,danger:state.config.danger,difficulty:state.config.difficulty,spectrum:state.config.spectrum,supports:state.config.supports.slice(),
       encountersCleared:state.encounters.filter(function(e){return e.cleared;}).length,totalEncounters:state.encounters.length,
       defeated:state.kills,totalEnemies:state.encounters.reduce(function(sum,e){return sum+e.enemies.length;},0),
@@ -11476,6 +11506,7 @@ window.SceneEnvironment=(()=>{
     if(!save())announce('无法存档，关页后会重新开局。');
     state=prepared.state;
     meta={id:'explore-'+Date.now().toString(36)+'-'+newSeed().toString(36),eventId:id,source:entrySource,historyTime:'unspecified',started:Date.now(),ended:null,delivery:'pending'};
+    if(entrySource==='map')meta.context=R.resultContext(mapContext);
     exitFlow=null;exitOrigin=null;selectedSkill='strike';selectedEnemy=null;deliveryError='';manualCopy=false;refresh();return true;
   }
   function discardAttempt(restart){
@@ -11795,6 +11826,11 @@ window.SceneEnvironment=(()=>{
       if(typeof next.when!=='string'||typeof next.where!=='string'||next.when.length>40||next.where.length>40)return false;
       // 便条字级依内容重新计算（整备页重画时一并处理）。
       prepPlace=next;renderPlace();if(!state)refresh();return true;
+    },
+    // 地图事件送回正文用的时间与地点：{time, place}，各最多 40 字；空字串＝不写。只影响之后开始的局。
+    setResultContext:function(value){
+      if(disposed||!value||typeof value!=='object')return false;
+      mapContext=R.resultContext(value);return true;
     },
     getBattleAllies:function(){return wantsBattle(entrySource,config.encounter)?R.clone(allyResolution(config.encounter)):null;},
     getEncounterSource:function(){return R.clone(encounterOrigin);},

@@ -6961,12 +6961,12 @@ var NewCardAlbumData = (function () {
             var now = mapEventNow.minutes, target = Math.floor(now / 1440) * 1440 + event.time.hour * 60 + event.time.minute;
             return new Date((target < now ? target + 1440 : target) * 60000);
         }
-        // 送回剧情时附上时间推进。
-        function mapTimeNote(event) {
+        // 送回剧情用的时间与地点：事件发生的时刻（例如 1889年10月15日 21:30）与分区（伦敦城东）。读不到的项目留空。
+        function mapResultContext(event) {
             var date = mapEventMoment(event), pad = function (n) { return ('0' + n).slice(-2); };
-            if (!date) return '';
-            return '【时间推进至 ' + date.getUTCFullYear() + '年' + (date.getUTCMonth() + 1) + '月' + date.getUTCDate() + '日 ' +
-                pad(date.getUTCHours()) + ':' + pad(date.getUTCMinutes()) + '】';
+            var time = date ? date.getUTCFullYear() + '年' + (date.getUTCMonth() + 1) + '月' + date.getUTCDate() + '日 ' +
+                pad(date.getUTCHours()) + ':' + pad(date.getUTCMinutes()) : '';
+            return {time: time, place: '伦敦' + (MAP_AREA_NAMES[event.area] || event.area || '')};
         }
         function mapEnterOpen() {
             var floor = mapCardFloor();
@@ -10241,8 +10241,9 @@ var NewCardAlbumData = (function () {
         // 结果以玩家讯息送出，接着开始生成下一楼。
         function deliverExploration(payload) {
             if (!payload || !payload.prompt || typeof context.createChatMessages !== 'function' || typeof context.triggerSlash !== 'function') return false;
-            var map = exploration && exploration.mapEvent, note = map ? mapTimeNote(map) : '';
-            return Promise.resolve(context.createChatMessages([{role: 'user', message: payload.prompt + (note ? '\n' + note : '')}], {refresh: 'all'})).then(function () {
+            // 提示词由小游戏组好（地图事件的时间、地点来自 mapResultContext），这里原样送出。
+            var map = exploration && exploration.mapEvent;
+            return Promise.resolve(context.createChatMessages([{role: 'user', message: payload.prompt}], {refresh: 'all'})).then(function () {
                 if (!map) encounterView.result = EXPLORATION_OUTCOMES[payload.outcome] || '';
                 closeExploration();
                 if (!map) repaintEncounter();
@@ -10264,6 +10265,7 @@ var NewCardAlbumData = (function () {
             var allies = explorationAllies();
             game.setUnlockedSupports(allies.ids, allies.reasons);
             game.setPrepNote(explorationNote(current.mapEvent));
+            if (current.mapEvent && typeof game.setResultContext === 'function') game.setResultContext(mapResultContext(current.mapEvent));
             // 小游戏工具列的音乐键：在小游戏画面里开同一台留声机（小游戏会盖住卡片里的留声机）。
             if (musicUi && typeof game.setMusicControl === 'function') {
                 try {
