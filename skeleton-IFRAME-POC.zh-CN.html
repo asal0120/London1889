@@ -2061,14 +2061,16 @@
 .rpg-v7-root .rpg-bbi-tools { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 6px; max-width: calc(100% - 16px); }
 .rpg-v7-root .rpg-bbi-menu { display: none; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .rpg-v7-root .rpg-bbi-tools[data-open="1"] .rpg-bbi-menu { display: flex; }
-@media (hover: hover) { .rpg-v7-root .rpg-bbi-tools:hover .rpg-bbi-menu, .rpg-v7-root .rpg-bbi-tools:focus-within .rpg-bbi-menu { display: flex; } }
+@media (hover: hover) and (pointer: fine) { .rpg-v7-root .rpg-bbi-tools:hover .rpg-bbi-menu { display: flex; } }
+.rpg-v7-root .rpg-bbi-tools:has(:focus-visible) .rpg-bbi-menu { display: flex; }
+.rpg-v7-root .rpg-bbi-tools[data-open="0"] .rpg-bbi-menu { display: none; }
 /* 压在图上的圆钮用半透明黑底，任何图、任何主题都看得清楚。 */
-.rpg-v7-root .rpg-bbi-fab { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--radius-round); background: rgba(0,0,0,.55); color: rgba(255,255,255,.92); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.rpg-v7-root .rpg-bbi-fab { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--radius-round); background: rgba(0,0,0,.55); color: rgba(255,255,255,.92); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); flex: none; }
 .rpg-v7-root .rpg-bbi-fab:hover:not(:disabled) { background: rgba(0,0,0,.72); color: #fff; }
 .rpg-v7-root .rpg-bbi-fab[aria-pressed="true"] { background: var(--brass); color: var(--paper); }
 .rpg-v7-root .rpg-bbi-fab svg { width: 16px; height: 16px; }
 .rpg-v7-root .rpg-bbi-more { opacity: .7; }
-.rpg-v7-root .rpg-bbi-stage:hover .rpg-bbi-more, .rpg-v7-root .rpg-bbi-tools[data-open="1"] .rpg-bbi-more, .rpg-v7-root .rpg-bbi-tools:focus-within .rpg-bbi-more { opacity: 1; }
+.rpg-v7-root .rpg-bbi-stage:hover .rpg-bbi-more, .rpg-v7-root .rpg-bbi-tools[data-open="1"] .rpg-bbi-more, .rpg-v7-root .rpg-bbi-tools:has(:focus-visible) .rpg-bbi-more { opacity: 1; }
 /* 错误与警告叠在图片底部，不另占一行（图片高度已经算满一页）；不接收点击，也不盖到右上角的「⋯」。 */
 .rpg-v7-root .rpg-bbi-status { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 2; max-height: calc(100% - 56px); overflow: hidden; pointer-events: none; display: block; padding: 4px 10px; border-radius: var(--radius-md); background: rgba(0,0,0,.62); color: rgba(255,255,255,.92); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .rpg-v7-root .rpg-bbi-prompt { position: relative; display: block; margin-top: 6px; padding: 9px 64px 9px 10px; border-radius: var(--radius-md); background: var(--line-soft); text-align: left; }
@@ -5940,7 +5942,7 @@ var NewCardAlbumData = (function () {
                 var action = button.dataset.bbiAction;
                 if (action === 'menu') {
                     var open = card.tools.dataset.open !== '1';
-                    card.tools.dataset.open = open ? '1' : '';
+                    card.tools.dataset.open = open ? '1' : '0';
                     button.setAttribute('aria-expanded', String(open));
                     return;
                 }
@@ -5980,6 +5982,11 @@ var NewCardAlbumData = (function () {
                 } finally {
                     if (!closed) refresh();
                 }
+            });
+            // 点「⋯」收起后写 '0'，滑鼠离开这组按钮时清回 ''，恢复「移上去展开」。
+            listen(root, 'mouseout', function (event) {
+                var tools = event.target.closest && event.target.closest('.rpg-bbi-tools[data-open="0"]');
+                if (tools && !tools.contains(event.relatedTarget)) tools.dataset.open = '';
             });
             if (context.bbi?.subscribe) unsubscribe = context.bbi.subscribe(refresh);
             return {
