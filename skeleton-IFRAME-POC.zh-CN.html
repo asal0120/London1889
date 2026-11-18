@@ -453,7 +453,9 @@
 }
 
 /* ── 本文排版 ── */
-.rpg-v7-root .text-display { color: var(--ink); }
+/* 全形标点一律占一格（Chrome 123 以前与 Firefox 的排法）。Chrome 预设会把相邻的全形标点压成半格，
+   但压缩跨不过对白的 <span>，行尾差一点就把整句对白移到下一行、上一行被左右对齐撑开（2026-11-18，同前作）。 */
+.rpg-v7-root .text-display { color: var(--ink); text-spacing-trim: space-all; }
 .rpg-v7-root .text-display p {
     line-height: 1.95;
     letter-spacing: .015em;
@@ -564,8 +566,9 @@
 .rpg-v7-root .svBar { margin: 28px 0 8px; }
 /* 生成中正文可能沿用上一次的画面，横条一律藏起来，避免在串流中按到「重新解析」。 */
 .rpg-v7-root.generating .svBar { display: none; }
-/* 分页模式下这一页还能往下卷（最后一页接上变量横条、遭遇入口后放不下）：底部淡出，提示下面还有内容。 */
-.rpg-v7-root.paged-mode.stage-more .stage {
+/* 正文区还能往下卷：底部淡出，提示下面还有内容。分页模式是这一页放不下（最后一页接上变量横条、遭遇入口后），
+   全文模式是还没读到底（2026-11-18，比照前作）。 */
+.rpg-v7-root.stage-more .stage {
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), rgba(0,0,0,.15));
     mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), rgba(0,0,0,.15));
 }
@@ -575,7 +578,7 @@
     border: 1px solid var(--brass-dim); border-radius: 50%; background: var(--paper); color: var(--brass);
     box-shadow: 0 2px 6px rgba(0,0,0,.35); cursor: pointer; animation: moreBob 1.8s ease-in-out infinite;
 }
-.rpg-v7-root.paged-mode.stage-more .moreHint { display: grid; place-items: center; }
+.rpg-v7-root.stage-more .moreHint { display: grid; place-items: center; }
 .rpg-v7-root.sv-open .moreHint { display: none; }
 .rpg-v7-root .moreHint svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rpg-v7-root .moreHint:hover { background: var(--brass-glow); }
@@ -1295,6 +1298,12 @@
 }
 /* 全文模式时隐藏分页（沿用 rpg-core 的 .paged-mode 惯例） */
 .rpg-v7-root:not(.paged-mode) .pager { display: none; }
+/* 全文模式的阅读百分比（syncMoreHint）：「切换分页」右侧，字体与颜色同页码。 */
+.rpg-v7-root .ctrlRow .readProgress {
+    min-width: 40px; font-family: var(--display); font-size: 12px; letter-spacing: .1em; text-align: center;
+    color: var(--ds-cover-ink, var(--brass)); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none;
+}
+.rpg-v7-root .ctrlRow .readProgress[hidden], .rpg-v7-root.paged-mode .ctrlRow .readProgress { display: none; }
 
 .rpg-v7-root .ctrlRow .rowIcons {
     display: flex;
@@ -1932,6 +1941,30 @@
   .rpg-v7-root.d-material-ui .uiReadingFlowHead { width: 35px; height: 14px; margin-bottom: 8px; }
   .rpg-v7-root.d-material-ui .uiReadingFlowFoot { width: 20px; height: 8px; margin-top: 10px; }
   .rpg-v7-root.d-material-ui .stage { margin-block: 2px; padding-block: 6px; }
+}
+/* 全文模式（2026-11-18，使用者决定）：书页、书页＋齿轮两种样式拿掉正文上方那一列，齿轮改放在正文开头，
+   和页首一起跟着文字卷走。正文区往上接到那一列的位置，刚打开时页首、齿轮、第一行都和分页模式同高。
+   --flow-top＝那一列的上边距；--flow-gap＝分页模式页首下缘到第一行（正文区上边距＋上内距）。 */
+.rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingTop { display: none; }
+.rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .stage {
+  --flow-top: 12px; --flow-gap: 18px; --flow-gear-top: 1px; margin-top: 0; padding-top: var(--flow-top);
+}
+.rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .uiReadingFlowHead { margin-top: 0; margin-bottom: var(--flow-gap); }
+.rpg-v7-root.d-material-ui .uiReadingFlowGear { top: calc(var(--flow-top) + var(--flow-gear-top)); right: var(--flow-gear-right, 1px); transform: rotate(15deg); }
+.rpg-v7-root.d-material-ui:not(.paged-mode)[data-reading-style="mixed"] .uiReadingFlowGear { display: block; }
+@container d-paper-area (min-width: 521px) {
+  .rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .stage { --flow-gap: 22px; --flow-gear-right: 0px; }
+}
+@media (min-width: 700px) {
+  @container d-paper-area (min-width: 521px) {
+    .rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .stage { --flow-gap: 30px; }
+  }
+}
+@container d-paper-area (max-height: 260px) {
+  .rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .stage { --flow-top: 8px; --flow-gap: 12px; --flow-gear-top: 0px; }
+}
+@container d-paper-area (max-height: 150px) {
+  .rpg-v7-root.d-material-ui:not(.paged-mode):is([data-reading-style="book"], [data-reading-style="mixed"]) .stage { --flow-top: 2px; --flow-gap: 8px; }
 }
 .rpg-v7-root.d-material-ui .portrait { container-type: inline-size; border-color: transparent; border-radius: 0; background: radial-gradient(ellipse at 50% 30%, var(--portrait-hi), var(--portrait-lo)); }
 .rpg-v7-root.d-material-ui .charDesc::before {
@@ -3481,6 +3514,7 @@
         <div class="uiReadingTop" aria-hidden="true"><span class="uiReadingHead"></span><span class="uiReadingGear uiReadingGear--right"></span></div>
         <div class="stage" tabindex="0" aria-label="正文阅读区">
             <div class="uiReadingFlowHead" aria-hidden="true"></div>
+            <span class="uiReadingGear uiReadingFlowGear" aria-hidden="true"></span>
             <div class="text-display show-drop-cap">
                 <div class="placeholder-text">谱写崭新篇章……</div>
             </div>
@@ -3766,6 +3800,7 @@
     <!-- ═══ [6] 底部控制列（功能键整合成一列）═══ -->
     <div class="ctrlRow">
         <button type="button" class="mode-switch" aria-label="切换为全文阅读">切换全文</button>
+        <span class="readProgress" data-role="read-progress" aria-hidden="true" hidden></span>
         <div class="pager">
             <button type="button" class="btn-prev" data-role="btn-prev" disabled>上页</button>
             <button type="button" class="btn-next" data-role="btn-next" disabled>下页</button>
@@ -5350,7 +5385,7 @@ var NewCardAlbumData = (function () {
         var pluginBridge = context.pluginBridge || {};
         var timers = new Set();
         var rafs = new Set();
-        var resizeObserver = null, dialogObserver = null;
+        var resizeObserver = null, dialogObserver = null, moreObserver = null, moreFrame = 0;
         var destroyed = false;
         var skillPresentation = null;
         var skillTree = null;
@@ -9394,12 +9429,18 @@ var NewCardAlbumData = (function () {
             }
         }
 
-        // 分页模式下这一页还没卷到底时加上 stage-more（底部淡出＋向下箭头）。
+        // 正文区还没卷到底时加上 stage-more（底部淡出＋向下箭头）；分页、全文两种模式相同。
         // 箭头放在正文区外面（正文区有淡出遮罩，放在里面会一起变淡），位置对齐正文区底部。
+        // 全文模式另在底部按钮列显示阅读百分比：画面下缘在全文的位置，卷到底是 100%。
         function syncMoreHint() {
-            var stage = stageEl(), hint = $('more-hint');
-            var more = root.classList.contains('paged-mode') && stage.scrollHeight - stage.clientHeight - stage.scrollTop > 4;
+            var stage = stageEl(), hint = $('more-hint'), progress = $('read-progress');
+            var rest = stage.scrollHeight - stage.clientHeight - stage.scrollTop;
+            var more = rest > 4;
             root.classList.toggle('stage-more', more);
+            var scrollable = !root.classList.contains('paged-mode') && stage.clientHeight > 0 && stage.scrollHeight - stage.clientHeight > 4;
+            var percent = scrollable ? (rest <= 4 ? 100 : Math.min(99, Math.round((stage.scrollTop + stage.clientHeight) / stage.scrollHeight * 100))) + '%' : '';
+            if (progress.textContent !== percent) progress.textContent = percent;
+            progress.hidden = !scrollable;
             if (!more || !hint.offsetParent) return;
             var top = Math.round(stage.getBoundingClientRect().bottom - hint.offsetParent.getBoundingClientRect().top - 42) + 'px';
             if (hint.style.top !== top) hint.style.top = top;
@@ -10836,6 +10877,12 @@ var NewCardAlbumData = (function () {
                 resizeObserver.observe(root);
                 // Paper margins can resize the reading viewport without resizing root.
                 resizeObserver.observe(stageEl());
+                // 正文变长（串流、插图载入）时更新「下面还有」箭头与全文百分比，一个画格最多一次。
+                moreObserver = new view.ResizeObserver(function () {
+                    if (moreFrame) return;
+                    moreFrame = view.requestAnimationFrame(function () { moreFrame = 0; if (!destroyed) syncMoreHint(); });
+                });
+                moreObserver.observe(textEl());
             }
             if (typeof view.MutationObserver === 'function') {
                 dialogObserver = new view.MutationObserver(syncDialogView);
@@ -10869,6 +10916,8 @@ var NewCardAlbumData = (function () {
             stRegexInputs.clear();
             if (typeof unsubscribeContext === 'function') unsubscribeContext();
             if (dialogObserver) { dialogObserver.disconnect(); dialogObserver = null; }
+            if (moreObserver) { moreObserver.disconnect(); moreObserver = null; }
+            if (moreFrame) { view.cancelAnimationFrame(moreFrame); moreFrame = 0; }
             if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
             failedAvatars.clear();
             timers.forEach(function (id) { view.clearTimeout(id); });
