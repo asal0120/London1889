@@ -579,6 +579,17 @@
     box-shadow: 0 2px 6px rgba(0,0,0,.35); cursor: pointer; animation: moreBob 1.8s ease-in-out infinite;
 }
 .rpg-v7-root.stage-more .moreHint { display: grid; place-items: center; }
+/* 箭头不叠在文字上（2026-11-18，使用者决定）：放在正文区下方的窄边（syncMoreHint 算位置）。
+   全文模式固定留这条窄边，卷到底箭头消失时也不收起，文字不会跳动；矮卡片（150px 以下）不留窄边、不显示箭头。
+   分页模式本来就有页标与页尾花饰那一条，箭头出现时暂时取代页尾花饰。 */
+.rpg-v7-root:not(.paged-mode) .pageWrap > .stage { margin-bottom: 42px; }
+.rpg-v7-root.paged-mode.stage-more .uiReadingFoot { visibility: hidden; }
+.rpg-v7-root.paged-mode .moreHint { width: 24px; height: 24px; margin-left: -12px; }
+.rpg-v7-root.paged-mode .moreHint svg { width: 12px; height: 12px; }
+@container d-paper-area (max-height: 150px) {
+  .rpg-v7-root:not(.paged-mode) .pageWrap > .stage { margin-bottom: 2px; }
+  .rpg-v7-root.stage-more:not(.paged-mode) .moreHint { display: none; }
+}
 .rpg-v7-root.sv-open .moreHint { display: none; }
 .rpg-v7-root .moreHint svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rpg-v7-root .moreHint:hover { background: var(--brass-glow); }
@@ -9442,7 +9453,11 @@ var NewCardAlbumData = (function () {
             if (progress.textContent !== percent) progress.textContent = percent;
             progress.hidden = !scrollable;
             if (!more || !hint.offsetParent) return;
-            var top = Math.round(stage.getBoundingClientRect().bottom - hint.offsetParent.getBoundingClientRect().top - 42) + 'px';
+            // 箭头放在正文区（分页模式还有页标那一列）下方到纸页底部之间的窄边，上下置中；页尾花饰出现箭头时隐藏。
+            var box = hint.offsetParent.getBoundingClientRect(), marks = $('page-marks');
+            var upper = stage.getBoundingClientRect().bottom;
+            if (marks && marks.getClientRects().length) upper = Math.max(upper, marks.getBoundingClientRect().bottom);
+            var top = Math.round(upper - box.top + Math.max(0, (box.bottom - upper - hint.offsetHeight) / 2)) + 'px';
             if (hint.style.top !== top) hint.style.top = top;
         }
 
