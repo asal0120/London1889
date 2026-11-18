@@ -456,6 +456,8 @@
 /* 全形标点一律占一格（Chrome 123 以前与 Firefox 的排法）。Chrome 预设会把相邻的全形标点压成半格，
    但压缩跨不过对白的 <span>，行尾差一点就把整句对白移到下一行、上一行被左右对齐撑开（2026-11-18，同前作）。 */
 .rpg-v7-root .text-display { color: var(--ink); text-spacing-trim: space-all; }
+/* 正文字级：「显示设定 → 正文字级」设定 --text-scale（百分比 / 100）。只放大本文，面板与按钮不变。 */
+.rpg-v7-root .text-display { font-size: calc(1em * var(--text-scale, 1)); }
 .rpg-v7-root .text-display p {
     line-height: 1.95;
     letter-spacing: .015em;
@@ -3687,17 +3689,25 @@
                 <div class="setSection">
                     <div class="setLabel">介面主题</div>
                     <div class="setBtnGroup" data-role="set-theme">
-                        <button class="setOptBtn active" data-theme="dark">深色</button>
-                        <button class="setOptBtn" data-theme="light">浅色</button>
+                        <button class="setOptBtn" data-theme="dark">深色</button>
+                        <button class="setOptBtn active" data-theme="light">浅色</button>
                     </div>
                 </div>
 
                 <div class="setSection">
                     <div class="setLabel">正文字体</div>
                     <div class="setBtnGroup" data-role="set-font">
-                        <button class="setOptBtn active" data-font="kinghwa">京华老宋</button>
-                        <button class="setOptBtn" data-font="zhuque">朱雀仿宋</button>
+                        <button class="setOptBtn" data-font="kinghwa">京华老宋</button>
+                        <button class="setOptBtn active" data-font="zhuque">朱雀仿宋</button>
                         <button class="setOptBtn" data-font="noto">思源宋体</button>
+                    </div>
+                </div>
+
+                <div class="setSection">
+                    <div class="setLabel">正文字级</div>
+                    <div class="setSliderRow">
+                        <input type="range" data-role="set-text-scale" min="85" max="130" step="5">
+                        <span class="setSliderVal" data-role="set-text-scale-val"></span>
                     </div>
                 </div>
 
@@ -3749,8 +3759,8 @@
                 <div class="setSection">
                     <div class="setLabel">探索画面</div>
                     <div class="setBtnGroup" data-role="set-explore">
-                        <button class="setOptBtn active" data-explore="flat">平面</button>
-                        <button class="setOptBtn" data-explore="3d">立体</button>
+                        <button class="setOptBtn" data-explore="flat">平面</button>
+                        <button class="setOptBtn active" data-explore="3d">立体</button>
                     </div>
                 </div>
 
@@ -8809,8 +8819,8 @@ var NewCardAlbumData = (function () {
         }
 
         // 正文字体：只载入选中字体的 CSS（ZeoSeven 切片版，浏览器只下载画面用到的字）。
-        // 选择存在最外层视窗的 localStorage，所有楼层共用，切换时通知其他楼层。
-        var BODY_FONT_KEY = 'newcard.display.font.v1', BODY_FONT_EVENT = 'newcard-body-font';
+        // 选择和其他显示设定一起保存（见 saveDisplay）。BODY_FONT_KEY 是改版前单独存字体的位置，只读不写。
+        var BODY_FONT_KEY = 'newcard.display.font.v1', DEFAULT_BODY_FONT = 'zhuque';
         var BODY_FONTS = {
             kinghwa: {css: 'https://fontsapi.zeoseven.com/309/main/result.css', family: '"KingHwaOldSong"'},
             zhuque: {css: 'https://fontsapi.zeoseven.com/7/main/result.css', family: '"Zhuque Fangsong (technical preview)"'},
@@ -8828,8 +8838,8 @@ var NewCardAlbumData = (function () {
             try { return bodyFontHost().localStorage.getItem(BODY_FONT_KEY) || ''; } catch (_) { return ''; }
         }
 
-        function applyBodyFont(id, save) {
-            if (!BODY_FONTS[id]) id = 'kinghwa';
+        function applyBodyFont(id) {
+            if (!BODY_FONTS[id]) id = DEFAULT_BODY_FONT;
             var font = BODY_FONTS[id], head = doc.head || doc.documentElement;
             if (!head.querySelector('link[data-body-font="' + id + '"]')) {
                 var link = create('link');
@@ -8847,10 +8857,17 @@ var NewCardAlbumData = (function () {
                 repaginateSoon();
                 reportHeight();
             }
-            if (!save) return;
-            var host = bodyFontHost();
-            try { host.localStorage.setItem(BODY_FONT_KEY, id); } catch (_) {}
-            try { host.dispatchEvent(new host.CustomEvent(BODY_FONT_EVENT, {detail: id})); } catch (_) {}
+        }
+
+        var textScale = 100;
+        function applyTextScale(percent) {
+            $('set-text-scale-val').textContent = percent + '%';
+            $('set-text-scale').value = percent;
+            if (percent === textScale) return;
+            textScale = percent;
+            root.style.setProperty('--text-scale', (percent / 100).toFixed(2));
+            repaginateSoon();
+            reportHeight();
         }
 
         function updateTexUrlHint() {
@@ -9047,10 +9064,13 @@ var NewCardAlbumData = (function () {
             }, 250);
         }
 
-        // 显示设定（主题、纸张、纸纹浓度、行宽、卡片高度）：和字体一样存在最外层视窗的 localStorage。
-        // 分页／卷动模式不保存（使用者决定，2026-11-01）。
-        // 依装置（浏览器）各自保存，所有楼层共用；改动时通知其他楼层一起套用。
+        // 显示设定（主题、字体、字级、纸张、纸纹浓度、行宽、卡片高度、探索画面、分页／卷动模式）。
+        // 分页／卷动模式也保存（2026-11-18 使用者决定，取代 2026-11-01「不保存」的决定）。
+        // 两处保存：最外层视窗的 localStorage（开卡时立刻套用），以及酒馆全域变量 DISPLAY_GLOBAL_KEY（换装置也跟着走）。
+        // 卡片高度和萤幕大小有关，只存在这台装置。所有楼层共用；改动时通知其他楼层一起套用。
         var DISPLAY_KEY = 'newcard.display.settings.v1', DISPLAY_EVENT = 'newcard-display';
+        var DISPLAY_GLOBAL_KEY = '手札显示设定', DISPLAY_LOCAL_ONLY = ['cardHeightFixed'];
+        var displayChanged = false;   // 读到全域变量前使用者已改过设定时，以刚改的为准
         function inRange(value, min, max) { return typeof value === 'number' && isFinite(value) && value >= min && value <= max; }
         function savedDisplay() {
             try {
@@ -9058,14 +9078,49 @@ var NewCardAlbumData = (function () {
                 return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
             } catch (_) { return {}; }
         }
+        function syncedDisplay(value) {
+            var copy = Object.assign({}, value);
+            DISPLAY_LOCAL_ONLY.forEach(function (key) { delete copy[key]; });
+            return copy;
+        }
+        function writeDisplayGlobal(value) {
+            Promise.resolve().then(function () { return writeGlobalVar(DISPLAY_GLOBAL_KEY, syncedDisplay(value)); }).catch(function () {});
+        }
         function saveDisplay(patch) {
-            var host = bodyFontHost();
-            try { host.localStorage.setItem(DISPLAY_KEY, JSON.stringify(Object.assign(savedDisplay(), patch))); } catch (_) {}
+            var host = bodyFontHost(), value = Object.assign(savedDisplay(), patch, {updatedAt: Date.now()});
+            displayChanged = true;
+            try { host.localStorage.setItem(DISPLAY_KEY, JSON.stringify(value)); } catch (_) {}
             try { host.dispatchEvent(new host.CustomEvent(DISPLAY_EVENT, {detail: {patch: patch, source: root}})); } catch (_) {}
+            if (Object.keys(syncedDisplay(patch)).length) writeDisplayGlobal(value);
+        }
+        // 开卡后读一次全域变量，用 updatedAt 比较哪一份比较新：
+        // 全域变量较新（别台装置改过）→ 套用并更新这台装置的副本；
+        // 这台装置较新（开局页刚改过，或改版前只存在浏览器、全域变量还没有值）→ 把这台装置的设定放上去，同一份只放一次。
+        function loadDisplayGlobal() {
+            Promise.resolve().then(function () { return readGlobalVar(DISPLAY_GLOBAL_KEY); }).then(function (raw) {
+                if (destroyed || displayChanged) return;
+                var value = raw, host = bodyFontHost(), local = savedDisplay();
+                while (typeof value === 'string') value = value && value !== '0' ? JSON.parse(value) : {};
+                var empty = !value || typeof value !== 'object' || Array.isArray(value) || !Object.keys(value).length;
+                var localTime = Number(local.updatedAt) || 0, globalTime = empty ? -1 : Number(value.updatedAt) || 0;
+                if (localTime > globalTime) {
+                    if (Object.keys(syncedDisplay(local)).length && host.__newcardDisplayUploaded !== localTime) {
+                        host.__newcardDisplayUploaded = localTime;
+                        writeDisplayGlobal(local);
+                    }
+                    return;
+                }
+                if (empty || globalTime === localTime) return;
+                value = syncedDisplay(value);
+                try { host.localStorage.setItem(DISPLAY_KEY, JSON.stringify(Object.assign(local, value))); } catch (_) {}
+                applyDisplay(value);
+            }).catch(function () {});
         }
         // 只套用合法的栏位；其他栏位保留目前的样子。
         function applyDisplay(value) {
             if (value.theme === 'dark' || value.theme === 'light') applyTheme(value.theme);
+            if (typeof value.font === 'string' && BODY_FONTS[value.font]) applyBodyFont(value.font);
+            if (inRange(value.textScale, 85, 130)) applyTextScale(Math.round(value.textScale / 5) * 5);
             if (typeof value.tex === 'string' && TEX_MODES[value.tex]) applyTexMode(value.tex);
             if (typeof value.texUrl === 'string' && value.texUrl.length <= 2000) { $('set-tex-url').value = value.texUrl; applyTexUrl(value.texUrl); }
             if (inRange(value.texOpacity, 0, 100)) applyTexOpacity(value.texOpacity);
@@ -9073,9 +9128,10 @@ var NewCardAlbumData = (function () {
             // 旧的 cardHeight（640–1200 固定高度）不再读取：改版后预设为「自动」，使用者要再选一次「自订」。
             if (typeof value.cardHeightFixed === 'number') applyCardFit(value.cardHeightFixed);
             if (value.explore === 'flat' || value.explore === '3d') applyExplorePage(value.explore);
+            if (typeof value.paged === 'boolean') setReadingMode(value.paged);
         }
-        // 探索画面：下次开启探索时生效（已开着的不切换）。
-        var explorePage = 'flat';
+        // 探索画面：下次开启探索时生效（已开着的不切换）。预设立体（2026-11-18 使用者决定）。
+        var explorePage = '3d';
         function applyExplorePage(mode) { explorePage = mode; markActive('set-explore', 'explore', mode); }
         // 宿主（载入器）给的卡片高度：窄版的预设，以及宽版量不到酒馆可见范围时使用；使用者选了自订就用自订。
         function hostCardHeight(px) {
@@ -10756,9 +10812,11 @@ var NewCardAlbumData = (function () {
             });
             listen($('set-font'), 'click', function (event) {
                 var button = event.target.closest('button[data-font]');
-                if (button) applyBodyFont(button.dataset.font, true);
+                if (button) { applyBodyFont(button.dataset.font); saveDisplay({font: bodyFont}); }
             });
-            listen(bodyFontHost(), BODY_FONT_EVENT, function (event) { applyBodyFont(event.detail, false); });
+            // 拖动时只改这一楼；放开才保存并通知其他楼层（同纸纹浓度）。
+            listen($('set-text-scale'), 'input', function (event) { applyTextScale(Number(event.currentTarget.value)); });
+            listen($('set-text-scale'), 'change', function (event) { saveDisplay({textScale: Number(event.currentTarget.value)}); });
             // 字体切片是边显示边下载的，下载完字宽可能改变，分页要重算。
             if (doc.fonts) listen(doc.fonts, 'loadingdone', function () { repaginateSoon(); reportHeight(); });
             listen($('set-tex'), 'click', function (event) {
@@ -10814,7 +10872,9 @@ var NewCardAlbumData = (function () {
                 fonts: function () { var style = view.getComputedStyle(root); return {serif: style.getPropertyValue('--serif').trim(), sans: style.getPropertyValue('--sans').trim()}; },
                 battleTracks: (FRONTEND_CONFIG.music.battle || []).map(musicSource)});
             listen(root.querySelector('.mode-switch'), 'click', function () {
-                setReadingMode(!root.classList.contains('paged-mode'));
+                var paged = !root.classList.contains('paged-mode');
+                setReadingMode(paged);
+                saveDisplay({paged: paged});
             });
             listen($('btn-prev'), 'click', function () { goPage(currPage - 1); });
             listen($('btn-next'), 'click', function () { goPage(currPage + 1); });
@@ -10871,13 +10931,16 @@ var NewCardAlbumData = (function () {
             initializeAlbum();
             initializeEncounter();
             initializeStateViewer();
-            applyTheme('dark');
-            applyBodyFont(savedBodyFont(), false);
+            // 预设浅色、朱雀仿宋（2026-11-18 使用者决定）；有保存的设定再盖过去。
+            applyTheme('light');
+            applyBodyFont(savedBodyFont());
+            applyTextScale(100);
             applyTexMode('local');
             applyTexOpacity(34);
             applyContentMax(68);
             applyCardFit(0);
             applyDisplay(savedDisplay());
+            loadDisplayGlobal();
             paginate();
             hostResizeWidth = cardHostWindow().innerWidth;
             listen(cardHostWindow(), 'resize', onHostResize);
