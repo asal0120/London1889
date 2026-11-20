@@ -1731,8 +1731,11 @@
    地点、日期的排版与可用宽度和加图示之前相同（使用者要求只改天气）。 */
 .rpg-v7-root .timeText { position: relative; }
 .rpg-v7-root .hudWeather { display: none; }
+/* 大小（2026-11-21）：地点那一行右侧有空位时放大到 30px、往上跨进地点行并大致置中；
+   地点越长、空位越少就缩小，最小 20px（只占日期那一行）。--hud-weather-size 由 syncPlaceMarquee 量测后设定。 */
 .rpg-v7-root.d-open-shell .timeText > .hudWeather:not([hidden]) {
-    position: absolute; right: 0; bottom: 0; display: block; width: 20px; height: 20px; overflow: visible;
+    position: absolute; right: 0; bottom: calc((var(--hud-weather-size, 20px) - 20px) / 2); display: block;
+    width: var(--hud-weather-size, 20px); height: var(--hud-weather-size, 20px); overflow: visible;
     margin: 0; color: var(--ds-note-ink); opacity: .85; pointer-events: auto;
 }
 .rpg-v7-root .hudWeather svg { display: block; width: 100%; height: 100%; }
@@ -6944,7 +6947,9 @@ var NewCardAlbumData = (function () {
                     var data = mapPlain(message.data) || {};
                     if (message.message_id === floor) role = message.role;
                     if (!stat && mapPlain(data.stat_data) && Object.keys(data.stat_data).length) stat = data.stat_data;
-                    if (mapValidState(data[MAP_EVENT_KEY])) {
+                    // MVU 处理新楼层（玩家发言、收到正文、重新生成）时会把上一楼整份变量复制过来，连 手札地图 一起。
+                    // 卡片写入时 at 一定是那一楼；at 不是这一楼的就是副本，略过，继续往回找。
+                    if (mapValidState(data[MAP_EVENT_KEY]) && data[MAP_EVENT_KEY].at === message.message_id) {
                         found = data[MAP_EVENT_KEY];
                         if (message.message_id === floor) own = found;
                         return true;
@@ -6989,7 +6994,13 @@ var NewCardAlbumData = (function () {
                 return {id: event.id, label: MAP_AREA_NAMES[event.area] || event.area, x: event.x, y: event.y, fading: left !== null && left <= .25};
             }));
         }
-        // 载入、非串流更新与生成结束时呼叫（与 MVU 同时）。最新一楼的卡片要等这一楼出现变量更新标签才写入新事件。
+        // 抽新事件要等这轮输出完：最新一楼、不在生成或串流中，而且额外模型解析不在进行中（含生成刚结束、等它开始的空档）。
+        // 不看变量更新标签：模型漏写、或额外解析没开自动而玩家还没手动更新时也照抽。进入按钮仍要等标签（canEnterMapEvent）。
+        function mapSpawnReady(floor) {
+            if (mapLatestFloor() !== floor || isGenerating || context.streaming) return false;
+            return floorUpdated() || !(mvuAnalyzing() || Date.now() < svAwaitUntil);
+        }
+        // 载入、非串流更新、生成结束与额外解析结束时呼叫（见 watchExtraAnalysis）。
         function refreshMapEvents() {
             var floor = mapCardFloor();
             if (destroyed || typeof context.getChatMessages !== 'function' || !Number.isInteger(floor)) return;
@@ -6997,7 +7008,7 @@ var NewCardAlbumData = (function () {
                 var result = mapResolve(floor);
                 if (!result) return;
                 if (result.spawned) {
-                    var ready = mapLatestFloor() === floor && floorUpdated();
+                    var ready = mapSpawnReady(floor);
                     if (!ready || !mapWrite(floor, result.state)) result.state.events = result.state.events.filter(function (event) { return event.born !== floor; });
                 }
                 mapEventState = result.state;
@@ -8827,11 +8838,16 @@ var NewCardAlbumData = (function () {
         // 越长卷越久。只动 transform，不重排版面。减少动态效果时不卷动，维持「…」并在 title 放全名。
         var PLACE_SPEED = 28, PLACE_REST_MS = 2200, PLACE_FADE = 14;   // PLACE_FADE 与 CSS 的右缘淡出宽度相同
         var placeAnim = null, placeKey = '', placeFrame = 0, placeObserver = null;
+        var WEATHER_MIN = 20, WEATHER_MAX = 30, WEATHER_GAP = 8;   // 天气图示大小（px），见 .hudWeather 的 CSS
         function syncPlaceMarquee() {
             var outer = $('hud-place'), inner = outer && outer.querySelector('.hudPlaceText');
             if (!inner) return;
             var pad = parseFloat(view.getComputedStyle(inner).paddingRight) || 0;
             var box = outer.clientWidth, text = inner.textContent;
+            // 天气图示的大小：地点那一行右侧剩下的宽度（扣掉间距），限制在 WEATHER_MIN～WEATHER_MAX。
+            // 用 offsetWidth（不受宽版 zoom 影响，和 clientWidth 同一种单位）。
+            if (box > 0) $('hud-weather').style.setProperty('--hud-weather-size',
+                Math.max(WEATHER_MIN, Math.min(WEATHER_MAX, Math.floor(box - (inner.offsetWidth - pad) - WEATHER_GAP))) + 'px');
             var over = Math.ceil(inner.getBoundingClientRect().width - pad - box);
             var overflowing = box > 0 && over > 1;
             var animate = overflowing && !motionReduced() && typeof inner.animate === 'function';
@@ -10318,8 +10334,11 @@ var NewCardAlbumData = (function () {
             svPollTimer = clearTimer(svPollTimer);
             if (destroyed || isGenerating || !rawContentActive || !isLatestFloor() || mvuUpdateMethod() === MVU_PLOT_ONLY) return;
             if (svExtraLive() !== svExtraShown) {
+                var ended = svExtraShown;
                 if (!svExtraShown) setSvOpen(false);
                 repaintEncounter();   // 重画正文后面的横条与遭遇入口（tailBlocks 会更新 svExtraShown）
+                // 额外解析结束、或等它开始的空档过了：地图这时才抽新事件（见 mapSpawnReady）。
+                if (ended) refreshMapEvents();
             }
             if (svExtraShown || extractStateText(floorRaw()) === null) svPollTimer = setTimer(watchExtraAnalysis, SV_POLL_MS);
         }
