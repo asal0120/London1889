@@ -6176,8 +6176,38 @@ var NewCardAlbumData = (function () {
             textRules[kind].rules.forEach(function (rule) { list.appendChild(ruleRow(rule)); });
         }
 
+        // 酒馆显示讯息时会删掉英文的 <…> 标签（DOMPurify 清理，只留里面的文字），卡片在画面文字里就找不到它们。
+        // 角色卡附带一条只影响显示的正则（regex-手札标签记号.json）：寻找 <(\/?(?:thinking|think|check|draft|{{getglobalvar::手札标签名}}))>，
+        // 换成 <span data-rpg-tag="…"></span>，载入器再转回标签文字。这里把玩家设定的正文标签与过滤规则中
+        // 英文 <名称> 形式的标签名称写进全域变量（例如 content|story）；内置的四个已写在正则里。
+        var TAG_NAMES_KEY = '手札标签名';
+        var BUILT_IN_TAGS = ['thinking', 'think', 'check', 'draft'];
+        function ruleTagNames() {
+            var names = [];
+            ['anchor', 'filter'].forEach(function (kind) {
+                textRules[kind].rules.forEach(function (rule) {
+                    [rule.open, rule.close].forEach(function (text) {
+                        var found = /^<\/?([A-Za-z][\w-]*)>$/.exec(text || '');
+                        if (!found) return;
+                        var name = found[1].toLowerCase();
+                        if (BUILT_IN_TAGS.indexOf(name) < 0 && names.indexOf(name) < 0) names.push(name);
+                    });
+                });
+            });
+            return names.sort().join('|');
+        }
+        function syncTagNames() {
+            var value = ruleTagNames();
+            Promise.resolve().then(function () { return readGlobalVar(TAG_NAMES_KEY); }).then(function (raw) {
+                var current = typeof raw === 'string' ? raw : '';
+                if (destroyed || current === value) return;
+                return writeGlobalVar(TAG_NAMES_KEY, value);
+            }).catch(function () {});
+        }
+
         function loadTextRules() {
-            Object.keys(textRules).forEach(function (kind) {
+            var kinds = Object.keys(textRules), left = kinds.length, failed = false;
+            kinds.forEach(function (kind) {
                 var store = textRules[kind];
                 Promise.resolve().then(function () { return readGlobalVar(store.key); }).then(function (raw) {
                     if (destroyed) return;
@@ -6185,7 +6215,10 @@ var NewCardAlbumData = (function () {
                     store.compiled = null;
                     fillRuleList(kind);
                     if (store.rules.length) reprocessText();
-                }).catch(function () {});
+                }).catch(function () { failed = true; }).then(function () {
+                    // 两种规则都读完后补写一次（旧玩家已存过规则、还没有这个变量时）；有一种没读到就不写，避免盖掉正确的值。
+                    if (--left === 0 && !failed && !destroyed) syncTagNames();
+                });
             });
         }
 
@@ -6204,6 +6237,7 @@ var NewCardAlbumData = (function () {
                 store.rules = rules;
                 store.compiled = null;
                 fillRuleList(kind);
+                syncTagNames();
                 status.textContent = '已储存。其他楼层在重新载入后套用。';
                 reprocessText();
             }, function (error) {
@@ -10459,7 +10493,31 @@ var NewCardAlbumData = (function () {
             return segments.filter(Boolean).join('\n\n');
         }
 
+        // 正文标签依原文判断：载入器送来的是酒馆画面上的文字，已经过酒馆正则（preset 常有针对正文标签的正则）。
+        // 画面文字里找得到正文标签时照常使用（保留生图插件的图片与正则的结果）；
+        // 找不到、但原文里有时，改从原文取正文。原文里 BBI 的标签由载入器换成卡片认得的记号（getRegexSource）。
         function extractBody(input) {
+            var shown = bodyFrom(input);
+            if (shown.found) return shown.text;
+            var source = rawBodySource();
+            if (source && source !== input) {
+                var fromRaw = bodyFrom(source);
+                if (fromRaw.found) return fromRaw.text;
+            }
+            // 生成中还没写出正文开头标签：正文前的内容（思考、<check> 等）一律不显示。
+            // 生成结束后原文也没有任何正文标签（模型没照格式写），才显示全文，避免整则回复空白。
+            return isGenerating ? '' : shown.text;
+        }
+
+        function rawBodySource() {
+            if (typeof context.getRegexSource === 'function') {
+                try { var mapped = context.getRegexSource(); if (typeof mapped === 'string') return mapped; } catch (_) {}
+            }
+            return typeof context.rawData === 'string' ? context.rawData : '';
+        }
+
+        // 回传 {text, found}：found 表示找到了正文标签；没找到时 text 是去掉变量区域的全文。
+        function bodyFrom(input) {
             var str = typeof input === 'string'
                 ? input
                 : (input && typeof input === 'object' ? String(Object.values(input)[0] || '') : String(input || ''));
@@ -10515,19 +10573,16 @@ var NewCardAlbumData = (function () {
             });
             // 自订正文标签优先：先找完整的一组，再找只有开头的（生成中）；都没有才用内置的 <RPG>（也接受 [RPG]）。
             // 完整的一组可以有好几段（见 joinSegments）。
-            for (i = 0; i < anchors.length; i++) if ((joined = joinSegments(content, anchors[i].complete, anchors[i].openOnly)) !== null) return joined;
-            for (i = 0; i < anchors.length; i++) if ((match = content.match(anchors[i].openOnly))) return match[1].trim();
+            for (i = 0; i < anchors.length; i++) if ((joined = joinSegments(content, anchors[i].complete, anchors[i].openOnly)) !== null) return {text: joined, found: true};
+            for (i = 0; i < anchors.length; i++) if ((match = content.match(anchors[i].openOnly))) return {text: match[1].trim(), found: true};
             joined = joinSegments(content, reContentComplete, reContentOpenOnly);
-            if (joined !== null) return joined;
+            if (joined !== null) return {text: joined, found: true};
             match = content.match(reContentOpenOnly);
-            if (match) return match[1].trim();
-            // 生成中还没写出正文开头标签：正文前的内容（思考、<check> 等）一律不显示。
-            // 生成结束后仍没有任何正文标签（模型没照格式写），才显示全文，避免整则回复空白。
-            if (isGenerating) return '';
-            return content
+            if (match) return {text: match[1].trim(), found: true};
+            return {found: false, text: content
                 .replace(new RegExp('<' + STATE_TAG + '>[\\s\\S]*?<\\/' + STATE_TAG + '>', 'gi'), '')
                 .replace(new RegExp('<' + STATE_TAG + '>[\\s\\S]*$', 'i'), '')
-                .trim();
+                .trim()};
         }
 
         function highlight(text) {
@@ -10643,7 +10698,10 @@ var NewCardAlbumData = (function () {
             var tailOk = isGenerating && !identityChanged && lastRenderedText !== null && !!streamLive &&
                 !root.classList.contains('paged-mode');
             lastRenderedText = text;
-            var blocks = toBlocks(text).concat(tailBlocks());
+            var body = toBlocks(text);
+            // 生成中还没有可显示的正文（正文开头标签还没出现）：保留等待文字，同开卡时。
+            if (isGenerating && !body.length) body = [buildLoadingText()];
+            var blocks = body.concat(tailBlocks());
             if (tailOk && renderStreamTail(blocks)) { reportHeight(); return; }
             captureParas(blocks.join(''));
 
