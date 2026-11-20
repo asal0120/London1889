@@ -553,8 +553,14 @@
     opacity: .85;
 }
 .rpg-v7-root .svBar { margin: 28px 0 8px; }
-/* 生成中正文可能沿用上一次的画面，横条一律藏起来，避免在串流中按到「重新解析」。 */
-.rpg-v7-root.generating .svBar { display: none; }
+/* 生成中正文可能沿用上一次的画面，横条一律藏起来，避免在串流中按到「重新解析」。
+   例外是「更新中」横条（svLive）：原文写到变量区域的开头标签时出现，没有按钮。 */
+.rpg-v7-root.generating .svBar:not(.svLive) { display: none; }
+.rpg-v7-root .svLive .svTitle { min-height: 46px; }
+.rpg-v7-root .svLive .svPill::after { content: '…'; animation: encBlink 1.2s steps(4) infinite; }
+.rpg-v7-root .svLive .svNeedle { transform-box: view-box; transform-origin: 10px 11px; animation: svNeedle 1.6s ease-in-out infinite alternate; }
+@keyframes svNeedle { from { transform: rotate(-95deg); } to { transform: rotate(15deg); } }
+@media (prefers-reduced-motion: reduce) { .rpg-v7-root .svLive .svPill::after, .rpg-v7-root .svLive .svNeedle { animation: none; } }
 /* 正文区还能往下卷：底部淡出，提示下面还有内容。分页模式是这一页放不下（最后一页接上变量横条、遭遇入口后），
    全文模式是还没读到底（2026-11-18，比照前作）。 */
 .rpg-v7-root.stage-more .stage {
@@ -1712,6 +1718,15 @@
     white-space: nowrap;
 }
 .rpg-v7-root.d-open-shell .timeText .sep { display: none; }
+/* 地点放不下时（2026-11-21）：来回卷动显示全名（syncPlaceMarquee），右缘淡出取代「…」。
+   减少动态效果时不卷动，维持「…」，滑鼠停留时显示全名提示（title）。 */
+/* 权重要高于 .d-open-shell .timeText > span 的 text-overflow: ellipsis。 */
+.rpg-v7-root .timeText > [data-role="hud-place"].is-marquee {
+    text-overflow: clip;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent);
+}
+.rpg-v7-root .timeText > [data-role="hud-place"].is-marquee .hudPlaceText { display: inline-block; padding-right: 14px; will-change: transform; }
 /* 天气图示（2026-11-21，取代日期后的天气文字）：叠在日期那一行的最右边，不占栏位，
    地点、日期的排版与可用宽度和加图示之前相同（使用者要求只改天气）。 */
 .rpg-v7-root .timeText { position: relative; }
@@ -3515,7 +3530,7 @@
     <div class="topBar">
         <div class="pocketWatch" data-role="pocket-watch"><span class="uiWatchRim" aria-hidden="true"></span></div>
         <div class="timeText">
-            <span data-role="hud-place">—</span><span class="sep">|</span><span class="dim" data-role="hud-sky">—</span><span class="hudWeather" data-role="hud-weather" role="img" hidden></span>
+            <span data-role="hud-place"><span class="hudPlaceText">—</span></span><span class="sep">|</span><span class="dim" data-role="hud-sky">—</span><span class="hudWeather" data-role="hud-weather" role="img" hidden></span>
         </div>
     </div>
 
@@ -5433,6 +5448,7 @@ var NewCardAlbumData = (function () {
         var pendingRaw = null;
         var lastProcessedRaw = null;
         var lastRenderedText = null;
+        var lastLiveBar = false;   // 上一次画面是否有「更新中」横条（见 processRaw）
         var isGenerating = false;
         var streamTimer = null;
         var safeUnlockTimer = null;
@@ -8793,6 +8809,42 @@ var NewCardAlbumData = (function () {
         };
         var WEATHER_KINDS = [[/晴/, 'sun', '晴'], [/阴|阴/, 'cloud', '阴'], [/雨/, 'rain', '雨'], [/雾|雾/, 'fog', '雾'], [/雪/, 'snow', '雪']];
         var hudWeatherKey = '';
+        // ── 顶栏地点放不下时来回卷动 ──
+        // 地点比栏位宽时：停 PLACE_REST_MS → 往左卷到结尾 → 停 → 卷回开头，一直重复。速度固定（PLACE_SPEED px／秒），
+        // 越长卷越久。只动 transform，不重排版面。减少动态效果时不卷动，维持「…」并在 title 放全名。
+        var PLACE_SPEED = 28, PLACE_REST_MS = 2200, PLACE_FADE = 14;   // PLACE_FADE 与 CSS 的右缘淡出宽度相同
+        var placeAnim = null, placeKey = '', placeFrame = 0, placeObserver = null;
+        function syncPlaceMarquee() {
+            var outer = $('hud-place'), inner = outer && outer.querySelector('.hudPlaceText');
+            if (!inner) return;
+            var pad = parseFloat(view.getComputedStyle(inner).paddingRight) || 0;
+            var box = outer.clientWidth, text = inner.textContent;
+            var over = Math.ceil(inner.getBoundingClientRect().width - pad - box);
+            var overflowing = box > 0 && over > 1;
+            var animate = overflowing && !motionReduced() && typeof inner.animate === 'function';
+            if (overflowing) outer.title = text; else outer.removeAttribute('title');
+            // 内容与宽度没变时不重新开始动画（setHud 每次读到变量都会呼叫）。
+            var key = animate ? text + '|' + over : '';
+            if (key === placeKey) return;
+            placeKey = key;
+            if (placeAnim) { placeAnim.cancel(); placeAnim = null; }
+            outer.classList.toggle('is-marquee', animate);
+            if (!animate) return;
+            var shift = over + PLACE_FADE, move = shift / PLACE_SPEED * 1000, total = 2 * (PLACE_REST_MS + move);
+            var start = 'translateX(0)', end = 'translateX(' + (-shift) + 'px)';
+            placeAnim = inner.animate([
+                {transform: start, offset: 0},
+                {transform: start, offset: PLACE_REST_MS / total, easing: 'ease-in-out'},
+                {transform: end, offset: (PLACE_REST_MS + move) / total},
+                {transform: end, offset: (2 * PLACE_REST_MS + move) / total, easing: 'ease-in-out'},
+                {transform: start, offset: 1}
+            ], {duration: total, iterations: Infinity});
+        }
+        function schedulePlaceMarquee() {
+            if (placeFrame || destroyed) return;
+            placeFrame = requestFrame(function () { placeFrame = 0; syncPlaceMarquee(); });
+        }
+
         function setHud(place, sky, hour, minute, weather) {
             var h = Number(hour);
             var m = Number(minute);
@@ -8815,7 +8867,8 @@ var NewCardAlbumData = (function () {
                 if (weather) sky = [sky, weather].filter(Boolean).join(' ');
             }
             icon.hidden = !kind;
-            $('hud-place').textContent = place || '—';
+            $('hud-place').querySelector('.hudPlaceText').textContent = place || '—';
+            schedulePlaceMarquee();
             $('hud-sky').textContent = sky || '—';
             if (!isNaN(h) && !isNaN(m)) {
                 $('pocket-watch').style.setProperty('--hourAngle', ((h % 12) * 30 + m * 0.5) + 'deg');
@@ -10065,6 +10118,26 @@ var NewCardAlbumData = (function () {
         }
         var SV_ICON = '<circle cx="10" cy="11" r="7"/><path d="M10 11l3.6-3M10 4v1.4M3.6 8.2l1.2.7M16.4 8.2l-1.2.7M7 18h6"/>';
         var SV_RETRY_ICON = '<path d="M13 3.5v3h-3"/><path d="M12.7 6.4A5 5 0 1 0 13 10"/>';
+        // 生成中的「更新中」横条：同一个仪表图示，指针（M10 11l3.6-3）单独一条，用动画摆动。
+        var SV_LIVE_BAR = '<div class="svEntry svBar svLive" data-no-edge-turn><div class="svHead"><div class="svTitle" role="status">' +
+            '<svg class="svIcon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="11" r="7"/>' +
+            '<path d="M10 4v1.4M3.6 8.2l1.2.7M16.4 8.2l-1.2.7M7 18h6"/><path class="svNeedle" d="M10 11l3.6-3"/></svg>' +
+            '<span class="svName">变量更新</span><span class="svPill">更新中</span></div></div></div>';
+        // 生成中，原文（去掉思考、<check>、<draft>、注解；还没写完的这类区块从开头截掉）已写到变量区域的开头标签。
+        // 一次生成中找到后就不再扫描原文（setGenerating 时清除）。
+        var stateStreamSeen = false;
+        function stateStreamStarted() {
+            if (stateStreamSeen) return true;
+            if (!isGenerating) return false;
+            var str = String(floorRaw())
+                .replace(/<(thinking|think|check|draft)>[\s\S]*?<\/\1>/gi, '')
+                .replace(/\[metacognition\][\s\S]*?\[\/metacognition\]/gi, '')
+                .replace(/<!--[\s\S]*?-->/g, '');
+            var open = str.search(/<(?:thinking|think|check|draft)>|\[metacognition\]|<!--/i);
+            if (open >= 0) str = str.slice(0, open);
+            stateStreamSeen = new RegExp('<(?:UpdateVariable|' + STATE_TAG + ')>', 'i').test(str);
+            return stateStreamSeen;
+        }
         // JSONPatch 的操作（含 MVU 扩充的 insert、delta）用一个字标示。
         var SV_OPS = {replace: '改', add: '增', insert: '增', remove: '删', delta: '±', move: '移', copy: '复', test: '验'};
         function svPathHtml(path) {
@@ -10188,14 +10261,54 @@ var NewCardAlbumData = (function () {
         // MVU 的重试按钮只跳出提示、不解析，卡片不送出，改在浮层说明。读不到设定时回传 null，照常送出。
         // MVU 没存过设定时用预设值「随AI输出」。角色卡可在世界书覆写这个设定（本卡没有），这里不读覆写。
         var MVU_PLOT_ONLY = '随AI输出';   // 必须和 MVU 的设定值完全相同（简体）
-        function mvuUpdateMethod() {
+        var MVU_EXTRA = '额外模型解析';
+        // 玩家的 MVU 设定物件；酒馆没存过时是 {}，读不到酒馆设定时回传 null。
+        function mvuSettings() {
             try {
                 var st = (context.rootWin || view.top || view).SillyTavern;
                 var settings = st && (typeof st.getContext === 'function' ? st.getContext().extensionSettings : st.extensionSettings);
                 if (!settings || typeof settings !== 'object') return null;
-                var method = settings.mvu_settings && settings.mvu_settings['更新方式'];
-                return typeof method === 'string' ? method : MVU_PLOT_ONLY;
+                return settings.mvu_settings && typeof settings.mvu_settings === 'object' ? settings.mvu_settings : {};
             } catch (_) { return null; }
+        }
+        function mvuUpdateMethod() {
+            var settings = mvuSettings();
+            if (!settings) return null;
+            return typeof settings['更新方式'] === 'string' ? settings['更新方式'] : MVU_PLOT_ONLY;
+        }
+        // 「额外模型解析配置.启用自动请求」，预设开启。
+        function mvuAutoRequest() {
+            var config = (mvuSettings() || {})['额外模型解析配置'];
+            return !(config && config['启用自动请求'] === false);
+        }
+        // MVU 挂在酒馆最上层的 Mvu.isDuringExtraAnalysis()：额外模型解析进行中为 true。读不到时当作没有。
+        function mvuAnalyzing() {
+            try {
+                var mvu = (context.rootWin || view.top || view).Mvu;
+                return !!(mvu && typeof mvu.isDuringExtraAnalysis === 'function' && mvu.isDuringExtraAnalysis());
+            } catch (_) { return false; }
+        }
+
+        // ── 额外模型解析进行中也显示「更新中」 ──
+        // 设定是「额外模型解析」时，MVU 在正文生成结束后另送一次请求，再把变量区域接到这一楼后面。
+        // 这段时间最新一楼缺少变量区域，横条显示「更新中」，不显示「未找到」。
+        // MVU 没有开始、结束事件，卡片每 SV_POLL_MS 读一次 mvuAnalyzing()；只在最新一楼、缺少变量区域时读。
+        // 生成刚结束、MVU 还没开始的空档（SV_AWAIT_MS 内）也算更新中；MVU 关闭自动请求时不等。
+        var SV_POLL_MS = 500, SV_AWAIT_MS = 4000;
+        var svAwaitUntil = 0, svPollTimer = null, svExtraShown = false;
+        function svExtraLive() {
+            if (destroyed || isGenerating || !rawContentActive || !isLatestFloor()) return false;
+            if (extractStateText(floorRaw()) !== null) return false;
+            return mvuAnalyzing() || Date.now() < svAwaitUntil;
+        }
+        function watchExtraAnalysis() {
+            svPollTimer = clearTimer(svPollTimer);
+            if (destroyed || isGenerating || !rawContentActive || !isLatestFloor() || mvuUpdateMethod() === MVU_PLOT_ONLY) return;
+            if (svExtraLive() !== svExtraShown) {
+                if (!svExtraShown) setSvOpen(false);
+                repaintEncounter();   // 重画正文后面的横条与遭遇入口（tailBlocks 会更新 svExtraShown）
+            }
+            if (svExtraShown || extractStateText(floorRaw()) === null) svPollTimer = setTimer(watchExtraAnalysis, SV_POLL_MS);
         }
         function setSvState(name, on) { root.classList.toggle(name, !!on); }
         function endSvRetry() {
@@ -10271,8 +10384,10 @@ var NewCardAlbumData = (function () {
         // 正文后面依序接：变量更新横条 → 遭遇入口（不论原文顺序）。玩家先确认变量，再进入遭遇。
         // 分页时两者都接在最后一段正文的同一页（见 measurePages）。
         function tailBlocks() {
-            var state = stateView(), entry = encounterBlock();
-            return [state ? state.bar : '', entry].filter(Boolean);
+            var state = isGenerating ? null : stateView(), entry = encounterBlock();
+            svExtraShown = svExtraLive();
+            var bar = isGenerating ? (stateStreamStarted() ? SV_LIVE_BAR : '') : svExtraShown ? SV_LIVE_BAR : state ? state.bar : '';
+            return [bar, entry].filter(Boolean);
         }
         // 生成结束、楼层文字被改写（例如 MVU 补上变量区域）时：更新浮层，并重画正文后面的横条与遭遇入口。
         function syncStateViewer() {
@@ -10743,7 +10858,12 @@ var NewCardAlbumData = (function () {
 
         function setGenerating(on) {
             cancelEdgeTurn();
+            // 生成刚结束：额外模型解析还没开始的空档也显示「更新中」（见 watchExtraAnalysis）。
+            if (isGenerating && !on) svAwaitUntil = mvuUpdateMethod() === MVU_EXTRA && mvuAutoRequest() ? Date.now() + SV_AWAIT_MS : 0;
+            if (on) { svAwaitUntil = 0; svPollTimer = clearTimer(svPollTimer); }
             isGenerating = !!on;
+            stateStreamSeen = false;
+            lastLiveBar = false;
             // 生成中记住对话已经放在哪一页；结束时清掉，结束后的完整分页照一般规则。
             streamPins = isGenerating ? {} : null;
             if (isGenerating) { repagTimer = clearTimer(repagTimer); streamPaging = false; renderStateView(); }
@@ -10788,7 +10908,11 @@ var NewCardAlbumData = (function () {
             rawContentActive = true;
             var text = extractContent(raw);
             var settling = !!streamLive && !isGenerating;
-            if (text === lastRenderedText && !identityChanged && !settling) return;
+            // 正文写完后，原文接着写变量区域时正文文字不变；「更新中」横条第一次出现时仍要重画一次。
+            var liveBar = isGenerating && stateStreamStarted();
+            var liveBarAdded = liveBar && !lastLiveBar;
+            lastLiveBar = liveBar;
+            if (text === lastRenderedText && !identityChanged && !settling && !liveBarAdded) return;
             var tailOk = isGenerating && !identityChanged && lastRenderedText !== null && !!streamLive &&
                 !root.classList.contains('paged-mode');
             lastRenderedText = text;
@@ -10871,6 +10995,7 @@ var NewCardAlbumData = (function () {
             refreshAlbum();
             refreshMvu();
             if (encounterView.tag && context.encounter) context.encounter.query();
+            watchExtraAnalysis();
             reportHeight();
         }
 
@@ -11143,7 +11268,12 @@ var NewCardAlbumData = (function () {
                     moreFrame = view.requestAnimationFrame(function () { moreFrame = 0; if (!destroyed) syncMoreHint(); });
                 });
                 moreObserver.observe(textEl());
+                // 顶栏地点栏位的宽度改变（版面切换、视窗缩放）时，重新判断要不要卷动。
+                placeObserver = new view.ResizeObserver(schedulePlaceMarquee);
+                placeObserver.observe($('hud-place'));
             }
+            // 字型载入后文字宽度会变。
+            if (doc.fonts && typeof doc.fonts.addEventListener === 'function') listen(doc.fonts, 'loadingdone', schedulePlaceMarquee);
             if (typeof view.MutationObserver === 'function') {
                 dialogObserver = new view.MutationObserver(syncDialogView);
                 dialogObserver.observe(root, {subtree: true, attributes: true, attributeFilter: ['open']});
@@ -11177,6 +11307,8 @@ var NewCardAlbumData = (function () {
             if (typeof unsubscribeContext === 'function') unsubscribeContext();
             if (dialogObserver) { dialogObserver.disconnect(); dialogObserver = null; }
             if (moreObserver) { moreObserver.disconnect(); moreObserver = null; }
+            if (placeObserver) { placeObserver.disconnect(); placeObserver = null; }
+            if (placeAnim) { placeAnim.cancel(); placeAnim = null; }
             if (moreFrame) { view.cancelAnimationFrame(moreFrame); moreFrame = 0; }
             if (dialogViewAbort) { dialogViewAbort.abort(); dialogViewAbort = null; }
             failedAvatars.clear();
