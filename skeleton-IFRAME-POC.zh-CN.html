@@ -6149,9 +6149,11 @@ var NewCardAlbumData = (function () {
                     complete: new RegExp(open + '([\\s\\S]*?)' + close, 'i'),
                     openOnly: new RegExp(open + '([\\s\\S]*)$', 'i')
                 } : null;
-                if (open && close) return new RegExp(open + '[\\s\\S]*?' + close, 'gi');
-                if (open) return new RegExp(open + '[\\s\\S]*$', 'i');
-                return new RegExp('^[\\s\\S]*?' + close, 'i');
+                // 过滤规则：remove 删掉的范围；unclosed 是开头、结尾都填的规则的开头标签，
+                // 用来处理只写出开头、还没有结尾的情况（见 extractBody）。
+                if (open && close) return {remove: new RegExp(open + '[\\s\\S]*?' + close, 'gi'), unclosed: new RegExp(open, 'i')};
+                if (open) return {remove: new RegExp(open + '[\\s\\S]*$', 'i'), unclosed: null};
+                return {remove: new RegExp('^[\\s\\S]*?' + close, 'i'), unclosed: null};
             }).filter(Boolean);
             return store.compiled;
         }
@@ -9834,13 +9836,12 @@ var NewCardAlbumData = (function () {
                 from++;
             }
             var stage = stageEl(), shown = pages[currPage], scroll = stage.scrollTop;
-            var atBottom = stage.scrollHeight - stage.clientHeight - scroll < 40;
             measurePages(from);
             currPage = Math.min(currPage, pages.length - 1);
             if (pages[currPage] !== shown) {
                 withPluginRender(renderPageInsideTransaction);
-                // 同一页长出新文字：维持卷动位置；原本在底部就跟着往下。
-                stage.scrollTop = atBottom ? stage.scrollHeight : scroll;
+                // 同一页长出新文字：维持卷动位置，不跟着往下（读者自己卷）。
+                stage.scrollTop = scroll;
                 syncMoreHint();
             } else {
                 syncPageNumber();
@@ -10462,15 +10463,19 @@ var NewCardAlbumData = (function () {
             var str = typeof input === 'string'
                 ? input
                 : (input && typeof input === 'object' ? String(Object.values(input)[0] || '') : String(input || ''));
+            // 内置不显示的区块：思考标签，以及回复格式（98_回复格式）里的 <check>、<draft>。
             var content = str
                 .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
                 .replace(/<think>[\s\S]*?<\/think>/gi, '')
                 .replace(/\[metacognition\][\s\S]*?\[\/metacognition\]/gi, '')
+                .replace(/<check>[\s\S]*?<\/check>/gi, '')
+                .replace(/<draft>[\s\S]*?<\/draft>/gi, '')
                 .replace(/<!--[\s\S]*?-->/g, '');
             if (stRegexEnabled) content = stRegex.apply(content);
-            compiledRules('filter').forEach(function (pattern) {
-                pattern.lastIndex = 0;
-                content = content.replace(pattern, '');
+            var filters = compiledRules('filter');
+            filters.forEach(function (rule) {
+                rule.remove.lastIndex = 0;
+                content = content.replace(rule.remove, '');
             });
             var anchors = compiledRules('anchor'), i, match, joined;
             // 只有结尾、没有开头的思考标签：
@@ -10484,11 +10489,30 @@ var NewCardAlbumData = (function () {
                 });
                 return first;
             };
-            [/<\/thinking>/i, /<\/think>/i, /\[\/metacognition\]/i].forEach(function (close) {
+            [/<\/thinking>/i, /<\/think>/i, /\[\/metacognition\]/i, /<\/check>/i, /<\/draft>/i].forEach(function (close) {
                 var found = close.exec(content), start = bodyStart();
                 if (found && (start < 0 || found.index < start)) content = content.slice(found.index + found[0].length);
             });
-            content = content.replace(/<\/think(?:ing)?>|\[\/metacognition\]/gi, '');
+            content = content.replace(/<\/(?:think(?:ing)?|check|draft)>|\[\/metacognition\]/gi, '');
+            // 只有开头、还没有结尾的思考标签（生成中写到一半）：从开头标签删到下一个正文开头标签，
+            // 没有正文开头标签时删到最后。否则后面删除标签时只拿掉标签本身，思考内容会像正文一样显示。
+            // 生成结束后仍没有结尾、后面也没有正文开头标签时，只删标签本身，避免整则回复消失。
+            // 注解 <!-- 与开头、结尾都填的过滤规则也一样（完整的一对在前面已删除，留下来的都没有结尾）。
+            var unclosed = [/<thinking>/i, /<think>/i, /\[metacognition\]/i, /<check>/i, /<draft>/i, /<!--/];
+            filters.forEach(function (rule) { if (rule.unclosed) unclosed.push(rule.unclosed); });
+            unclosed.forEach(function (open) {
+                var found;
+                while ((found = open.exec(content))) {
+                    var rest = content.slice(found.index + found[0].length), next = rest.search(reContentOpenOnly);
+                    anchors.forEach(function (rule) {
+                        var at = rest.search(rule.openOnly);
+                        if (at >= 0 && (next < 0 || at < next)) next = at;
+                    });
+                    if (next >= 0) content = content.slice(0, found.index) + rest.slice(next);
+                    else if (isGenerating) { content = content.slice(0, found.index); break; }
+                    else content = content.slice(0, found.index) + rest;
+                }
+            });
             // 自订正文标签优先：先找完整的一组，再找只有开头的（生成中）；都没有才用内置的 <RPG>（也接受 [RPG]）。
             // 完整的一组可以有好几段（见 joinSegments）。
             for (i = 0; i < anchors.length; i++) if ((joined = joinSegments(content, anchors[i].complete, anchors[i].openOnly)) !== null) return joined;
@@ -10497,6 +10521,9 @@ var NewCardAlbumData = (function () {
             if (joined !== null) return joined;
             match = content.match(reContentOpenOnly);
             if (match) return match[1].trim();
+            // 生成中还没写出正文开头标签：正文前的内容（思考、<check> 等）一律不显示。
+            // 生成结束后仍没有任何正文标签（模型没照格式写），才显示全文，避免整则回复空白。
+            if (isGenerating) return '';
             return content
                 .replace(new RegExp('<' + STATE_TAG + '>[\\s\\S]*?<\\/' + STATE_TAG + '>', 'gi'), '')
                 .replace(new RegExp('<' + STATE_TAG + '>[\\s\\S]*$', 'i'), '')
@@ -10587,8 +10614,8 @@ var NewCardAlbumData = (function () {
             if (from > 0 && nodes[from - 1].parentNode !== element) return false;
             if (from < count && nodes[from].parentNode !== element) return false;
             if (from === previous.length && from === blocks.length) { allParas = blocks; return true; }
+            // 串流中不跟着最新段落往下卷：生成比阅读快，跟随会把读者正在看的段落推走。
             var stage = stageEl();
-            var wasAtBottom = stage.scrollHeight - stage.clientHeight - stage.scrollTop < 40;
             var previousScroll = stage.scrollTop;
             var added = withTailRender(function () { return bbiViews.patchTail(nodes, from, blocks.slice(from)); });
             if (!added) return false;
@@ -10596,7 +10623,7 @@ var NewCardAlbumData = (function () {
             allParas = blocks;
             applyDropCap();
             syncPageControls();
-            stage.scrollTop = wasAtBottom ? stage.scrollHeight : previousScroll;
+            stage.scrollTop = previousScroll;
             return true;
         }
 
@@ -10624,10 +10651,9 @@ var NewCardAlbumData = (function () {
                 streamPaginate();
             } else if (isGenerating) {
                 var stage = stageEl();
-                var wasAtBottom = stage.scrollHeight - stage.clientHeight - stage.scrollTop < 40;
                 var previousScroll = stage.scrollTop;
                 showAllText(false);
-                stage.scrollTop = wasAtBottom ? stage.scrollHeight : previousScroll;
+                stage.scrollTop = previousScroll;
                 // 整段重画后，记住每个顶层段落，下一次串流只需要比对尾端。
                 var shown = textEl().childNodes;
                 if (!root.classList.contains('paged-mode') && shown.length === blocks.length) {
