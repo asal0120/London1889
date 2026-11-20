@@ -2924,6 +2924,8 @@
 .rpg-v7-root.d-refresh .ctrlRow .icon-btn.theme-toggle { width: 32px; min-width: 32px; height: 32px; min-height: 32px; }
 /* ◐ ♪ 改为 1.5px 单色线条 SVG（2026-11-20），各系统字型下粗细一致；颜色跟着按钮文字色。 */
 .rpg-v7-root .ctrlRow .nc-line-icon { display: block; width: 15px; height: 15px; }
+/* 图示是 display:block，按钮的文字置中对它无效，会贴齐内容区左边（宽版 40px 时偏左 3.5px）；改用 grid 置中。 */
+.rpg-v7-root .ctrlRow .icon-btn.theme-toggle { display: grid; place-items: center; padding: 0; }
 /* 主题钮显示按下后的主题：浅色时是月亮、深色时是太阳（2026-11-20）。 */
 .rpg-v7-root.light-mode .ctrlRow .nc-theme-sun,
 .rpg-v7-root:not(.light-mode) .ctrlRow .nc-theme-moon { display: none; }
