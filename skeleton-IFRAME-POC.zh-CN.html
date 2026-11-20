@@ -133,7 +133,6 @@
     --ctrl-fg: #cbbfa4;
     --track-bg: rgba(0,0,0,.5);
 
-    --moon: #a83232;            /* 红月 */
     --stat-a: #c23b3b;          /* 状态条 A */
     --stat-b: #3b6fc2;          /* 状态条 B */
     --stat-c: #46a06a;          /* 状态条 C */
@@ -206,8 +205,6 @@
     --ctrl-bg: rgba(255,255,255,.35);
     --ctrl-fg: #4a3f30;
     --track-bg: rgba(90,70,40,.22);
-
-    --moon: #9c2c2c;
 }
 
 /* ==========================================================================
@@ -239,7 +236,6 @@
     --gilt-lo: #6a4c1c;         /* 暗部 */
 
     /* ── 其他重复使用的固定色 ── */
-    --moon-deep: #6b1f1f;       /* 月亮的深红暗色 */
     --avatar-face: #efe3c6;     /* 玩家头像底色（淡纸色） */
     --avatar-edge: #c9b083;     /* 玩家头像／便条纸的边线色 */
     --et-fold-drop: rgba(40,24,8,.28); /* 翻角的阴影 */
@@ -332,15 +328,6 @@
 .rpg-v7-root .pocketWatch::after {    /* 分针 */
     width: 1.5px; height: 14px;
     transform: translate(-50%, -100%) rotate(var(--minAngle, 270deg));
-}
-
-/* 红月 */
-.rpg-v7-root .moonPhase {
-    width: 17px; height: 17px;
-    flex-shrink: 0;
-    border-radius: var(--radius-round);
-    background: radial-gradient(circle at 38% 32%, #d45a4a, var(--moon) 60%, var(--moon-deep));
-    box-shadow: 0 0 10px rgba(168,50,50,.6);
 }
 
 .rpg-v7-root .timeText {
@@ -1645,7 +1632,7 @@
 }
 .rpg-v7-root.d-open-shell .topBar {
     display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) 10px;
+    grid-template-columns: 32px minmax(0, 1fr);
     align-self: flex-start;
     align-items: center;
     gap: 10px;
@@ -1727,15 +1714,6 @@
     color: var(--ds-note-dim);
     letter-spacing: .025em;
     opacity: 1;
-}
-.rpg-v7-root.d-open-shell .moonPhase {
-    grid-column: 3;
-    grid-row: 1;
-    width: 9px;
-    height: 9px;
-    justify-self: end;
-    background: radial-gradient(circle at 38% 32%, #c97366, var(--moon) 70%, var(--moon-deep));
-    box-shadow: 0 1px 1px rgba(74,36,20,.25);
 }
 /* The lower controls become paper markers resting on the cover. */
 .rpg-v7-root.d-open-shell .ctrlRow button {
@@ -2946,6 +2924,9 @@
 .rpg-v7-root.d-refresh .ctrlRow .icon-btn.theme-toggle { width: 32px; min-width: 32px; height: 32px; min-height: 32px; }
 /* ◐ ♪ 改为 1.5px 单色线条 SVG（2026-11-20），各系统字型下粗细一致；颜色跟着按钮文字色。 */
 .rpg-v7-root .ctrlRow .nc-line-icon { display: block; width: 15px; height: 15px; }
+/* 主题钮显示按下后的主题：浅色时是月亮、深色时是太阳（2026-11-20）。 */
+.rpg-v7-root.light-mode .ctrlRow .nc-theme-sun,
+.rpg-v7-root:not(.light-mode) .ctrlRow .nc-theme-moon { display: none; }
 .rpg-v7-root.d-refresh .ctrlRow .nc-music-controls {
   flex-direction: row; align-items: stretch; width: auto; height: auto; gap: 0;
   border: 1px solid rgba(226,201,162,.28); border-radius: var(--radius-md);
@@ -3512,7 +3493,6 @@
     <!-- ═══ [1] 顶部时间列 ═══ -->
     <div class="topBar">
         <div class="pocketWatch" data-role="pocket-watch"><span class="uiWatchRim" aria-hidden="true"></span></div>
-        <div class="moonPhase" data-role="moon-phase"></div>
         <div class="timeText">
             <span data-role="hud-place">—</span><span class="sep">|</span><span class="dim" data-role="hud-sky">—</span>
         </div>
@@ -3831,7 +3811,7 @@
             <button type="button" class="btn-next" data-role="btn-next" disabled>下页</button>
         </div>
         <div class="rowIcons">
-            <button class="icon-btn theme-toggle" data-role="theme-toggle" title="切换深色／亮色"><svg class="nc-line-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 10.2A5.8 5.8 0 0 1 5.8 2.8a5.8 5.8 0 1 0 7.4 7.4Z"/></svg></button>
+            <button class="icon-btn theme-toggle" data-role="theme-toggle" title="切换深色／亮色"><svg class="nc-line-icon nc-theme-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.8 2.4A5.8 5.8 0 1 0 11.8 13.6A7 7 0 0 1 11.8 2.4Z"/></svg><svg class="nc-line-icon nc-theme-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.9"/><path d="M8 1.4v1.5M8 13.1v1.5M1.4 8h1.5M13.1 8h1.5M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M3.3 12.7l1.1-1.1M11.6 4.4l1.1-1.1"/></svg></button>
             <!-- BEGIN_FRONTEND_MUSIC_CONTROLS -->
             <div class="nc-music-controls" role="group" aria-label="音乐控制">
                 <button type="button" class="icon-btn music-toggle" data-role="music-toggle" aria-label="静音" aria-pressed="false"><span class="nc-music-note" aria-hidden="true"><svg class="nc-line-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 12.5V3.8l7-1.5v8.7"/><circle cx="4.2" cy="12.5" r="1.8"/><circle cx="11.2" cy="11" r="1.8"/></svg></span></button>
