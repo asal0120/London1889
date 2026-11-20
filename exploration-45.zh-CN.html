@@ -1573,6 +1573,9 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .hud-tools button:hover,.hud-tools button:focus-visible{opacity:1}
 .hud-tools button[hidden]{display:none}
 .hud-tools .theme-glyph,.hud-tools .music-glyph{font-size:17px;line-height:1}
+/* ◐ ♪ ? 改为 1.5px 单色线条 SVG（2026-11-20）：各系统字型下粗细一致，笔触同撤离门图示。 */
+.game-shell .line-glyph{display:block;width:18px;height:18px}
+.hud-tools .line-glyph{width:16px;height:16px}
 .explore-layout.hud-row{grid-template-columns:minmax(0,1fr) auto!important;align-items:stretch}
 .explore-layout.hud-row>.map-card{grid-column:1/-1}
 .bl-player-bar.hud-has-tools{display:flex!important;align-items:center;gap:8px}
@@ -1588,7 +1591,6 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .hud-tools.hud-compact button{width:32px!important;height:32px!important;min-width:0!important;min-height:0!important;padding:0!important;border-radius:var(--radius-lg)!important;font-size:0!important;display:grid!important;place-items:center}
 .hud-tools.hud-compact .theme-glyph,.hud-tools.hud-compact .music-glyph{font-size:15px!important}
 .hud-tools.hud-compact button[hidden]{display:none!important}
-.hud-tools.hud-compact #help-button::before{content:"?";font-size:15px}
 
 /* 撤离：门与向外箭头。 */
 .hud-tools .hud-icon{display:none;width:17px;height:17px}
@@ -1886,22 +1888,22 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .game-shell .app[data-scene="prep"] .prep-hint { color: var(--muted); }
 
 /* ── 黄铜铭牌按钮（确认出击、结算选项）──────────── */
+/* 铭牌图用九宫格（同正文地图列）：四角雕花与双线边框固定大小，只拉长中间，手机撑满整列时不会被压扁。 */
 .game-shell .app[data-scene="prep"] #start-button,
 .game-shell .app[data-scene="ended"] .result-story :is(.primary, .secondary) {
   -webkit-mask: none; mask: none; border: 0; border-radius: var(--radius-xs);
+  border-image: var(--vr-plate) 24 fill / 12px stretch;
   color: #f6e2ae; text-shadow: 0 1px 0 var(--shade-73); letter-spacing: .12em;
   background:
     var(--vr-rivet) 5px 5px / 6px 6px no-repeat, var(--vr-rivet) calc(100% - 5px) 5px / 6px 6px no-repeat,
-    var(--vr-rivet) 5px calc(100% - 5px) / 6px 6px no-repeat, var(--vr-rivet) calc(100% - 5px) calc(100% - 5px) / 6px 6px no-repeat,
-    var(--vr-plate) center / 100% 100% no-repeat;
+    var(--vr-rivet) 5px calc(100% - 5px) / 6px 6px no-repeat, var(--vr-rivet) calc(100% - 5px) calc(100% - 5px) / 6px 6px no-repeat;
   box-shadow: 0 2px 4px var(--shade-40);
 }
 .game-shell .app[data-scene="prep"] #start-button:hover:not(:disabled),
 .game-shell .app[data-scene="ended"] .result-story :is(.primary, .secondary):hover:not(:disabled) {
   background:
     var(--vr-rivet) 5px 5px / 6px 6px no-repeat, var(--vr-rivet) calc(100% - 5px) 5px / 6px 6px no-repeat,
-    var(--vr-rivet) 5px calc(100% - 5px) / 6px 6px no-repeat, var(--vr-rivet) calc(100% - 5px) calc(100% - 5px) / 6px 6px no-repeat,
-    var(--vr-plate) center / 100% 100% no-repeat;
+    var(--vr-rivet) 5px calc(100% - 5px) / 6px 6px no-repeat, var(--vr-rivet) calc(100% - 5px) calc(100% - 5px) / 6px 6px no-repeat;
   filter: brightness(1.12);
 }
 .game-shell .app[data-scene="prep"] #start-button { padding-inline: 30px; }
@@ -2320,7 +2322,7 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 </defs></svg>
 <div class="game-shell" id="game-shell">
 <main class="app" id="app">
-  <header class="topbar"><div class="brand"><svg class="brand-mark" aria-hidden="true"><use href="#i-seal"/></svg><div><div class="brand-title">战斗小游戏</div><div class="eyebrow">测试版</div></div></div><div class="top-actions" role="group" aria-label="游戏选单"><button type="button" class="link-button theme-toggle" id="theme-toggle" aria-label="日间纸色" aria-pressed="false" title="切换为日间纸色"><span class="theme-glyph" id="theme-glyph" aria-hidden="true">◐</span></button><button type="button" class="link-button music-button" id="music-button" aria-label="音乐" aria-haspopup="dialog" hidden><span class="music-glyph" aria-hidden="true">♪</span></button><button type="button" class="link-button" id="skill-layout-button" aria-haspopup="dialog">招式</button><button type="button" class="link-button" id="help-button">玩法</button><button type="button" class="link-button retreat-button" id="retreat-button" data-retreat title="提前离开小游戏" hidden>撤离</button></div></header>
+  <header class="topbar"><div class="brand"><svg class="brand-mark" aria-hidden="true"><use href="#i-seal"/></svg><div><div class="brand-title">战斗小游戏</div><div class="eyebrow">测试版</div></div></div><div class="top-actions" role="group" aria-label="游戏选单"><button type="button" class="link-button theme-toggle" id="theme-toggle" aria-label="日间纸色" aria-pressed="false" title="切换为日间纸色"><span class="theme-glyph" id="theme-glyph" aria-hidden="true"><svg class="line-glyph" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M13.2 10.2A5.8 5.8 0 0 1 5.8 2.8a5.8 5.8 0 1 0 7.4 7.4Z"/></svg></span></button><button type="button" class="link-button music-button" id="music-button" aria-label="音乐" aria-haspopup="dialog" hidden><span class="music-glyph" aria-hidden="true"><svg class="line-glyph" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 12.5V3.8l7-1.5v8.7"/><circle cx="4.2" cy="12.5" r="1.8"/><circle cx="11.2" cy="11" r="1.8"/></svg></span></button><button type="button" class="link-button" id="skill-layout-button" aria-haspopup="dialog">招式</button><button type="button" class="link-button" id="help-button">玩法</button><button type="button" class="link-button retreat-button" id="retreat-button" data-retreat title="提前离开小游戏" hidden>撤离</button></div></header>
   <section id="prep-view" aria-label="出击整备">
     <div class="prep-grid">
       <figure class="prep-cover" id="prep-cover"><figcaption class="prep-cover-note" id="prep-place" hidden><span class="when"></span><span class="where"></span><span id="case-title" hidden></span></figcaption></figure>
@@ -7599,6 +7601,9 @@ window.BattleSceneKeys = {"street":"london","woodland":"woodland","factory":"fac
     // 撤离在手机战斗只显示图示：门与向外箭头。
     var retreat = $('retreat-button');
     if (retreat) retreat.insertAdjacentHTML('beforeend', '<svg class="hud-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2.5H3v11h4"/><path d="M7 8h7M11 5l3 3-3 3"/></svg>');
+    // 玩法在战斗只显示图示：圆框问号。
+    var help = $('help-button');
+    if (help) help.insertAdjacentHTML('beforeend', '<svg class="hud-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.3 6.2a1.8 1.8 0 1 1 2.9 1.4c-.7.5-1.2.9-1.2 1.7"/><circle cx="8" cy="11.8" r=".7" fill="currentColor" stroke="none"/></svg>');
 
     // 浮动标签
     var heading = doc.querySelector('#explore-view .run-heading'), mapCard = doc.querySelector('#explore-view .map-card');
@@ -10268,7 +10273,6 @@ window.SceneEnvironment=(()=>{
     theme=value;uiRoot.dataset.theme=value;
     $('theme-toggle').setAttribute('aria-pressed',String(value==='light'));
     $('theme-toggle').title=value==='light'?'切换为夜间纸色':'切换为日间纸色';
-    $('theme-glyph').textContent=value==='light'?'◑':'◐';
     var themeMeta=document.querySelector('meta[name="theme-color"]');
     if(themeMeta)themeMeta.content=value==='light'?'#704c33':'#291f1a';
     if(persist!==false){try{localStorage.setItem(themeStorageKey,value);}catch(_){}}
