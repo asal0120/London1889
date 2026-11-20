@@ -1298,12 +1298,16 @@
 }
 /* 全文模式时隐藏分页（沿用 rpg-core 的 .paged-mode 惯例） */
 .rpg-v7-root:not(.paged-mode) .pager { display: none; }
-/* 全文模式的阅读百分比（syncMoreHint）：「切换分页」右侧，字体与颜色同页码。 */
-.rpg-v7-root .ctrlRow .readProgress {
-    min-width: 40px; font-family: var(--display); font-size: 12px; letter-spacing: .1em; text-align: center;
-    color: var(--ds-cover-ink, var(--brass)); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none;
+/* 全文模式的阅读百分比（syncMoreHint）：2026-11-21 从底部按钮列移到纸页内、正文下方那条窄边的右侧（和向下箭头同一列），
+   卷动时不用把视线移到纸页外。字体与颜色同分页模式的页数数字；位置由 syncMoreHint 依正文区算出。 */
+.rpg-v7-root .readProgress {
+    position: absolute; z-index: 4; top: 0; right: 0; line-height: 1;
+    font: 13px/1 "Times New Roman", Times, serif; letter-spacing: .08em; font-variant-numeric: lining-nums tabular-nums;
+    color: var(--ink); opacity: .7; white-space: nowrap; pointer-events: none; user-select: none;
 }
-.rpg-v7-root .ctrlRow .readProgress[hidden], .rpg-v7-root.paged-mode .ctrlRow .readProgress { display: none; }
+.rpg-v7-root .readProgress[hidden], .rpg-v7-root.paged-mode .readProgress, .rpg-v7-root.sv-open .readProgress { display: none; }
+@container rpg-card (min-width: 700px) { .rpg-v7-root .readProgress { font-size: 15px; } }
+@container d-paper-area (max-height: 150px) { .rpg-v7-root .readProgress { display: none; } }
 
 .rpg-v7-root .ctrlRow .rowIcons {
     display: flex;
@@ -1708,6 +1712,15 @@
     white-space: nowrap;
 }
 .rpg-v7-root.d-open-shell .timeText .sep { display: none; }
+/* 天气图示（2026-11-21，取代日期后的天气文字）：叠在日期那一行的最右边，不占栏位，
+   地点、日期的排版与可用宽度和加图示之前相同（使用者要求只改天气）。 */
+.rpg-v7-root .timeText { position: relative; }
+.rpg-v7-root .hudWeather { display: none; }
+.rpg-v7-root.d-open-shell .timeText > .hudWeather:not([hidden]) {
+    position: absolute; right: 0; bottom: 0; display: block; width: 20px; height: 20px; overflow: visible;
+    margin: 0; color: var(--ds-note-ink); opacity: .85; pointer-events: auto;
+}
+.rpg-v7-root .hudWeather svg { display: block; width: 100%; height: 100%; }
 .rpg-v7-root.d-open-shell .timeText .dim {
     margin-top: 3px;
     font: 400 12px/1.4 var(--sans);
@@ -3297,6 +3310,12 @@
   .rpg-v7-root.d-material-ui .dpSheet .dpProfile { padding: 0 4px; }
   .rpg-v7-root :is(.dpProfileLabel, .profileFlip) { letter-spacing: .08em; }
 }
+/* 手机 341–560：好感在名字右侧时，名字可往右多用 24px（伸进间隔与好感栏的左侧空白），真的放不下才换行。
+   2026-11-21：卡片宽约 354–390px 时三个字的名字差 2px 就被挤成两行（实测手机约 370px），画面上其实放得下。
+   只放宽名字本身；罗马拼音、称号维持原宽度，不会叠到好感数字。 */
+@container rpg-card (min-width: 341px) and (max-width: 560px) {
+  .rpg-v7-root.d-material-ui .dpSheet .infoCol > .nameplate .charName { max-width: none; margin-right: -24px; }
+}
 /* 经验两组：区块够宽才并排，320 的窄栏改成上下排列。并排时依名称长短分宽度，短名称那组最多占一半。 */
 @container dp-profile (min-width: 150px) {
   .rpg-v7-root .expGroups { grid-template-columns: fit-content(50%) minmax(0, 1fr); }
@@ -3496,7 +3515,7 @@
     <div class="topBar">
         <div class="pocketWatch" data-role="pocket-watch"><span class="uiWatchRim" aria-hidden="true"></span></div>
         <div class="timeText">
-            <span data-role="hud-place">—</span><span class="sep">|</span><span class="dim" data-role="hud-sky">—</span>
+            <span data-role="hud-place">—</span><span class="sep">|</span><span class="dim" data-role="hud-sky">—</span><span class="hudWeather" data-role="hud-weather" role="img" hidden></span>
         </div>
     </div>
 
@@ -3524,6 +3543,7 @@
         <div class="uiReadingFoot" aria-hidden="true"></div>
         <span class="page-num" data-role="page-num" aria-live="polite" aria-atomic="true">1 / 1</span>
         <div class="svEntry svPop" data-role="sv-pop" role="dialog" aria-label="变量更新" data-no-edge-turn></div>
+        <span class="readProgress" data-role="read-progress" aria-hidden="true" hidden></span>
         <button type="button" class="moreHint" data-role="more-hint" aria-label="往下卷动" tabindex="-1" data-no-edge-turn><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg></button>
         <button type="button" class="edgeTurnCorner edgeTurnCorner--previous" data-role="page-corner-prev" aria-label="上一页" title="上一页" disabled><span class="edgeTurnFold" aria-hidden="true"></span></button>
         <button type="button" class="edgeTurnCorner edgeTurnCorner--next" data-role="page-corner-next" aria-label="下一页" title="下一页" disabled><span class="edgeTurnFold" aria-hidden="true"></span></button>
@@ -3806,7 +3826,6 @@
     <!-- ═══ [6] 底部控制列（功能键整合成一列）═══ -->
     <div class="ctrlRow">
         <button type="button" class="mode-switch" aria-label="切换为全文阅读">切换全文</button>
-        <span class="readProgress" data-role="read-progress" aria-hidden="true" hidden></span>
         <div class="pager">
             <button type="button" class="btn-prev" data-role="btn-prev" disabled>上页</button>
             <button type="button" class="btn-next" data-role="btn-next" disabled>下页</button>
@@ -8756,11 +8775,48 @@ var NewCardAlbumData = (function () {
         }
         /* END_FRONTEND_ALBUM */
 
-        function setHud(place, sky, hour, minute) {
-            $('hud-place').textContent = place || '—';
-            $('hud-sky').textContent = sky || '—';
+        // 顶部便条的天气图示（2026-11-21，放在日期那一行右端）：MVU 的 天气 只有 晴、阴、雨、雾、雪 五种；晴在 18:00–05:59 改画月亮。
+        // 认不出的天气不画图示，照旧把文字接在日期后面。
+        // 图示取自 Lucide 0.460.0（lucide.dev）。ISC License: Copyright (c) for portions of Lucide are held by
+        // Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide
+        // Contributors 2022. Permission to use, copy, modify, and/or distribute this software for any purpose with or
+        // without fee is hereby granted, provided that the above copyright notice and this permission notice appear in
+        // all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES.
+        var WEATHER_CLOUD = '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>';
+        var WEATHER_ICONS = {
+            sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+            moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+            cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+            rain: WEATHER_CLOUD + '<path d="M16 14v6M8 14v6M12 16v6"/>',
+            fog: WEATHER_CLOUD + '<path d="M16 17H7M17 21H9"/>',
+            snow: '<path d="M2 12h20M12 2v20m8-6-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/>'
+        };
+        var WEATHER_KINDS = [[/晴/, 'sun', '晴'], [/阴|阴/, 'cloud', '阴'], [/雨/, 'rain', '雨'], [/雾|雾/, 'fog', '雾'], [/雪/, 'snow', '雪']];
+        var hudWeatherKey = '';
+        function setHud(place, sky, hour, minute, weather) {
             var h = Number(hour);
             var m = Number(minute);
+            weather = String(weather || '').trim();
+            var kind = weather && WEATHER_KINDS.find(function (entry) { return entry[0].test(weather); });
+            var icon = $('hud-weather');
+            if (kind) {
+                var name = kind[1] === 'sun' && hour !== undefined && !isNaN(h) && (h < 6 || h >= 18) ? 'moon' : kind[1];
+                if (hudWeatherKey !== name) {
+                    hudWeatherKey = name;
+                    icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + WEATHER_ICONS[name] + '</svg>';
+                }
+                icon.setAttribute('aria-label', '天气：' + kind[2]);
+                icon.title = kind[2];
+            } else {
+                hudWeatherKey = '';
+                icon.textContent = '';
+                icon.removeAttribute('aria-label');
+                icon.removeAttribute('title');
+                if (weather) sky = [sky, weather].filter(Boolean).join(' ');
+            }
+            icon.hidden = !kind;
+            $('hud-place').textContent = place || '—';
+            $('hud-sky').textContent = sky || '—';
             if (!isNaN(h) && !isNaN(m)) {
                 $('pocket-watch').style.setProperty('--hourAngle', ((h % 12) * 30 + m * 0.5) + 'deg');
                 $('pocket-watch').style.setProperty('--minAngle', (m * 6) + 'deg');
@@ -8805,8 +8861,8 @@ var NewCardAlbumData = (function () {
                 var pad = function (n) { return ('0' + (Number(n) || 0)).slice(-2); };
                 var place = [where.区域, where.地点].filter(function (part) { return part; }).join('・');
                 var sky = [date.年 ? date.年 + '.' + date.月 + '.' + date.日 : '',
-                    time.时 !== undefined ? pad(time.时) + ':' + pad(time.分) : '', now.天气 || ''].filter(Boolean).join(' ');
-                setHud(place, sky, time.时, time.分);
+                    time.时 !== undefined ? pad(time.时) + ':' + pad(time.分) : ''].filter(Boolean).join(' ');
+                setHud(place, sky, time.时, time.分, now.天气);
                 setMapArea(where.区域 || null);
                 // 环境音目前只有雨声；其他天气（晴、阴、雾、雪）不播放。
                 if (ambience) ambience.setEnvironment({weather: /雨/.test(String(now.天气 || '')) ? 'rain' : null});
@@ -9534,13 +9590,24 @@ var NewCardAlbumData = (function () {
             var percent = scrollable ? (rest <= 4 ? 100 : Math.min(99, Math.round((stage.scrollTop + stage.clientHeight) / stage.scrollHeight * 100))) + '%' : '';
             if (progress.textContent !== percent) progress.textContent = percent;
             progress.hidden = !scrollable;
-            if (!more || !hint.offsetParent) return;
+            var showHint = more && hint.offsetParent, showProgress = scrollable && progress.offsetParent;
+            if (!showHint && !showProgress) return;
             // 箭头放在正文区（分页模式还有页标那一列）下方到纸页底部之间的窄边，上下置中；页尾花饰出现箭头时隐藏。
-            var box = hint.offsetParent.getBoundingClientRect(), marks = $('page-marks');
-            var upper = stage.getBoundingClientRect().bottom;
+            // 百分比在同一条窄边上下置中，右缘对齐正文的右缘。
+            var box = (showHint ? hint : progress).offsetParent.getBoundingClientRect(), marks = $('page-marks');
+            var stageBox = stage.getBoundingClientRect(), upper = stageBox.bottom;
             if (marks && marks.getClientRects().length) upper = Math.max(upper, marks.getBoundingClientRect().bottom);
-            var top = Math.round(upper - box.top + Math.max(0, (box.bottom - upper - hint.offsetHeight) / 2)) + 'px';
-            if (hint.style.top !== top) hint.style.top = top;
+            var place = function (el) {
+                var top = Math.round(upper - box.top + Math.max(0, (box.bottom - upper - el.offsetHeight) / 2)) + 'px';
+                if (el.style.top !== top) el.style.top = top;
+            };
+            if (showHint) place(hint);
+            if (showProgress) {
+                place(progress);
+                var text = stage.querySelector('.text-display'), edge = text ? text.getBoundingClientRect().right : stageBox.right;
+                var right = Math.max(0, Math.round(box.right - edge)) + 'px';
+                if (progress.style.right !== right) progress.style.right = right;
+            }
         }
 
         function renderPage() {
@@ -10949,7 +11016,7 @@ var NewCardAlbumData = (function () {
             });
             fillRuleList('anchor');   // 正文标签固定一列；读到全域变量前先放空白的一列
             loadTextRules();
-            ambience =NewCardAmbience.mount({window: view});
+            ambience = NewCardAmbience.mount({window: view});
             if (FRONTEND_CONFIG.ambience.rain) ambience.configure({rain: {src: cardAsset(FRONTEND_CONFIG.ambience.rain)}});
             // 以 ./ 或 ../ 开头的路径以卡片资料夹为准（尚未上传的音乐；预览页会改成 ../）；其他接在 music.base 后面。
             var musicSource = function (track) {
