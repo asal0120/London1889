@@ -660,11 +660,11 @@
 .rpg-v7-root .svVal { font: 12.5px/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--q); white-space: pre-wrap; overflow-wrap: anywhere; }
 .rpg-v7-root .svVal.is-none { color: var(--ink-dim); font-family: var(--sans); }
 .rpg-v7-root .svRaw { margin: 8px 0 0; font: 12px/1.65 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--ink-dim); white-space: pre-wrap; word-break: break-all; }
-.rpg-v7-root .svConfirm, .rpg-v7-root .svWait, .rpg-v7-root .svMissing {
+.rpg-v7-root .svConfirm, .rpg-v7-root .svWait, .rpg-v7-root .svMissing, .rpg-v7-root .svPlotOnly {
     display: none; margin: 0 8px; padding: 10px 6px 12px; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.65;
 }
 .rpg-v7-root .svConfirm .svRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-.rpg-v7-root.sv-confirm .svConfirm, .rpg-v7-root.sv-retrying .svWait, .rpg-v7-root.sv-missing .svMissing { display: block; }
+.rpg-v7-root.sv-confirm .svConfirm, .rpg-v7-root.sv-retrying .svWait, .rpg-v7-root.sv-missing .svMissing, .rpg-v7-root.sv-plot-only .svPlotOnly { display: block; }
 .rpg-v7-root.sv-confirm .svRetry, .rpg-v7-root.sv-retrying .svRetry { display: none; }
 .rpg-v7-root .svWait { color: var(--ink-dim); }
 .rpg-v7-root .svWait::after { content: '…'; animation: encBlink 1.2s steps(4) infinite; }
@@ -10141,7 +10141,8 @@ var NewCardAlbumData = (function () {
                     '<div class="svRow"><button type="button" class="svBtn is-quiet" data-sv-action="cancel">取消</button>' +
                     '<button type="button" class="svBtn is-main" data-sv-action="retry">重新解析</button></div></div>' +
                     '<div class="svWait" role="status">已送出，等待 MVU 解析</div>' +
-                    '<div class="svMissing" role="status">找不到 MVU 脚本。请确认酒馆助手里的 MVU 脚本已启用。</div>' : '');
+                    '<div class="svMissing" role="status">找不到 MVU 脚本。请确认酒馆助手里的 MVU 脚本已启用。</div>' +
+                    '<div class="svPlotOnly" role="status">MVU 的更新方式是「随 AI 输出」，不会另外解析变量。可以在 MVU 设定改用「额外模型解析」后再按一次，或重新生成这一楼。</div>' : '');
             return {html: html, bar: bar};
         }
         var svShownHtml = null;
@@ -10155,7 +10156,7 @@ var NewCardAlbumData = (function () {
         function setSvOpen(open) {
             setSvState('sv-open', open);
             root.querySelectorAll('.svBar .svToggle').forEach(function (button) { button.setAttribute('aria-expanded', String(!!open)); });
-            if (!open) { setSvState('sv-confirm', false); setSvState('sv-missing', false); }
+            if (!open) { setSvState('sv-confirm', false); setSvState('sv-missing', false); setSvState('sv-plot-only', false); }
         }
         // MVU 的按钮事件名称 = MVU 脚本编号 + 按钮名称的杂凑。不论按钮是否显示，MVU 都会监听这个事件。
         // 1. 在酒馆主页面找酒馆助手的脚本 iframe（id 以 TH-script-- 开头）。脚本按钮清单里有这个按钮的就是 MVU，
@@ -10183,6 +10184,19 @@ var NewCardAlbumData = (function () {
             } catch (_) {}
             return null;
         }
+        // 玩家的 MVU 设定「更新方式」（存在酒馆的扩充设定 mvu_settings）。设定是「随AI输出」时，
+        // MVU 的重试按钮只跳出提示、不解析，卡片不送出，改在浮层说明。读不到设定时回传 null，照常送出。
+        // MVU 没存过设定时用预设值「随AI输出」。角色卡可在世界书覆写这个设定（本卡没有），这里不读覆写。
+        var MVU_PLOT_ONLY = '随AI输出';   // 必须和 MVU 的设定值完全相同（简体）
+        function mvuUpdateMethod() {
+            try {
+                var st = (context.rootWin || view.top || view).SillyTavern;
+                var settings = st && (typeof st.getContext === 'function' ? st.getContext().extensionSettings : st.extensionSettings);
+                if (!settings || typeof settings !== 'object') return null;
+                var method = settings.mvu_settings && settings.mvu_settings['更新方式'];
+                return typeof method === 'string' ? method : MVU_PLOT_ONLY;
+            } catch (_) { return null; }
+        }
         function setSvState(name, on) { root.classList.toggle(name, !!on); }
         function endSvRetry() {
             svRetryTimer = clearTimer(svRetryTimer);
@@ -10202,6 +10216,7 @@ var NewCardAlbumData = (function () {
                 // 横条上的「重新解析」：打开浮层，直接显示确认。
                 setSvOpen(true);
                 setSvState('sv-missing', false);
+                setSvState('sv-plot-only', false);
                 setSvState('sv-confirm', true);
                 revealSvBottom();
             } else if (action === 'cancel') {
@@ -10215,6 +10230,12 @@ var NewCardAlbumData = (function () {
                     setSvState('sv-missing', true);
                     svMissingTimer = clearTimer(svMissingTimer);
                     svMissingTimer = setTimer(function () { svMissingTimer = null; setSvState('sv-missing', false); }, 8000);
+                    revealSvBottom();
+                    return;
+                }
+                // 每次按下都重新读设定：玩家改用额外模型解析后，再按一次就能送出。
+                if (mvuUpdateMethod() === MVU_PLOT_ONLY) {
+                    setSvState('sv-plot-only', true);
                     revealSvBottom();
                     return;
                 }
@@ -10568,14 +10589,16 @@ var NewCardAlbumData = (function () {
         function extractBody(input) {
             var shown = bodyFrom(input);
             if (shown.found) return shown.text;
-            var source = rawBodySource();
+            var source = rawBodySource(), fromRaw = null;
             if (source && source !== input) {
-                var fromRaw = bodyFrom(source);
+                fromRaw = bodyFrom(source);
                 if (fromRaw.found) return fromRaw.text;
             }
             // 生成中还没写出正文开头标签：正文前的内容（思考、<check> 等）一律不显示。
             // 生成结束后原文也没有任何正文标签（模型没照格式写），才显示全文，避免整则回复空白。
-            return isGenerating ? '' : shown.text;
+            // 全文优先取自原文：画面文字里的英文标签已被酒馆删掉，找不到变量区域的范围，变量内容会混进正文。
+            if (isGenerating) return '';
+            return fromRaw ? fromRaw.text : shown.text;
         }
 
         function rawBodySource() {
@@ -10585,7 +10608,7 @@ var NewCardAlbumData = (function () {
             return typeof context.rawData === 'string' ? context.rawData : '';
         }
 
-        // 回传 {text, found}：found 表示找到了正文标签；没找到时 text 是去掉变量区域的全文。
+        // 回传 {text, found}：found 表示找到了正文标签；没找到时 text 是去掉变量区域（<UpdateVariable>、<JSONPatch>）的全文。
         function bodyFrom(input) {
             var str = typeof input === 'string'
                 ? input
@@ -10649,6 +10672,8 @@ var NewCardAlbumData = (function () {
             match = content.match(reContentOpenOnly);
             if (match) return {text: match[1].trim(), found: true};
             return {found: false, text: content
+                .replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '')
+                .replace(/<UpdateVariable>[\s\S]*$/i, '')
                 .replace(new RegExp('<' + STATE_TAG + '>[\\s\\S]*?<\\/' + STATE_TAG + '>', 'gi'), '')
                 .replace(new RegExp('<' + STATE_TAG + '>[\\s\\S]*$', 'i'), '')
                 .trim()};
