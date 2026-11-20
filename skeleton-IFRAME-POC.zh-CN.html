@@ -6743,6 +6743,9 @@ var NewCardAlbumData = (function () {
             "nightStart": null,
             "nightEnd": null
           },
+          "byLadder": {
+            "2": { "capacity": null, "spawnChance": null }
+          },
           "districts": {
             "西区": {
               "weight": null,
@@ -6890,6 +6893,16 @@ var NewCardAlbumData = (function () {
         }
         function mapExpired(rules, event, now) { return mapRemaining(rules, event, now) === 0; }
 
+        // 依 MVU 玩家.技能阶梯 套用 byLadder 里那一阶的 capacity／spawnChance；没列出或是 null 的照用全体值。
+        function mapLadderRules(rules, stat) {
+            var player = mapPlain(mapPlain(stat) && stat.玩家), tier = player ? Math.round(Number(player.技能阶梯)) : NaN;
+            var override = Number.isFinite(tier) ? mapPlain((mapPlain(rules.byLadder) || {})[tier]) : null;
+            if (!override) return rules;
+            var result = Object.assign({}, rules);
+            ['capacity', 'spawnChance'].forEach(function (key) { if (override[key] != null) result[key] = override[key]; });
+            return result;
+        }
+
         function mapSpawn(rules, state, floor, now) {
             var capacity = mapInteger(rules.capacity), chance = mapNumber(rules.spawnChance), districts = mapPlain(rules.districts) || {};
             if (!capacity || capacity < 1 || !chance || state.events.length >= capacity) return null;
@@ -6947,7 +6960,7 @@ var NewCardAlbumData = (function () {
             state.events.forEach(function (event) { event.passed = (Number(event.passed) || 0) + assistant; });
             state.events = state.events.filter(function (event) { return !mapExpired(mapEventRules, event, now); });
             state.at = floor;
-            var event = role === 'assistant' ? mapSpawn(mapEventRules, state, floor, now) : null;
+            var event = role === 'assistant' ? mapSpawn(mapLadderRules(mapEventRules, stat), state, floor, now) : null;
             if (event) state.events.push(event);
             return {state: state, now: now, spawned: !!event, own: false};
         }
@@ -8904,7 +8917,7 @@ var NewCardAlbumData = (function () {
                 var data = mvuObject(team[MVU_NAMES[person.name] || person.name]);
                 if (!data || data.认识 !== '是') return null;
                 var nsfw = mvuObject(data.NSFW) || {};
-                return Object.assign({}, person, {bond: data.好感度, bondMax: 300, profile: profileWithLadder(person, data.阶梯),
+                return Object.assign({}, person, {bond: data.好感度, bondMax: 200, profile: profileWithLadder(person, data.阶梯),
                     experience: Object.assign({}, mvuObject(nsfw.侍奉经验), mvuObject(nsfw.亲密经验))});
             }).filter(Boolean));
             var world = mvuObject(stat.世界);
