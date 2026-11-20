@@ -3752,11 +3752,10 @@
 
                 <div class="setSection ruleSection">
                     <div class="setLabel">正文标签</div>
-                    <div class="setHint">AI 回复中包住正文的开头与结尾，可设定多组，依序比对。
-                        都没有比对到时，改用内置的 &lt;RPG&gt;…&lt;/RPG&gt;。</div>
-                    <div class="ruleList" data-role="rule-list-anchor" data-empty="尚未设定，使用 &lt;RPG&gt;…&lt;/RPG&gt;。"></div>
+                    <div class="setHint">AI 回复中包住正文的开头与结尾（一组）。
+                        两个都留空，或回复里没有这组标签时，使用内置的 &lt;RPG&gt;…&lt;/RPG&gt;。</div>
+                    <div class="ruleList" data-role="rule-list-anchor"></div>
                     <div class="ruleActions">
-                        <button type="button" class="setOptBtn" data-role="rule-add-anchor">＋ 新增</button>
                         <button type="button" class="setOptBtn" data-role="rule-save-anchor">储存</button>
                     </div>
                     <div class="setHint ruleStatus" data-role="rule-status-anchor" role="status" aria-live="polite"></div>
@@ -6158,12 +6157,13 @@ var NewCardAlbumData = (function () {
             return store.compiled;
         }
 
-        function ruleRow(rule) {
+        // 正文标签只有一组（世界书 98_回复格式 也只用一组），固定一列、没有删除钮；过滤规则可以有多条。
+        function ruleRow(rule, single) {
             var row = create('div');
             row.className = 'ruleRow';
             row.innerHTML = '<input type="text" data-field="open" spellcheck="false" aria-label="开头" placeholder="开头">' +
                 '<input type="text" data-field="close" spellcheck="false" aria-label="结尾" placeholder="结尾">' +
-                '<button type="button" class="ruleDelete" aria-label="删除这一条">×</button>';
+                (single ? '' : '<button type="button" class="ruleDelete" aria-label="删除这一条">×</button>');
             row.querySelector('[data-field="open"]').value = rule.open;
             row.querySelector('[data-field="close"]').value = rule.close;
             return row;
@@ -6173,6 +6173,7 @@ var NewCardAlbumData = (function () {
             var list = $('rule-list-' + kind);
             if (!list) return;
             list.textContent = '';
+            if (kind === 'anchor') { list.appendChild(ruleRow(textRules.anchor.rules[0] || {open: '', close: ''}, true)); return; }
             textRules[kind].rules.forEach(function (rule) { list.appendChild(ruleRow(rule)); });
         }
 
@@ -6212,6 +6213,7 @@ var NewCardAlbumData = (function () {
                 Promise.resolve().then(function () { return readGlobalVar(store.key); }).then(function (raw) {
                     if (destroyed) return;
                     store.rules = parseRules(raw);
+                    if (kind === 'anchor') store.rules = store.rules.slice(0, 1);
                     store.compiled = null;
                     fillRuleList(kind);
                     if (store.rules.length) reprocessText();
@@ -6228,7 +6230,7 @@ var NewCardAlbumData = (function () {
                 return {open: row.querySelector('[data-field="open"]').value, close: row.querySelector('[data-field="close"]').value};
             }));
             if (kind === 'anchor' && rules.some(function (rule) { return !rule.open || !rule.close; })) {
-                status.textContent = '正文标签的每一条都要填开头和结尾。';
+                status.textContent = '正文标签的开头和结尾都要填；两个都留空则使用 <RPG>…</RPG>。';
                 return;
             }
             status.textContent = '储存中…';
@@ -10933,7 +10935,7 @@ var NewCardAlbumData = (function () {
             listen($('set-content-max'), 'change', function (event) { saveDisplay({contentMax: Number(event.currentTarget.value)}); });
             listen($('set-card-height'), 'change', function (event) { saveDisplay({cardHeightFixed: Number(event.currentTarget.value)}); });
             Object.keys(textRules).forEach(function (kind) {
-                listen($('rule-add-' + kind), 'click', function () {
+                if ($('rule-add-' + kind)) listen($('rule-add-' + kind), 'click', function () {
                     var row = ruleRow({open: '', close: ''});
                     $('rule-list-' + kind).appendChild(row);
                     row.querySelector('input').focus();
@@ -10945,8 +10947,9 @@ var NewCardAlbumData = (function () {
                     if (button) { button.parentElement.remove(); reportHeight(); }
                 });
             });
+            fillRuleList('anchor');   // 正文标签固定一列；读到全域变量前先放空白的一列
             loadTextRules();
-            ambience = NewCardAmbience.mount({window: view});
+            ambience =NewCardAmbience.mount({window: view});
             if (FRONTEND_CONFIG.ambience.rain) ambience.configure({rain: {src: cardAsset(FRONTEND_CONFIG.ambience.rain)}});
             // 以 ./ 或 ../ 开头的路径以卡片资料夹为准（尚未上传的音乐；预览页会改成 ../）；其他接在 music.base 后面。
             var musicSource = function (track) {
