@@ -10055,7 +10055,7 @@ var NewCardAlbumData = (function () {
                     '<div class="svRow"><button type="button" class="svBtn is-quiet" data-sv-action="cancel">取消</button>' +
                     '<button type="button" class="svBtn is-main" data-sv-action="retry">重新解析</button></div></div>' +
                     '<div class="svWait" role="status">已送出，等待 MVU 解析</div>' +
-                    '<div class="svMissing" role="status">找不到 MVU 的「' + MVU_RETRY_BUTTON + '」按钮。请确认 MVU 脚本已启用，并在酒馆助手的脚本按钮里显示这个按钮。</div>' : '');
+                    '<div class="svMissing" role="status">找不到 MVU 脚本。请确认酒馆助手里的 MVU 脚本已启用。</div>' : '');
             return {html: html, bar: bar};
         }
         var svShownHtml = null;
@@ -10071,9 +10071,22 @@ var NewCardAlbumData = (function () {
             root.querySelectorAll('.svBar .svToggle').forEach(function (button) { button.setAttribute('aria-expanded', String(!!open)); });
             if (!open) { setSvState('sv-confirm', false); setSvState('sv-missing', false); }
         }
-        // MVU 的按钮事件名称含有 MVU 脚本自己的编号，所以从「已启用的脚本按钮」名单用按钮名称找。
-        // 名单只列出设为显示的按钮。
+        // MVU 的按钮事件名称 = MVU 脚本编号 + 按钮名称的杂凑。不论按钮是否显示，MVU 都会监听这个事件。
+        // 1. 在酒馆主页面找酒馆助手的脚本 iframe（id 以 TH-script-- 开头）。脚本按钮清单里有这个按钮的就是 MVU，
+        //    用它自己的 getButtonEvent 算出事件名称，再用它自己的 eventEmit 送出。按钮隐藏时也找得到。
+        // 2. 找不到时，改查「已启用的脚本按钮」名单（只列出设为显示的按钮）。
         function mvuRetryEvent() {
+            var frames = [];
+            try { frames = Array.prototype.slice.call((context.rootWin || view.top || view).document.querySelectorAll('iframe[id^="TH-script--"]')); } catch (_) {}
+            for (var f = 0; f < frames.length; f++) {
+                try {
+                    var w = frames[f].contentWindow;
+                    if (!w || typeof w.getScriptButtons !== 'function' || typeof w.getButtonEvent !== 'function' || typeof w.eventEmit !== 'function') continue;
+                    var buttons = w.getScriptButtons() || [];
+                    if (!buttons.some(function (button) { return button && button.name === MVU_RETRY_BUTTON; })) continue;
+                    return {helper: {eventEmit: w.eventEmit.bind(w)}, event: w.getButtonEvent(MVU_RETRY_BUTTON)};
+                } catch (_) {}
+            }
             var helper = context.TavernHelper || view.TavernHelper;
             try {
                 var map = helper && typeof helper.getAllEnabledScriptButtons === 'function' ? helper.getAllEnabledScriptButtons() : null;
