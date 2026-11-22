@@ -3956,6 +3956,11 @@ var NewCardMusic = (function () {
             return /^(https?:|file:|blob:)$/.test(url.protocol) || /^data:audio\//i.test(url.href) ? url.href : '';
         } catch (_) { return ''; }
     }
+    // iOS 17 不能播 .ogg（2026-11-22 实测）：浏览器回答不能播 Ogg 时，改用曲目的 fallback（.m4a）。
+    function canPlayOgg(audio, src) {
+        if (!/\.(ogg|oga|opus)([?#]|$)/i.test(src)) return true;
+        try { return audio.canPlayType('audio/ogg; codecs="vorbis"') !== ''; } catch (_) { return true; }
+    }
     function scoreBlob(host, track) {
         var rate = 22050, seconds = track.notes.length * track.step + 1.5;
         var samples = new Float32Array(Math.ceil(seconds * rate));
@@ -4023,6 +4028,10 @@ var NewCardMusic = (function () {
         function saveSettings() {
             try { host.localStorage.setItem(SETTINGS, JSON.stringify({mode: mode, volume: audio.volume, muted: audio.muted, track: mainChoice, battleTrack: battleChoice, battle: battleOn})); } catch (_) {}
         }
+        // 主要来源不能播（或已经载入失败）而且有备援时，用备援。
+        function sourceOf(track) {
+            return track.fallback && (track.useFallback || !canPlayOgg(audio, track.src)) ? track.fallback : track.src;
+        }
         function blobUrl(blob) { var url = host.URL.createObjectURL(blob); ownedUrls.add(url); return url; }
         function normalized(input) {
             var result = [], ids = new Set();
@@ -4030,7 +4039,8 @@ var NewCardMusic = (function () {
                 if (!entry || typeof entry !== 'object') return;
                 var src = safeSource(entry.src, host.document.baseURI), id = String(entry.id || 'track-' + i);
                 if (!src || ids.has(id)) return;
-                ids.add(id); result.push({id: id, title: String(entry.title || '未命名曲目'), artist: String(entry.artist || ''), src: src});
+                var fallback = safeSource(entry.fallback, host.document.baseURI);
+                ids.add(id); result.push({id: id, title: String(entry.title || '未命名曲目'), artist: String(entry.artist || ''), src: src, fallback: fallback});
             });
             return result;
         }
@@ -4075,7 +4085,7 @@ var NewCardMusic = (function () {
             epoch++; wanted = false; pending = false; audio.pause(); error = ''; current = id;
             if (isBattle(id)) battleChoice = id; else mainChoice = id;
             if (track.notes && !track.src) track.src = blobUrl(scoreBlob(host, track));
-            audio.src = track.src; audio.loop = mode === 'repeat-one'; audio.load();
+            audio.src = sourceOf(track); audio.loop = mode === 'repeat-one'; audio.load();
             saveSettings(); notify();
             if (autoplay) play();
             return true;
@@ -4127,6 +4137,16 @@ var NewCardMusic = (function () {
             notify(); return true;
         }
         function failed() {
+            // 主要来源载入失败、还没试过备援：换成备援，原本在播放就接着播。
+            var track = find(current);
+            if (track && track.fallback && !track.useFallback) {
+                var resume = wanted, at = audio.currentTime || 0;
+                track.useFallback = true; epoch++; pending = false;
+                audio.src = track.fallback; audio.load();
+                if (at > 0) { try { audio.currentTime = at; } catch (_) {} }
+                if (resume) play(); else notify();
+                return;
+            }
             // 小游戏曲目读不到（例如还没上传）：回到原本的音乐。
             if (battleActive && isBattle(current)) {
                 restoreMain(resumeAt ? resumeAt.playing : wanted);
@@ -4435,12 +4455,26 @@ var NewCardAmbience = (function () {
     return host;
   }
   function create(host) {
-    var enabled = true, volume = .35, rain = {src: '', placeholder: 'audio/ambience/rain.ogg'};
+    var enabled = true, volume = .35, rain = {src: '', fallback: '', placeholder: 'audio/ambience/rain.ogg'};
     var clients = new Map(), listeners = new Set(), serial = 0, owner = null, weather = null, cleanupTimer = null, disposed = false, suspended = false, lastError = '';
     var FADE = 1.5, audioContext = null, gain = null, node = null, buffer = null, bufferSrc = '', loading = null, stopTimer = null;
     // Fallback when the file cannot be read for Web Audio (file:// pages, hosts without CORS):
     // a plain looping <audio>, faded by stepping its volume.
     var element = null, elementFade = null;
+    // iOS 17 cannot play .ogg (2026-11-22): use rain.fallback (.m4a) when the browser says no to Ogg,
+    // or after the main file failed to load or decode.
+    var badSrc = '';
+    function canPlayOgg(src) {
+      if (!/\.(ogg|oga|opus)([?#]|$)/i.test(src)) return true;
+      try { return host.document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"') !== ''; } catch (_) { return true; }
+    }
+    function rainSource() {
+      return rain.fallback && (badSrc === rain.src || !canPlayOgg(rain.src)) ? rain.fallback : rain.src;
+    }
+    function useFallback(src) {
+      if (!rain.fallback || src === rain.fallback || src !== rain.src) return false;
+      badSrc = src; return true;
+    }
     try {
       var saved = JSON.parse(host.localStorage.getItem(SETTINGS) || '{}');
       if (typeof saved.enabled === 'boolean') enabled = saved.enabled;
@@ -4465,6 +4499,7 @@ var NewCardAmbience = (function () {
         stopElement();
         element = new host.Audio(src); element.dataset.src = src; element.loop = true; element.volume = 0;
         element.addEventListener('playing', notifyState); element.addEventListener('pause', notifyState);
+        element.addEventListener('error', () => { if (!disposed && useFallback(src)) { stopElement(); sync(); } });
       }
       var started = element.play();
       if (started && started.catch) started.catch(() => {});
@@ -4527,11 +4562,11 @@ var NewCardAmbience = (function () {
         stopTimer = host.setTimeout(() => { stopTimer = null; if (!state().ready) { stopNode(); notifyState(); } }, FADE * 1000 + 50);
         return;
       }
-      var context = audio(), src = rain.src;
+      var context = audio(), src = rainSource();
       if (element && element.dataset.src === src) { playElement(src); return; }
       if (!context) { playElement(src); return; }
       load(src).then(decoded => {
-        if (disposed || !state().ready || rain.src !== src) return;
+        if (disposed || !state().ready || rainSource() !== src) return;
         stopElement();
         if (!node || node.buffer !== decoded) {
           stopNode();
@@ -4539,7 +4574,10 @@ var NewCardAmbience = (function () {
           node.connect(gain); node.start();
         }
         fadeTo(volume); notifyState();
-      }, () => { if (!disposed && state().ready && rain.src === src) playElement(src); });
+      }, () => {
+        if (disposed || !state().ready || rainSource() !== src) return;
+        if (useFallback(src)) sync(); else playElement(src);
+      });
     }
     function deliver(listener, value) {
       try {
@@ -4560,17 +4598,17 @@ var NewCardAmbience = (function () {
           if (typeof input.rain.placeholder !== 'string') return false;
           nextRain.placeholder = input.rain.placeholder;
         }
-        if (own(input.rain, 'src')) {
-          if (typeof input.rain.src !== 'string') return false;
-          if (!input.rain.src) nextRain.src = '';
-          else {
-            try {
-              if (!input.rain.src.trim()) return false;
-              var url = new URL(input.rain.src, base);
-              if (!['http:', 'https:', 'file:', 'blob:'].includes(url.protocol) && !/^data:audio\//i.test(input.rain.src)) return false;
-              nextRain.src = url.href;
-            } catch (_) { return false; }
-          }
+        for (var field of ['src', 'fallback']) {
+          if (!own(input.rain, field)) continue;
+          var value = input.rain[field];
+          if (typeof value !== 'string') return false;
+          if (!value) { nextRain[field] = ''; continue; }
+          try {
+            if (!value.trim()) return false;
+            var url = new URL(value, base);
+            if (!['http:', 'https:', 'file:', 'blob:'].includes(url.protocol) && !/^data:audio\//i.test(value)) return false;
+            nextRain[field] = url.href;
+          } catch (_) { return false; }
         }
       }
       enabled = nextEnabled; volume = nextVolume; rain = nextRain;
@@ -5159,18 +5197,20 @@ var NewCardAlbumData = (function () {
         map: { image: FRONTEND_ASSETS.map, ratio: 2864 / 2192, height: 176, events: [] },
         // 音乐与雨声由 audio/build_bgm.py 产生；相对路径以卡片所在的资料夹为准。
         // 音乐不放 GitHub：上传到别处后，把 base 改成那个资料夹的网址（以 / 结尾）。
+        // fallback：同一首的 .m4a。浏览器不能播 .ogg（iOS 17）或 src 载入失败时改用它；空白＝没有备援。
         music: { base: 'https://files.catbox.moe/', tracks: [
-            {id: 'bgm-01', title: '曲目 01', src: 'c18lcn.ogg'},
-            {id: 'bgm-02', title: '曲目 02', src: 'oncf8a.ogg'},
-            {id: 'bgm-03', title: '曲目 03', src: '87oa00.ogg'}
+            {id: 'bgm-01', title: '曲目 01', src: 'c18lcn.ogg', fallback: 'iywnlz.m4a'},
+            {id: 'bgm-02', title: '曲目 02', src: 'oncf8a.ogg', fallback: 'aga064.m4a'},
+            {id: 'bgm-03', title: '曲目 03', src: '87oa00.ogg', fallback: '47frig.m4a'}
         ],
         // 战斗曲目（留声机的「战斗」分类，只在小游戏中显示）。src 以 ./ 或 ../ 开头时以卡片资料夹为准，不套用 base。
         // 01＝audio/bgm/B01.ogg、02＝audio/bgm/B02.ogg（2026-11-01 上传）。
+        // .m4a 备援：audio/bgm/*.m4a，2026-11-22 上传（01＝iywnlz、02＝aga064、03＝47frig、B01＝bmggoq、B02＝ft92n3）。
         battle: [
-            {id: 'battle-01', title: '小游戏 01', src: 'y7nm7w.ogg'},
-            {id: 'battle-02', title: '小游戏 02', src: 'u3q85d.ogg'}
+            {id: 'battle-01', title: '小游戏 01', src: 'y7nm7w.ogg', fallback: 'bmggoq.m4a'},
+            {id: 'battle-02', title: '小游戏 02', src: 'u3q85d.ogg', fallback: 'ft92n3.m4a'}
         ] },
-        ambience: { rain: './audio/ambience/rain.ogg' },
+        ambience: { rain: './audio/ambience/rain.ogg', rainFallback: './audio/ambience/rain.m4a' },
         // 好感（雏形）：以百分比显示，max 是换算用的最大值；个别角色可在数据中用 bondMax 覆写。
         bond: { max: 100 },
         // TEAM 人物数据与经验的栏位。人物数据栏位来自 character-profile.json 的 fields（key 与 label 相同）；
@@ -11202,10 +11242,12 @@ var NewCardAlbumData = (function () {
             fillRuleList('anchor');   // 正文标签固定一列；读到全域变量前先放空白的一列
             loadTextRules();
             ambience = NewCardAmbience.mount({window: view});
-            if (FRONTEND_CONFIG.ambience.rain) ambience.configure({rain: {src: cardAsset(FRONTEND_CONFIG.ambience.rain)}});
+            if (FRONTEND_CONFIG.ambience.rain) ambience.configure({rain: {src: cardAsset(FRONTEND_CONFIG.ambience.rain), fallback: FRONTEND_CONFIG.ambience.rainFallback ? cardAsset(FRONTEND_CONFIG.ambience.rainFallback) : ''}});
             // 以 ./ 或 ../ 开头的路径以卡片资料夹为准（尚未上传的音乐；预览页会改成 ../）；其他接在 music.base 后面。
+            // fallback（.m4a 备援）用同样的规则。
+            var musicUrl = function (src) { return /^\.\.?\//.test(src) ? cardAsset(src) : new URL(src, cardAsset(FRONTEND_CONFIG.music.base || './')).href; };
             var musicSource = function (track) {
-                try { return Object.assign({}, track, {src: /^\.\.?\//.test(track.src) ? cardAsset(track.src) : new URL(track.src, cardAsset(FRONTEND_CONFIG.music.base || './')).href}); } catch (_) { return track; }
+                try { return Object.assign({}, track, {src: musicUrl(track.src), fallback: track.fallback ? musicUrl(track.fallback) : ''}); } catch (_) { return track; }
             };
             // 留声机面板开在酒馆最外层的全萤幕对话框（见 music.js 的 mountFullscreen）；卡片里只留静音键与展开键。
             musicUi = NewCardMusic.mountFullscreen(root, {window: view, ambience: ambience, tracks: context.musicTracks || FRONTEND_CONFIG.music.tracks.map(musicSource),

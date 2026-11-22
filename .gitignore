@@ -67,9 +67,10 @@
 !/Sound/PlayerHit.mp3
 !/Sound/be hit.mp3
 
-# 雨聲：audio/build_bgm.py 產生的 ogg（背景音樂上傳到別處，不放 GitHub）
+# 雨聲：audio/build_bgm.py 產生的 ogg 與 m4a（iOS 備援）（背景音樂上傳到別處，不放 GitHub）
 !/audio/
 /audio/*
 !/audio/ambience/
 /audio/ambience/*
 !/audio/ambience/rain.ogg
+!/audio/ambience/rain.m4a
