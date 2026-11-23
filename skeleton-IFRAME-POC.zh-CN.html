@@ -3994,7 +3994,8 @@ var NewCardMusic = (function () {
         var audio = host.document.createElement('audio');
         audio.preload = 'metadata';
         var listeners = new Set(), clients = 0, cleanupTimer = null, disposed = false;
-        var tracks = [], current = null, mode = 'sequence', error = '', notice = '', pending = false;
+        // 预设随机：开始时随机选一首，播完也随机换（2026-11-23 使用者决定）。玩家自己选过播放方式才沿用存下的选择。
+        var tracks = [], current = null, mode = 'shuffle', modeChosen = false, error = '', notice = '', pending = false;
         var wanted = false, epoch = 0, history = [], bag = [], ownedUrls = new Set();
         var selectedSetting = '';
         // 自动播放：卡片挂载时开始播放（静音中不播）。玩家按过暂停，之后挂载的卡片不再自动播放。
@@ -4010,7 +4011,9 @@ var NewCardMusic = (function () {
         var nsfwTracks = [], nsfwOn = true, nsfwActive = false, nsfwChoice = '', nsfwReports = new Map();
         try {
             var saved = JSON.parse(host.localStorage.getItem(SETTINGS) || '{}');
-            mode = ['sequence', 'repeat-one', 'shuffle'].includes(saved.mode) ? saved.mode : mode;
+            // 旧版会在调音量等任何设定时一起存下预设的「顺序」，所以只认玩家明确选过的（modeChosen）。
+            modeChosen = saved.modeChosen === true && ['sequence', 'repeat-one', 'shuffle'].includes(saved.mode);
+            if (modeChosen) mode = saved.mode;
             audio.volume = Number.isFinite(saved.volume) ? Math.max(0, Math.min(1, saved.volume)) : .35;
             audio.muted = saved.muted === true;
             selectedSetting = typeof saved.track === 'string' ? saved.track : '';
@@ -4042,7 +4045,7 @@ var NewCardMusic = (function () {
         }
         function notify() { if (!disposed) listeners.forEach(function (callback) { try { callback(state()); } catch (_) {} }); }
         function saveSettings() {
-            try { host.localStorage.setItem(SETTINGS, JSON.stringify({mode: mode, volume: audio.volume, muted: audio.muted, track: mainChoice, battleTrack: battleChoice, battle: battleOn, nsfwTrack: nsfwChoice, nsfw: nsfwOn})); } catch (_) {}
+            try { host.localStorage.setItem(SETTINGS, JSON.stringify({mode: mode, modeChosen: modeChosen, volume: audio.volume, muted: audio.muted, track: mainChoice, battleTrack: battleChoice, battle: battleOn, nsfwTrack: nsfwChoice, nsfw: nsfwOn})); } catch (_) {}
         }
         // 主要来源不能播（或已经载入失败）而且有备援时，用备援。
         function sourceOf(track) {
@@ -4070,12 +4073,12 @@ var NewCardMusic = (function () {
             // 小游戏／亲密场景曲目播放中：只换清单，不打断（离开时再回到通用曲目）。
             if (isBattle(current) || isNsfw(current)) { notify(); return true; }
             var keep = tracks.find(function (t) { return t.id === current; });
-            if (!keep || !old || keep.src !== old.src) choose(tracks[0].id, wasPlaying, false);
+            if (!keep || !old || keep.src !== old.src) choose(firstTrack(), wasPlaying, false);
             notify(); return true;
         }
         async function play() {
             if (disposed) return false;
-            if (!current) choose(tracks[0].id, false, false);
+            if (!current) choose(firstTrack(), false, false);
             var version = epoch;
             wanted = true; pending = true; error = ''; notify();
             try {
@@ -4134,6 +4137,10 @@ var NewCardMusic = (function () {
             saveSettings(); notify();
             if (autoplay) play();
             return true;
+        }
+        // 开始播放的曲目：随机模式随机选一首，其他模式从第一首开始。
+        function firstTrack() {
+            return mode === 'shuffle' ? randomNext(tracks) : tracks[0].id;
         }
         // 上一首、下一首与随机只在目前曲目所在的清单里换。
         function randomNext(list) {
@@ -4235,7 +4242,7 @@ var NewCardMusic = (function () {
             pending = false; wanted = false; audio.pause(); error = '这首音乐无法载入，请选择其他曲目。'; notify(); }
         function modeTo(value) {
             if (!['sequence', 'repeat-one', 'shuffle'].includes(value)) return;
-            mode = value; audio.loop = mode === 'repeat-one'; bag = []; saveSettings(); notify();
+            mode = value; modeChosen = true; audio.loop = mode === 'repeat-one'; bag = []; saveSettings(); notify();
         }
         function seek(value) { if (Number.isFinite(value) && Number.isFinite(audio.duration) && audio.duration > 0) { audio.currentTime = Math.max(0, Math.min(audio.duration, value)); notify(); } }
         function dispose() {
@@ -8385,6 +8392,10 @@ var NewCardAlbumData = (function () {
             var own = Number(character.bondMax), shared = Number(FRONTEND_CONFIG.bond && FRONTEND_CONFIG.bond.max);
             return own > 0 ? own : shared > 0 ? shared : 100;
         }
+        // 好感百分比（四舍五入到整数）：TEAM 页的显示与小游戏同行资格共用。
+        function bondPercent(raw, max) {
+            return Math.round(Math.max(0, Math.min(1, raw / max)) * 100);
+        }
         function renderBond(character) {
             var meter = $('stat-bars');
             var raw = Number(character.bond);
@@ -8392,7 +8403,7 @@ var NewCardAlbumData = (function () {
             meter.hidden = !hasBond;
             if (!hasBond) { bondShown = null; return; }
             var ratio = Math.max(0, Math.min(1, raw / bondMaxOf(character)));
-            var percent = Math.round(ratio * 100);
+            var percent = bondPercent(raw, bondMaxOf(character));
             var same = bondShown && bondShown.name === character.name;
             var moved = same && ratio !== bondShown.ratio;
             var delta = same ? percent - bondShown.percent : 0;
@@ -9109,6 +9120,8 @@ var NewCardAlbumData = (function () {
             var data = mvuObject(team[MVU_NAMES[name] || name]);
             return !!data && data.认识 === '是';
         }
+        // MVU 好感度的最大值：TEAM 页的好感百分比与小游戏同行资格都以它为基准。最大值改变时只改这里。
+        var MVU_BOND_MAX = 200;
         function applyMvu(variables) {
             var stat = mvuObject(variables) && mvuObject(variables.stat_data) || {};
             mvuStat = stat;
@@ -9117,7 +9130,7 @@ var NewCardAlbumData = (function () {
                 var data = mvuObject(team[MVU_NAMES[person.name] || person.name]);
                 if (!data || data.认识 !== '是') return null;
                 var nsfw = mvuObject(data.NSFW) || {};
-                return Object.assign({}, person, {bond: data.好感度, bondMax: 200, profile: profileWithLadder(person, data.阶梯),
+                return Object.assign({}, person, {bond: data.好感度, bondMax: MVU_BOND_MAX, profile: profileWithLadder(person, data.阶梯),
                     experience: Object.assign({}, mvuObject(nsfw.侍奉经验), mvuObject(nsfw.亲密经验))});
             }).filter(Boolean));
             // 亲密场景曲目：任一队友的 NSFW状态 为「是」。播放器以楼层编号最大的卡片为准。
@@ -10305,7 +10318,7 @@ var NewCardAlbumData = (function () {
                 '<div class="encFoes">' + foes + '</div>' +
                 (done ? '<div class="encResult">' + esc(done) + '</div>' : '<span class="encPips" role="img" aria-label="地图大小 ' + size + '／4">' + pips + '</span>') +
                 (done || !latest ? '' : floorUpdated() ? '<button type="button" class="encBtn" data-encounter-action="enter">进入探索</button>'
-                    : '<button type="button" class="encBtn" disabled>等待变量更新</button>') + '</div>';
+                    : '<button type="button" class="encBtn" data-encounter-action="parse">解析变量</button>') + '</div>';
         }
         // ── 变量更新面板 ──
         // 显示这一楼 <UpdateVariable>／<JSONPatch> 的内容（前作 RPGMVU0916 的「变量更新状态」）。
@@ -10648,6 +10661,11 @@ var NewCardAlbumData = (function () {
             listen(root, 'click', function (event) {
                 var button = event.target.closest && event.target.closest('[data-encounter-action]');
                 if (!button || !root.contains(button)) return;
+                // 这一楼还没有变量更新：等同按变量横条的「重新解析」（先显示确认，再请 MVU 补全）。更新后入口换成「进入探索」。
+                if (button.dataset.encounterAction === 'parse') {
+                    if (stateView()) runSvAction('ask');
+                    return;
+                }
                 if (button.dataset.encounterAction === 'rewrite') {
                     encounterView.rewriting = true;
                     // 解析脚本没有回应时，两分钟后恢复按钮。
@@ -10655,7 +10673,7 @@ var NewCardAlbumData = (function () {
                     encounterRewriteTimer = setTimer(function () { encounterRewriteTimer = null; encounterView.rewriting = false; repaintEncounter(); }, 120000);
                     repaintEncounter();
                     bridge.rewrite();
-                } else if (encounterView.record && encounterView.record.status === 'ready') {
+                } else if (encounterView.record && encounterView.record.status === 'ready' && floorUpdated()) {
                     bridge.enter(encounterView.record);
                     openExploration(encounterView.record);
                 }
@@ -10696,9 +10714,11 @@ var NewCardAlbumData = (function () {
             }
             return cache.promise;
         }
-        // 小游戏同行资格：认识且好感 50 以上（2026-10-31 使用者决定）。读不到 MVU 队友数据时全部可带。
+        // 小游戏同行资格：认识且好感百分比 17% 以上。读不到 MVU 队友数据时全部可带。
+        // 原本是好感 50 以上、最大值 300（2026-10-31 使用者决定）；改用百分比后，最大值改变也不必改门槛。
+        // 17% 是四舍五入后的百分比，和 TEAM 页显示的数字相同；最大值 300 时正好等于 50 以上。
         var SUPPORT_MEMBERS = {ward: '莉泽', medic: '蒂安娜', disrupt: '格蕾', companion4: '纱夜', companion5: '薇薇安'};
-        var SUPPORT_BOND_MIN = 50;
+        var SUPPORT_BOND_MIN_PERCENT = 17;
         function explorationAllies() {
             var team = mvuObject(mvuStat && mvuStat.队友);
             if (!team) return {ids: null, reasons: {}};
@@ -10706,7 +10726,7 @@ var NewCardAlbumData = (function () {
             Object.keys(SUPPORT_MEMBERS).forEach(function (id) {
                 var name = SUPPORT_MEMBERS[id], data = mvuObject(team[MVU_NAMES[name] || name]);
                 if (!data || data.认识 !== '是') reasons[id] = '未认识';
-                else if (!(Number(data.好感度) >= SUPPORT_BOND_MIN)) reasons[id] = '好感不足';
+                else if (!(bondPercent(Number(data.好感度), MVU_BOND_MAX) >= SUPPORT_BOND_MIN_PERCENT)) reasons[id] = '好感不足';
                 else ids.push(id);
             });
             return {ids: ids, reasons: reasons};
