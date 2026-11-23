@@ -3307,6 +3307,8 @@
 .rpg-v7-root .profileGrid { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 18px; row-gap: 8px; margin: 0; }
 .rpg-v7-root .profileRow { display: flex; align-items: baseline; gap: 6px; min-width: 0; margin: 0; font-size: 13px; }
 .rpg-v7-root .profileRow dt { flex: none; color: var(--card-fg); letter-spacing: .06em; }
+/* 空间不足时点线先缩到 0，数值（例如生日）才换行（2026-11-24：320／390 宽时「1869年10月21日」被拆成两行）。 */
+.rpg-v7-root .profileRow .lead { min-width: 0; }
 /* 长文字换行时平均分配两行，避免最后只剩一个字。 */
 .rpg-v7-root .profileRow dd { flex: 0 1 auto; margin: 0; color: var(--q); font-weight: 600; text-align: right; overflow-wrap: anywhere; text-wrap: balance; }
 .rpg-v7-root .profileRow dd.num { color: var(--q); font: 700 15px/1 Georgia, "Times New Roman", serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -3340,6 +3342,14 @@
 }
 @container dp-profile (min-width: 300px) {
   .rpg-v7-root .profileFace > .profileGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* 300–320 宽的卡片：数据栏不到 140px（300 宽约 125px），缩小字级与间距，生日才放得进一行。 */
+@container dp-profile (max-width: 139.98px) {
+  .rpg-v7-root .profileRow { font-size: 12px; }
+}
+@container dp-profile (max-width: 129.98px) {
+  .rpg-v7-root .profileRow { gap: 4px; font-size: 11.5px; }
+  .rpg-v7-root .profileRow dt { letter-spacing: 0; }
 }
 /* 宽版 561–849：好感放在名字右侧的空位，数据整列全宽；850 以上改放在数据右侧（见特宽版）。不加分隔线，「好感」在上方。 */
 @container rpg-card (min-width: 561px) {
