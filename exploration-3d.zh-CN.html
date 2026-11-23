@@ -1573,6 +1573,8 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .hud-tools button:hover,.hud-tools button:focus-visible{opacity:1}
 .hud-tools button[hidden]{display:none}
 .hud-tools .theme-glyph,.hud-tools .music-glyph{font-size:17px;line-height:1}
+/* 只有图示的音乐键：图示置中（原本靠左，左右间距 11／17px）。 */
+.hud-tools .music-button{display:grid;place-items:center}
 /* ◐ ♪ ? 改为 1.5px 单色线条 SVG（2026-11-20）：各系统字型下粗细一致，笔触同撤离门图示。 */
 .game-shell .line-glyph{display:block;width:18px;height:18px}
 .hud-tools .line-glyph{width:16px;height:16px}
@@ -1597,6 +1599,7 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 /* 撤离：门与向外箭头。 */
 .hud-tools .hud-icon{display:none;width:17px;height:17px}
 .hud-tools.hud-compact .hud-icon{display:block}
+.hud-tools.hud-compact .hud-label{display:none}
 .hud-tools button,.hud-buff{position:relative}
 .hud-tools button:not(.hud-compact *)::after{content:"";position:absolute;inset:-3px 0}
 .hud-tools.hud-compact button::after{content:"";position:absolute;inset:-7px -3px}
@@ -2314,15 +2317,7 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 <symbol id="portrait-support-ward" viewBox="0 0 120 160"><path d="M12 160c1-40 9-56 33-67h30c24 11 32 27 33 67" fill="#3c5050" stroke="#90a391"/><path d="m42 93 18 27 18-27 10 19-14 11-14 34-14-34-14-11Z" fill="#7b8875"/><path d="M40 42c-4 19-1 42 10 49l10 5 12-6c11-9 14-33 9-48" fill="#c5ad8a"/><path d="M35 47c-4-28 14-37 27-36 21 0 29 15 24 38l-9-7-5-16-24 9-4 15Z" fill="#858e83"/><path d="m40 50-3 18 8 10-1-26m36-2 2 19-7 8 1-26" fill="#929a8a"/><path d="M47 72q13-10 26 0l-10 4-3-3-4 3Z" fill="#8b9180"/><path d="m47 58 9-1m9 0 9 1M52 84h15" stroke="#605b4e" stroke-width="2"/><path d="M59 123v37M24 138h17m42 0h13" stroke="#b2b99c"/><path d="m83 111 8 3v9l-8 6-7-6v-9Z" fill="#baa879"/></symbol>
 <symbol id="portrait-support-medic" viewBox="0 0 120 160"><path d="M13 160c2-38 15-55 36-65h22c21 10 34 27 36 65" fill="#798d7d" stroke="#b0bba2"/><path d="M32 45c-1-27 13-38 29-38 18 0 29 14 29 38l-4 46-19 5-26-8Z" fill="#493e36"/><path d="M41 40c-2 16 0 38 8 47l12 7 12-7c8-10 10-29 6-48" fill="#d1b79a"/><path d="M37 43q8-38 37-15l9 18-22-13-22 20Z" fill="#574639"/><path d="m40 22 20-11 24 10-5 12-19-6-18 9Z" fill="#d3d5be" stroke="#859884"/><path d="M60 16v8m-4-4h8" stroke="#677d70" stroke-width="2"/><path d="m48 57 8 0m9 0h8M56 79h10" stroke="#756356" stroke-width="1.8"/><path d="m45 95 16 13 14-13 5 17-19 14-21-14Z" fill="#e2dbc4"/><path d="M43 117h36l4 43H39Z" fill="#bbc4ad"/><path d="M61 130v18m-9-9h18" stroke="#728879" stroke-width="4"/></symbol>
 <symbol id="portrait-support-disrupt" viewBox="0 0 120 160"><path d="M12 160c2-38 14-54 36-64h26c21 10 32 26 34 64" fill="#4a4e62" stroke="#9b9cb2"/><path d="M40 43c-4 21 2 38 11 46l11 7 12-9c8-11 12-29 6-45" fill="#b59b7f"/><path d="m32 48 5-25 19-14 26 6 10 20-9 26-6-20-8-5-24 15-7 17Z" fill="#303039"/><path d="m34 34 48-9" stroke="#8e7764" stroke-width="8"/><circle cx="48" cy="31" r="9" fill="#26373e" stroke="#b39e72" stroke-width="3"/><circle cx="72" cy="27" r="9" fill="#26373e" stroke="#b39e72" stroke-width="3"/><path d="m45 59 8-2m14 0 8-1M57 79l11-2" stroke="#68584e" stroke-width="2"/><path d="m44 92 20 11 18-15 2 22-19 12-25-17Z" fill="#a79b83"/><path d="m67 118 17 7-11 35H57Z" fill="#8d8271"/><path d="m31 114-7 17 19 10m44-26 9 21-12 9" fill="none" stroke="#9696a5"/><circle cx="37" cy="142" r="3" fill="#c5b688"/></symbol>
-<symbol id="portrait-ghost" viewBox="0 0 160 180"><path d="M30 155c13-12 9-20 2-25-5 11-13 11-20 7 24-24 21-38 27-73 9-55 86-66 91-3 3 34-11 40 1 63 7 12 17 12 23 9-8 18-25 22-36 12 0 19 14 22 19 18-21 21-42 7-42-10-15 25-26 16-33 1-8 20-26 14-32 1Z" fill="url(#mist)" stroke="#aac2b1" stroke-width="1.2"/><path d="M55 71c4-16 15-21 20-8-2 17-9 24-17 19m26-13c12-10 22-6 22 5-2 14-13 15-23 8" fill="#294b56"/><path d="M72 95c-5 19 6 27 16 20 4-11-3-25-16-20Z" fill="#355965"/><path d="M52 111c-5 19 0 32-13 34m72-36c-5 15-3 21 3 28" fill="none" stroke="#c6d5bd" opacity=".5"/></symbol>
-<symbol id="portrait-hound" viewBox="0 0 180 180"><path d="M28 100c-11-4-12-32-5-37 2 15 9 23 20 22 22-22 61-24 87-6l18-32 7 27 16 14-5 28-24 10-12 32h-15l3-31-29-1-14 29H59l4-35-23-6-8 36H17Z" fill="#5d7271" stroke="#a4b4a0" stroke-width="1.3"/><path d="m126 82 1-27 14 22m-84 4 9-19 13 17 14-18 9 15" fill="#8c9b8d" stroke="#b3b79b"/><path d="m42 107 18-14 23 9 27-11 24 15-18 11-22-7-24 9" fill="none" stroke="#a9b697" opacity=".6"/><path d="m148 87 12 3-8 5Z" fill="#f0be7c"/><path d="m152 105 11 0-6 10-3-6-4 5" fill="#e0d5ad"/><path d="m118 156 18 0m-76 0h15m-57-6h13" stroke="#a8af95" stroke-width="2"/></symbol>
-<symbol id="portrait-sentinel" viewBox="0 0 160 180"><path d="m47 25 14-13h40l12 16-5 37H52Z" fill="url(#metal)" stroke="#b9b797"/><path d="M51 44h58v11H51Z" fill="#273c42"/><path d="M63 47h14m10 0h12" stroke="#edcb81" stroke-width="3"/><path d="m44 69 35-8 39 9 6 58-39 14-46-18Z" fill="url(#metal)" stroke="#b9b797"/><path d="m41 72-20 6-8 49 16 4 14-40m77-20 19 9 11 47-16 6-15-42" fill="#657b76" stroke="#b2b492"/><path d="m52 132-10 34h24l13-29m10 1 10 29h25l-12-37" fill="#637875" stroke="#b4b594"/><circle cx="82" cy="96" r="19" fill="#314c4c" stroke="#bbc396"/><circle cx="82" cy="96" r="9" fill="#bad0ad"/><path d="M82 78v36m-18-18h36" stroke="#d1d5a5" stroke-width="1"/><path d="M57 31h44M48 168h19m32 0h25" stroke="#d1caa1" stroke-width="2"/></symbol>
-<symbol id="portrait-dragon" viewBox="0 0 200 180"><path d="M87 80C54 20 21 25 5 9l8 78 25-20 12 32 22-4m42-17c36-60 59-46 79-69l-7 78-22-22-14 36-26-5" fill="#555169" stroke="#b6a9ab"/><path d="m15 30 54 60-30-35m141-23-49 58 29-34" fill="none" stroke="#9e929f"/><path d="M74 100c-21 11-27 33-9 45 18 13 55 15 76 1 19-14 27-6 29 4-3 19-26 21-36 16 23 1 16-17 5-7-34 19-87 3-88-19-2-17 17-35 23-40Z" fill="url(#dragon-skin)" stroke="#b5ada3"/><path d="m79 64-5-36 21 22 19-16-1 32 14 30-22 28-22-15-10-23Z" fill="url(#dragon-skin)" stroke="#c2b4ab"/><path d="m81 72 13 5-10 6m19-7 12-6-4 12" fill="#e7bb83"/><path d="m85 96 23 0-6 11-6-6-7 6Z" fill="#ddd1b6"/><path d="m75 110-8 29H51m61-29 13 29h20" fill="none" stroke="#aeaaa1" stroke-width="7" stroke-linejoin="round"/><path d="m59 155 9 0m47 2h12" stroke="#d1bfab" stroke-width="3"/></symbol>
 <symbol id="p-player" viewBox="0 0 24 32"><g shape-rendering="crispEdges"><path d="M7 1h10v3h3v3H4V4h3Z" fill="#233842"/><path d="M7 4h10v2H7Z" fill="#d6bf78"/><path d="M8 7h9v7H8Z" fill="#c6ba94"/><path d="M7 8h2v4H7Zm9 0h2v4h-2Z" fill="#293f44"/><path d="M6 14h13v3h2v10H3V17h3Z" fill="#789783"/><path d="M9 14h6v12H9Z" fill="#d0c8a0"/><path d="M11 16h2v10h-2ZM6 27h5v5H6Zm8 0h5v5h-5Z" fill="#243b43"/><path d="M3 19h3v6H3Zm16 0h2v6h-2Z" fill="#baa98b"/></g></symbol>
-<symbol id="p-ghost" viewBox="0 0 24 32"><g shape-rendering="crispEdges"><path d="M8 3h8v3h4v5h2v17h-4v-3h-3v5h-4v-5H8v3H3V11h2V6h3Z" fill="#98b6aa"/><path d="M6 10h3v13H6Z" fill="#bdd0b7"/><path d="M9 12h3v4H9Zm7 0h3v4h-3Zm-5 8h6v3h-6Z" fill="#335358"/></g></symbol>
-<symbol id="p-hound" viewBox="0 0 24 32"><g shape-rendering="crispEdges"><path d="M4 10h4v4h7v-3h4V6h3v15h-3v7h-4v-6H8v6H4V18H1v-7h3Z" fill="#96aa9a"/><path d="M7 14h8v4H7Z" fill="#5b7770"/><path d="M17 14h3v2h-3Z" fill="#efc17f"/><path d="M5 28h4v2H5Zm11 0h4v2h-4Z" fill="#2b4145"/></g></symbol>
-<symbol id="p-sentinel" viewBox="0 0 24 32"><g shape-rendering="crispEdges"><path d="M7 2h11v10H7Zm-3 11h17v12H4Zm0 12h6v7H4Zm12 0h5v7h-5Z" fill="#a6aa8c"/><path d="M1 15h4v11H1Zm20 0h3v11h-3Z" fill="#6e8880"/><path d="M9 6h7v3H9Z" fill="#edd28f"/><path d="M9 16h8v6H9Z" fill="#d1ddba"/><path d="M11 18h4v2h-4Z" fill="#60857c"/></g></symbol>
-<symbol id="p-dragon" viewBox="0 0 24 32"><g shape-rendering="crispEdges"><path d="M0 5h3v3h3v3h3v9H6v-5H3v4H0Zm24 0h-3v3h-3v3h-3v9h3v-5h3v4h3ZM8 5h9v16H8Zm-2 16h13v7H6Zm1 7h4v4H7Zm9 0h4v4h-4Z" fill="#a298a9"/><path d="M8 2h3v5H8Zm8 0h3v5h-3Z" fill="#cdc0ab"/><path d="M10 11h2v2h-2Zm5 0h2v2h-2Z" fill="#f4ce87"/><path d="M11 19h4v7h-4Z" fill="#d0bda1"/></g></symbol>
 <symbol id="p-event" viewBox="0 0 20 24"><g shape-rendering="crispEdges"><path d="M8 0h4v4h4v4h4v8h-4v4h-4v4H8v-4H4v-4H0V8h4V4h4Z" fill="#cbb779"/><path d="M8 5h4v6h5v3h-5v5H8v-5H3v-3h5Z" fill="#f1dda1"/></g></symbol>
 <symbol id="portrait-support-pending" viewBox="0 0 120 160"><circle cx="60" cy="52" r="26" fill="#677e78"/><path d="M17 160v-23c0-26 18-46 43-46s43 20 43 46v23" fill="#415c57" stroke="#80968a"/><path d="m46 100 14 21 14-21M60 121v39" fill="none" stroke="#9aae93"/><path d="M51 49c0-13 22-13 22 0 0 8-13 8-13 17m0 7v3" fill="none" stroke="#c2c6ac" stroke-width="3"/></symbol>
 <!-- 状态图示 st-*：game-icons.net（Lorc：bleeding-wound、shattered-sword、crossed-chains、life-tap；Sbed：shield），CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ -->
@@ -4079,7 +4074,7 @@ window.ExplorationSkillEffects = {"assetBase":"./","assets":{"sword1":{"source":
 <!-- END_EXPLORATION_PRESENTATION_ASSETS -->
 <!-- BEGIN_EXPLORATION_PRESENTATION_ACTOR_ASSETS -->
 <script id="exploration-actor-assets">
-window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actors/pixel-idle-13-54-08-v1/idle-atlas.webp","width":832,"height":1216,"src":"./assets/actors/pixel-idle-13-54-08-v1/idle-atlas.webp","atlas":{"width":832,"height":1216,"columns":6,"rows":4,"frames":24,"cell":[768,1216],"crop":[0,0],"durations":[150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]}},"player-poster":{"source":"assets/actors/pixel-idle-13-54-08-v1/original.webp","width":832,"height":1216,"src":"./assets/actors/pixel-idle-13-54-08-v1/original.webp"},"player-walk":{"source":"assets/actors/walk.webp","width":832,"height":1216,"src":"./assets/actors/walk.webp"},"lize-idle":{"source":"assets/actors/char1-idle-v1/idle-atlas.webp","width":384,"height":768,"src":"./assets/actors/char1-idle-v1/idle-atlas.webp","atlas":{"width":384,"height":768,"columns":8,"rows":3,"frames":24,"cell":[334,738],"crop":[25,14],"durations":[150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]}},"lize-poster":{"source":"assets/actors/char1-idle-v1/char1-static.webp","width":384,"height":768,"src":"./assets/actors/char1-idle-v1/char1-static.webp"},"tiana-idle":{"source":"assets/actors/char2-idle-v1/idle-atlas.webp","width":384,"height":768,"src":"./assets/actors/char2-idle-v1/idle-atlas.webp","atlas":{"width":384,"height":768,"columns":8,"rows":3,"frames":23,"cell":[351,738],"crop":[16,14],"durations":[300,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]}},"tiana-poster":{"source":"assets/actors/char2-idle-v1/char2-static.webp","width":384,"height":768,"src":"./assets/actors/char2-idle-v1/char2-static.webp"},"grey-idle":{"source":"assets/actors/char3-idle-v2/idle-atlas.webp","width":512,"height":768,"src":"./assets/actors/char3-idle-v2/idle-atlas.webp","atlas":{"width":512,"height":768,"columns":8,"rows":5,"frames":40,"cell":[414,738],"crop":[49,14],"durations":[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100]}},"grey-poster":{"source":"assets/actors/char3-idle-v2/char3-static.webp","width":512,"height":768,"src":"./assets/actors/char3-idle-v2/char3-static.webp"},"saya-idle":{"source":"assets/actors/char4-idle-v1/idle-atlas.webp","width":512,"height":768,"src":"./assets/actors/char4-idle-v1/idle-atlas.webp","atlas":{"width":512,"height":768,"columns":6,"rows":4,"frames":23,"cell":[420,738],"crop":[47,14],"durations":[300,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]}},"saya-poster":{"source":"assets/actors/char4-idle-v1/char4-static.webp","width":512,"height":768,"src":"./assets/actors/char4-idle-v1/char4-static.webp"},"vivian-idle":{"source":"assets/actors/char5-idle-v1/idle-atlas.webp","width":512,"height":768,"src":"./assets/actors/char5-idle-v1/idle-atlas.webp","atlas":{"width":512,"height":768,"columns":6,"rows":4,"frames":24,"cell":[374,738],"crop":[70,14],"durations":[150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]}},"vivian-poster":{"source":"assets/actors/char5-idle-v1/char5-static.webp","width":512,"height":768,"src":"./assets/actors/char5-idle-v1/char5-static.webp"},"lize-avatar":{"source":"img/Char/1-莉澤/01正方.webp","width":400,"height":400,"src":"./img/Char/1-莉澤/01正方.webp"},"lize-portrait":{"source":"img/Char/1-莉澤/01四分之三.webp","width":1500,"height":2100,"src":"./img/Char/1-莉澤/01四分之三.webp"},"lize-full":{"source":"img/Char/1-莉澤/01Full.webp","width":2048,"height":3072,"src":"./img/Char/1-莉澤/01Full.webp"},"tiana-avatar":{"source":"img/Char/2-蒂安娜/02正方.webp","width":400,"height":400,"src":"./img/Char/2-蒂安娜/02正方.webp"},"tiana-portrait":{"source":"img/Char/2-蒂安娜/02四分之三.webp","width":1500,"height":2100,"src":"./img/Char/2-蒂安娜/02四分之三.webp"},"tiana-full":{"source":"img/Char/2-蒂安娜/02Full.webp","width":2048,"height":3072,"src":"./img/Char/2-蒂安娜/02Full.webp"},"grey-avatar":{"source":"img/Char/3-格蕾/03正方.webp","width":400,"height":400,"src":"./img/Char/3-格蕾/03正方.webp"},"grey-portrait":{"source":"img/Char/3-格蕾/03四分之三.webp","width":1500,"height":2100,"src":"./img/Char/3-格蕾/03四分之三.webp"},"grey-full":{"source":"img/Char/3-格蕾/03Full.webp","width":2048,"height":3072,"src":"./img/Char/3-格蕾/03Full.webp"},"saya-avatar":{"source":"img/Char/4-紗夜/04正方.webp","width":400,"height":400,"src":"./img/Char/4-紗夜/04正方.webp"},"saya-portrait":{"source":"img/Char/4-紗夜/04四分之三.webp","width":1500,"height":2100,"src":"./img/Char/4-紗夜/04四分之三.webp"},"saya-full":{"source":"img/Char/4-紗夜/04Full.webp","width":2048,"height":3072,"src":"./img/Char/4-紗夜/04Full.webp"},"vivian-avatar":{"source":"img/Char/5-薇薇安/05正方.webp","width":400,"height":400,"src":"./img/Char/5-薇薇安/05正方.webp"},"vivian-portrait":{"source":"img/Char/5-薇薇安/05四分之三.webp","width":1500,"height":2100,"src":"./img/Char/5-薇薇安/05四分之三.webp"},"vivian-full":{"source":"img/Char/5-薇薇安/05Full.webp","width":1848,"height":3072,"src":"./img/Char/5-薇薇安/05Full.webp"},"beast-1":{"source":"img/monster/Beast1.webp","width":154,"height":209,"src":"./img/monster/Beast1.webp"},"beast-2":{"source":"img/monster/Beast2.webp","width":256,"height":256,"src":"./img/monster/Beast2.webp"},"beast-3":{"source":"img/monster/Beast3.webp","width":304,"height":320,"src":"./img/monster/Beast3.webp"},"undead-1":{"source":"img/monster/Undead1.webp","width":272,"height":256,"src":"./img/monster/Undead1.webp"},"undead-2":{"source":"img/monster/Undead2.webp","width":320,"height":221,"src":"./img/monster/Undead2.webp"},"undead-3":{"source":"img/monster/Undead3.webp","width":138,"height":184,"src":"./img/monster/Undead3.webp"},"dragon-1":{"source":"img/monster/Dragon1.webp","width":318,"height":294,"src":"./img/monster/Dragon1.webp"},"undead-4":{"source":"img/monster/Undead4.webp","width":320,"height":268,"src":"./img/monster/Undead4.webp"},"undead-5":{"source":"img/monster/Undead5.webp","width":320,"height":272,"src":"./img/monster/Undead5.webp"},"lich-1":{"source":"img/monster/Lich.webp","width":320,"height":304,"src":"./img/monster/Lich.webp"},"drake-1":{"source":"img/monster/Drake.webp","width":320,"height":320,"src":"./img/monster/Drake.webp"},"dragon-2":{"source":"img/monster/Dragon.webp","width":320,"height":235,"src":"./img/monster/Dragon.webp"},"giant-1":{"source":"img/monster/Giant.webp","width":320,"height":297,"src":"./img/monster/Giant.webp"},"wolf-1":{"source":"img/monster/wolf.webp","width":320,"height":318,"src":"./img/monster/wolf.webp"},"bat-1":{"source":"img/monster/bat.webp","width":241,"height":320,"src":"./img/monster/bat.webp"},"mouse-1":{"source":"img/monster/mouse.webp","width":320,"height":272,"src":"./img/monster/mouse.webp"},"snake-1":{"source":"img/monster/snake.webp","width":241,"height":320,"src":"./img/monster/snake.webp"},"spider-1":{"source":"img/monster/spider.webp","width":320,"height":247,"src":"./img/monster/spider.webp"},"map-enemy":{"source":"img/monster/premons.webp","width":303,"height":256,"src":"./img/monster/premons.webp"}},"player":{"idle":"player-idle","poster":"player-poster","walk":"player-walk","anchor":[0.625,0.9473684211],"mirror":true,"pixelated":true},"companions":{"ward":{"name":"莉泽","color":{"light":"#a3341f","dark":"#e58a72"},"avatar":"lize-avatar","portrait":"lize-portrait","full":"lize-full","battle":{"idle":"lize-idle","poster":"lize-poster","anchor":[0.5104166667,0.9791666667],"scale":0.85,"fit":"height","contain":true,"layout":{"tall":{"offset":15,"behind":true,"overlap":0.15}},"pixelated":true}},"medic":{"name":"蒂安娜","color":{"light":"#285f41","dark":"#84c7a0"},"avatar":"tiana-avatar","portrait":"tiana-portrait","full":"tiana-full","battle":{"idle":"tiana-idle","poster":"tiana-poster","anchor":[0.578125,0.9791666667],"scale":0.85,"fit":"height","contain":true,"layout":{"tall":{"offset":3,"behind":true,"overlap":0.2}},"pixelated":true}},"disrupt":{"name":"格蕾","color":{"light":"#2f5d8c","dark":"#8db6e0"},"avatar":"grey-avatar","portrait":"grey-portrait","full":"grey-full","battle":{"idle":"grey-idle","poster":"grey-poster","anchor":[0.546875,0.9791666667],"scale":0.85,"fit":"height","contain":true,"layout":{"tall":{"offset":5.5,"behind":true,"overlap":0.4}},"pixelated":true}},"companion4":{"name":"纱夜","color":{"light":"#64398a","dark":"#bd9be0"},"avatar":"saya-avatar","portrait":"saya-portrait","full":"saya-full","battle":{"idle":"saya-idle","poster":"saya-poster","anchor":[0.42578125,0.9791666667],"scale":0.8113,"fit":"height","contain":true,"layout":{"tall":{"offset":10,"behind":true,"overlap":0.3}},"pixelated":true}},"companion5":{"name":"薇薇安","color":{"light":"#9c3d63","dark":"#f2a3c2"},"avatar":"vivian-avatar","portrait":"vivian-portrait","full":"vivian-full","battle":{"idle":"vivian-idle","poster":"vivian-poster","anchor":[0.517578125,0.9791666667],"scale":0.82,"fit":"height","contain":true,"layout":{"tall":{"offset":14.5,"behind":true,"overlap":0.15}},"pixelated":true}}},"mapEnemy":"map-enemy","enemies":{"beast":["wolf-1","bat-1","mouse-1","snake-1","spider-1","beast-1"],"ghost":["undead-1","undead-2"],"undead":["undead-3","undead-4","undead-5"],"lich":["lich-1"],"drake":["drake-1"],"wyvern":["dragon-1"],"dragon":["dragon-2"],"giant":["giant-1"],"demon":["beast-2","beast-3"]},"keywords":{"wolf-1":["狼","犬"],"bat-1":["蝙","蝠"],"mouse-1":["鼠"],"snake-1":["蛇"],"spider-1":["蜘","蛛"],"beast-1":["鳥","鸟"],"undead-3":["殭屍","屍","僵尸","尸"],"undead-4":["骷髏","骨","兵","劍","刀","骷髅","剑"],"undead-5":["骷髏","骨","弓","箭","射手","骷髅"]}};
+window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actors/pixel-idle-13-54-08-v1/idle-atlas.webp","width":832,"height":1216,"src":"./assets/actors/pixel-idle-13-54-08-v1/idle-atlas.webp","atlas":{"width":832,"height":1216,"columns":6,"rows":4,"frames":24,"cell":[768,1216],"crop":[0,0],"durations":[150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]},"span":[0.125,0.9219]},"player-poster":{"source":"assets/actors/pixel-idle-13-54-08-v1/original.webp","width":832,"height":1216,"src":"./assets/actors/pixel-idle-13-54-08-v1/original.webp","span":[0.125,0.9219]},"player-walk":{"source":"assets/actors/walk.webp","width":832,"height":1216,"src":"./assets/actors/walk.webp","span":[0.3641,0.9363]},"lize-idle":{"source":"assets/actors/char1-idle-v1/idle-atlas.webp","width":384,"height":768,"src":"./assets/actors/char1-idle-v1/idle-atlas.webp","atlas":{"width":384,"height":768,"columns":8,"rows":3,"frames":24,"cell":[334,738],"crop":[25,14],"durations":[150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]},"span":[0.0677,0.9349]},"lize-poster":{"source":"assets/actors/char1-idle-v1/char1-static.webp","width":384,"height":768,"src":"./assets/actors/char1-idle-v1/char1-static.webp","span":[0.0677,0.9349]},"tiana-idle":{"source":"assets/actors/char2-idle-v1/idle-atlas.webp","width":384,"height":768,"src":"./assets/actors/char2-idle-v1/idle-atlas.webp","atlas":{"width":384,"height":768,"columns":8,"rows":3,"frames":23,"cell":[351,738],"crop":[16,14],"durations":[300,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]},"span":[0.0442,0.9558]},"tiana-poster":{"source":"assets/actors/char2-idle-v1/char2-static.webp","width":384,"height":768,"src":"./assets/actors/char2-idle-v1/char2-static.webp","span":[0.0442,0.9558]},"grey-idle":{"source":"assets/actors/char3-idle-v2/idle-atlas.webp","width":512,"height":768,"src":"./assets/actors/char3-idle-v2/idle-atlas.webp","atlas":{"width":512,"height":768,"columns":8,"rows":5,"frames":40,"cell":[414,738],"crop":[49,14],"durations":[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100]},"span":[0.0957,0.9043]},"grey-poster":{"source":"assets/actors/char3-idle-v2/char3-static.webp","width":512,"height":768,"src":"./assets/actors/char3-idle-v2/char3-static.webp","span":[0.0957,0.9043]},"saya-idle":{"source":"assets/actors/char4-idle-v1/idle-atlas.webp","width":512,"height":768,"src":"./assets/actors/char4-idle-v1/idle-atlas.webp","atlas":{"width":512,"height":768,"columns":6,"rows":4,"frames":23,"cell":[420,738],"crop":[47,14],"durations":[300,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]},"span":[0.0937,0.9063]},"saya-poster":{"source":"assets/actors/char4-idle-v1/char4-static.webp","width":512,"height":768,"src":"./assets/actors/char4-idle-v1/char4-static.webp","span":[0.0937,0.9063]},"vivian-idle":{"source":"assets/actors/char5-idle-v1/idle-atlas.webp","width":512,"height":768,"src":"./assets/actors/char5-idle-v1/idle-atlas.webp","atlas":{"width":512,"height":768,"columns":6,"rows":4,"frames":24,"cell":[374,738],"crop":[70,14],"durations":[150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150,150]},"span":[0.1386,0.8614]},"vivian-poster":{"source":"assets/actors/char5-idle-v1/char5-static.webp","width":512,"height":768,"src":"./assets/actors/char5-idle-v1/char5-static.webp","span":[0.1386,0.8614]},"lize-avatar":{"source":"img/Char/1-莉澤/01正方.webp","width":400,"height":400,"src":"./img/Char/1-莉澤/01正方.webp","span":[0.0625,0.96]},"lize-portrait":{"source":"img/Char/1-莉澤/01四分之三.webp","width":1500,"height":2100,"src":"./img/Char/1-莉澤/01四分之三.webp","span":[0.0033,0.994]},"lize-full":{"source":"img/Char/1-莉澤/01Full.webp","width":2048,"height":3072,"src":"./img/Char/1-莉澤/01Full.webp","span":[0.1513,0.8584]},"tiana-avatar":{"source":"img/Char/2-蒂安娜/02正方.webp","width":400,"height":400,"src":"./img/Char/2-蒂安娜/02正方.webp","span":[0.1375,1.0]},"tiana-portrait":{"source":"img/Char/2-蒂安娜/02四分之三.webp","width":1500,"height":2100,"src":"./img/Char/2-蒂安娜/02四分之三.webp","span":[0.056,0.988]},"tiana-full":{"source":"img/Char/2-蒂安娜/02Full.webp","width":2048,"height":3072,"src":"./img/Char/2-蒂安娜/02Full.webp","span":[0.122,0.8248]},"grey-avatar":{"source":"img/Char/3-格蕾/03正方.webp","width":400,"height":400,"src":"./img/Char/3-格蕾/03正方.webp","span":[0.0,0.9325]},"grey-portrait":{"source":"img/Char/3-格蕾/03四分之三.webp","width":1500,"height":2100,"src":"./img/Char/3-格蕾/03四分之三.webp","span":[0.0,0.948]},"grey-full":{"source":"img/Char/3-格蕾/03Full.webp","width":2048,"height":3072,"src":"./img/Char/3-格蕾/03Full.webp","span":[0.0444,0.898]},"saya-avatar":{"source":"img/Char/4-紗夜/04正方.webp","width":400,"height":400,"src":"./img/Char/4-紗夜/04正方.webp","span":[0.0,1.0]},"saya-portrait":{"source":"img/Char/4-紗夜/04四分之三.webp","width":1500,"height":2100,"src":"./img/Char/4-紗夜/04四分之三.webp","span":[0.0,1.0]},"saya-full":{"source":"img/Char/4-紗夜/04Full.webp","width":2048,"height":3072,"src":"./img/Char/4-紗夜/04Full.webp","span":[0.0771,0.8799]},"vivian-avatar":{"source":"img/Char/5-薇薇安/05正方.webp","width":400,"height":400,"src":"./img/Char/5-薇薇安/05正方.webp","span":[0.03,1.0]},"vivian-portrait":{"source":"img/Char/5-薇薇安/05四分之三.webp","width":1500,"height":2100,"src":"./img/Char/5-薇薇安/05四分之三.webp","span":[0.008,1.0]},"vivian-full":{"source":"img/Char/5-薇薇安/05Full.webp","width":1848,"height":3072,"src":"./img/Char/5-薇薇安/05Full.webp","span":[0.0708,0.9443]},"beast-1":{"source":"img/monster/Beast1.webp","width":154,"height":209,"src":"./img/monster/Beast1.webp","span":[0.0,1.0]},"beast-2":{"source":"img/monster/Beast2.webp","width":256,"height":256,"src":"./img/monster/Beast2.webp","span":[0.0078,0.9922]},"beast-3":{"source":"img/monster/Beast3.webp","width":304,"height":320,"src":"./img/monster/Beast3.webp","span":[0.0065,0.9935]},"undead-1":{"source":"img/monster/Undead1.webp","width":272,"height":256,"src":"./img/monster/Undead1.webp","span":[0.0147,0.978]},"undead-2":{"source":"img/monster/Undead2.webp","width":320,"height":221,"src":"./img/monster/Undead2.webp","span":[0.0,1.0]},"undead-3":{"source":"img/monster/Undead3.webp","width":138,"height":184,"src":"./img/monster/Undead3.webp","span":[0.0,1.0]},"dragon-1":{"source":"img/monster/Dragon1.webp","width":318,"height":294,"src":"./img/monster/Dragon1.webp","span":[0.0,1.0]},"undead-4":{"source":"img/monster/Undead4.webp","width":320,"height":268,"src":"./img/monster/Undead4.webp","span":[0.0,1.0]},"undead-5":{"source":"img/monster/Undead5.webp","width":320,"height":272,"src":"./img/monster/Undead5.webp","span":[0.0,1.0]},"lich-1":{"source":"img/monster/Lich.webp","width":320,"height":304,"src":"./img/monster/Lich.webp","span":[0.0,1.0]},"drake-1":{"source":"img/monster/Drake.webp","width":320,"height":320,"src":"./img/monster/Drake.webp","span":[0.0,1.0]},"dragon-2":{"source":"img/monster/Dragon.webp","width":320,"height":235,"src":"./img/monster/Dragon.webp","span":[0.0,1.0]},"giant-1":{"source":"img/monster/Giant.webp","width":320,"height":297,"src":"./img/monster/Giant.webp","span":[0.0,1.0]},"wolf-1":{"source":"img/monster/wolf.webp","width":320,"height":318,"src":"./img/monster/wolf.webp","span":[0.0,1.0]},"bat-1":{"source":"img/monster/bat.webp","width":241,"height":320,"src":"./img/monster/bat.webp","span":[0.0,1.0]},"mouse-1":{"source":"img/monster/mouse.webp","width":320,"height":272,"src":"./img/monster/mouse.webp","span":[0.0,1.0]},"snake-1":{"source":"img/monster/snake.webp","width":241,"height":320,"src":"./img/monster/snake.webp","span":[0.0,1.0]},"spider-1":{"source":"img/monster/spider.webp","width":320,"height":247,"src":"./img/monster/spider.webp","span":[0.0,1.0]},"map-enemy":{"source":"img/monster/premons.webp","width":303,"height":256,"src":"./img/monster/premons.webp","span":[0.0,1.0]}},"player":{"idle":"player-idle","poster":"player-poster","walk":"player-walk","anchor":[0.625,0.9473684211],"mirror":true,"pixelated":true},"companions":{"ward":{"name":"莉泽","color":{"light":"#a3341f","dark":"#e58a72"},"avatar":"lize-avatar","portrait":"lize-portrait","full":"lize-full","battle":{"idle":"lize-idle","poster":"lize-poster","anchor":[0.5104166667,0.9791666667],"scale":0.85,"fit":"height","contain":true,"layout":{"tall":{"offset":15,"behind":true,"overlap":0.15}},"pixelated":true}},"medic":{"name":"蒂安娜","color":{"light":"#285f41","dark":"#84c7a0"},"avatar":"tiana-avatar","portrait":"tiana-portrait","full":"tiana-full","battle":{"idle":"tiana-idle","poster":"tiana-poster","anchor":[0.578125,0.9791666667],"scale":0.85,"fit":"height","contain":true,"layout":{"tall":{"offset":3,"behind":true,"overlap":0.2}},"pixelated":true}},"disrupt":{"name":"格蕾","color":{"light":"#2f5d8c","dark":"#8db6e0"},"avatar":"grey-avatar","portrait":"grey-portrait","full":"grey-full","battle":{"idle":"grey-idle","poster":"grey-poster","anchor":[0.546875,0.9791666667],"scale":0.85,"fit":"height","contain":true,"layout":{"tall":{"offset":5.5,"behind":true,"overlap":0.4}},"pixelated":true}},"companion4":{"name":"纱夜","color":{"light":"#64398a","dark":"#bd9be0"},"avatar":"saya-avatar","portrait":"saya-portrait","full":"saya-full","battle":{"idle":"saya-idle","poster":"saya-poster","anchor":[0.42578125,0.9791666667],"scale":0.8113,"fit":"height","contain":true,"layout":{"tall":{"offset":10,"behind":true,"overlap":0.3}},"pixelated":true}},"companion5":{"name":"薇薇安","color":{"light":"#9c3d63","dark":"#f2a3c2"},"avatar":"vivian-avatar","portrait":"vivian-portrait","full":"vivian-full","battle":{"idle":"vivian-idle","poster":"vivian-poster","anchor":[0.517578125,0.9791666667],"scale":0.82,"fit":"height","contain":true,"layout":{"tall":{"offset":14.5,"behind":true,"overlap":0.15}},"pixelated":true}}},"mapEnemy":"map-enemy","enemies":{"beast":["wolf-1","bat-1","mouse-1","snake-1","spider-1","beast-1"],"ghost":["undead-1","undead-2"],"undead":["undead-3","undead-4","undead-5"],"lich":["lich-1"],"drake":["drake-1"],"wyvern":["dragon-1"],"dragon":["dragon-2"],"giant":["giant-1"],"demon":["beast-2","beast-3"]},"mirror":["undead-3"],"keywords":{"wolf-1":["狼","犬"],"bat-1":["蝙","蝠"],"mouse-1":["鼠"],"snake-1":["蛇"],"spider-1":["蜘","蛛"],"beast-1":["鳥","鸟"],"undead-3":["殭屍","屍","僵尸","尸"],"undead-4":["骷髏","骨","兵","劍","刀","骷髅","剑"],"undead-5":["骷髏","骨","弓","箭","射手","骷髅"]}};
 </script>
 <!-- END_EXPLORATION_PRESENTATION_ACTOR_ASSETS -->
 <!-- BEGIN_EXPLORATION_PRESENTATION_ACTORS -->
@@ -4110,7 +4105,8 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
     if (key === 'player') return catalog.player;
     if (key === catalog.mapEnemy) return image(key) ? {poster: key} : null;
     if (key.startsWith('companion-')) return companion(key.slice(10))?.battle || null;
-    return image(key) ? {poster: key, pixelated: true} : null;
+    // 敌人一律面向左方（玩家）；原图朝右的列在 actors.json 的 mirror，左右翻转显示。
+    return image(key) ? Object.assign({poster: key, pixelated: true}, (catalog.mirror || []).includes(key) ? {mirror: true} : {}) : null;
   }
   function defaultPresentation() {
     const portraits = {};
@@ -4122,6 +4118,8 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
         const asset = image(entry[pose]);
         // 图集（目前是战斗待机动画）：同时交出格子数据，presentation.js 逐格画出。
         if (asset.atlas) entry.atlas = Object.assign({}, entry.atlas, {[pose]: asset.atlas});
+        // 建置时量好的不透明范围（跨网域图读不到像素时，队友站位靠它）。
+        if (asset.span && (pose === 'idle' || pose === 'poster')) entry.span = Object.assign({}, entry.span, {[pose]: asset.span.slice()});
         entry[pose] = asset.src;
       }
       portraits[key] = entry;
@@ -4344,6 +4342,15 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       //   behind：站在玩家后方（图层在玩家之下）；overlap：站在后方时，允许被玩家遮住的有色宽度比例（0～0.5）。
       const layout = layoutSettings(value.layout);
       if (layout) entry.layout = layout;
+      // span：建置时量好的不透明左右范围（idle／poster 各一组，占画布宽的比例）。有它就不必读像素。
+      if (value.span && typeof value.span === 'object') {
+        const span = {};
+        for (const pose of ['idle', 'poster']) {
+          const s = value.span[pose];
+          if (entry[pose] && Array.isArray(s) && s.length === 2 && s.every(Number.isFinite) && s[0] >= 0 && s[0] < s[1] && s[1] <= 1) span[pose] = s.slice();
+        }
+        if (Object.keys(span).length) entry.span = span;
+      }
       Object.defineProperty(result.portraits, key, {value: entry, enumerable: true});
     }
     for (const [key, value] of Object.entries(input.effects === undefined ? previous.effects : input.effects)) {
@@ -4380,25 +4387,38 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       for (const item of collection.values()) { item.image.onload = item.image.onerror = null; item.image.removeAttribute('src'); }
       collection.clear();
     }
-    function preload(url, wait = 4000) {
+    // late：等待逾时时先回传「尚未载入」，图片照常下载，到了再呼叫 late(item)。
+    // 网路慢时（例如 20 Mbps 下一次预载约 7 MB 的待机动画），排在后面的敌人图原本会被永久当作读取失败。
+    function preload(url, wait = 4000, late = null, priority = '') {
       return new Promise(resolve => {
         const image = new Image();
         const load = {image, finish: null};
         let timer;
-        load.finish = ok => {
+        load.finish = (ok, timedOut) => {
           if (!pendingLoads.delete(load)) return;
           clearTimeout(timer); image.onload = image.onerror = null;
-          resolve({image, ok, width: image.naturalWidth, height: image.naturalHeight});
+          const item = {image, ok, width: image.naturalWidth, height: image.naturalHeight};
+          if (timedOut && late && !disposed) {
+            image.onload = () => {
+              image.onload = image.onerror = null;
+              Object.assign(item, {ok: image.naturalWidth > 0, width: image.naturalWidth, height: image.naturalHeight});
+              if (!disposed) late(item);
+            };
+            image.onerror = () => { image.onload = image.onerror = null; };
+          }
+          resolve(item);
         };
         pendingLoads.add(load);
         image.onload = () => load.finish(image.naturalWidth > 0);
         image.onerror = () => load.finish(false);
-        timer = setTimeout(() => load.finish(false), wait);
+        timer = setTimeout(() => load.finish(false, true), wait);
+        if (priority) image.fetchPriority = priority;
         image.src = url;
       });
     }
     const loadEffect = async ([key, asset]) => {
-      const item = await preload(asset.src, asset.href ? 30000 : 4000);
+      // 逾时后照常下载，到了就改用（effectMedia 存的是同一个物件）。
+      const item = await preload(asset.src, asset.href ? 30000 : 4000, () => { lastError = mediaDiagnostic(); });
       if (disposed) { item.image.removeAttribute('src'); return; }
       effectMedia.set(key, item);
       if (!item.ok) lastError = 'A skill effect could not be loaded; using the built-in effect.';
@@ -4435,15 +4455,23 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       for (const entry of Object.values(settings.portraits)) for (const [pose, sheet] of Object.entries(entry.atlas || {})) {
         if (!atlases.has(entry[pose])) atlases.set(entry[pose], sheet);
       }
-      return Promise.all([...urls].map(async url => {
-        const item = await preload(url), sheet = atlases.get(url);
+      const fit = (item, sheet) => {
         if (sheet && item.ok) {
           // 图集：之后的排版一律用原动画的画布大小；图片放不下整个格子表就当作读取失败。
           if (item.width >= sheet.columns * sheet.cell[0] && item.height >= sheet.rows * sheet.cell[1]) {
             item.atlas = sheet; item.width = sheet.width; item.height = sheet.height;
           } else item.ok = false;
         }
-        return [url, item];
+        return item;
+      };
+      return Promise.all([...urls].map(async url => {
+        const sheet = atlases.get(url);
+        // 待机动画图集较大，下载顺序排在静态图与敌人图之后。
+        const item = await preload(url, 4000, arrived => {
+          fit(arrived, sheet);
+          if (media.get(url) === arrived) { lastError = mediaDiagnostic(); syncPortraits(); }
+        }, sheet ? 'low' : 'high');
+        return [url, fit(item, sheet)];
       })).then(entries => new Map(entries));
     }
     function mediaDiagnostic() {
@@ -4485,7 +4513,11 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       return item.span;
     }
     function visibleSpan(entry, item) {
-      const spans = [entry.idle, entry.poster].map(url => media.get(url)).filter(it => it && it.ok && it.width === item.width && it.height === item.height).map(opaqueSpan).filter(Boolean);
+      const spans = ['idle', 'poster'].map(pose => {
+        const it = media.get(entry[pose]);
+        if (!it || !it.ok || it.width !== item.width || it.height !== item.height) return null;
+        return (entry.span && entry.span[pose]) || opaqueSpan(it);
+      }).filter(Boolean);
       return spans.length ? [Math.min(...spans.map(x => x[0])), Math.max(...spans.map(x => x[1]))] : null;
     }
     function layoutPortrait(actor) {
@@ -6569,6 +6601,13 @@ window.BattleSceneKeys = {"street":"london","woodland":"woodland","factory":"fac
     tools.setAttribute('aria-label', '游戏选单');
     // 先保存参照：按钮搬到尚未放进页面的容器时，用 id 就找不到。
     var buttons = ['theme-toggle', 'music-button', 'skill-layout-button', 'help-button', 'retreat-button'].map($).filter(Boolean);
+    // 只显示图示时（战斗列），文字即使字级是 0 仍会在 grid 里占一列、把图示往下推 3px；包进 .hud-label，另外隐藏。
+    function wrapLabel(button) {
+      Array.prototype.slice.call(button.childNodes).forEach(function (node) {
+        if (node.nodeType === 3 && node.textContent.trim()) { var label = el('span', 'hud-label'); node.replaceWith(label); label.appendChild(node); }
+      });
+    }
+    ['retreat-button', 'help-button'].forEach(function (id) { if ($(id)) wrapLabel($(id)); });
     // 撤离在手机战斗只显示图示：门与向外箭头。
     var retreat = $('retreat-button');
     if (retreat) retreat.insertAdjacentHTML('beforeend', '<svg class="hud-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2.5H3v11h4"/><path d="M7 8h7M11 5l3 3-3 3"/></svg>');
@@ -7132,6 +7171,12 @@ window.ExplorationPrepCoverAssets = {"width":1448,"height":1086,"cover":"./explo
       var maskId = uid + '-' + id;
       var mask = el('mask', { id: maskId, maskUnits: 'userSpaceOnUse', x: 0, y: 0, width: W, height: H });
       mask.appendChild(el('image', { href: p.mask, x: box[0], y: box[1], width: box[2], height: box[3] }));
+      // 遮罩可能包含被前方人物挡住的部分（纱夜的头发在蒂安娜头部后方）：扣掉站在前方的人（外框下缘较低＝较近），
+      // 变亮与变暗都只作用在看得到的部分。
+      ids.forEach(function (other) {
+        var q = assets.people[other];
+        if (other !== id && q.box[1] + q.box[3] > box[1] + box[3]) mask.appendChild(el('image', { href: q.mask, x: q.box[0], y: q.box[1], width: q.box[2], height: q.box[3], filter: 'url(#' + uid + '-black)' }));
+      });
       defs.appendChild(mask);
       var g = el('g', { 'class': 'prep-cover-person' });
       var hit = el('polygon', { 'class': 'prep-cover-hit', points: p.hit });
@@ -8743,7 +8788,7 @@ window.SceneEnvironment=(()=>{
     function actorMarkup(view,id){
       if(view.kind==='enemy'){
         const key=A.mapEnemyKey();
-        return '<ellipse rx="18" ry="7" fill="#172e27" opacity=".5"/>'+(A.mapSprite(key,46,57,'scene45-enemy-art')||`<use href="#p-${view.species}" x="-23" y="-57" width="46" height="57"/>`)+'<path d="M0-70l5 6-5 6-5-6Z" fill="#ecab80" stroke="#4b3928"/>';
+        return '<ellipse rx="18" ry="7" fill="#172e27" opacity=".5"/>'+A.mapSprite(key,46,57,'scene45-enemy-art')+'<path d="M0-70l5 6-5 6-5-6Z" fill="#ecab80" stroke="#4b3928"/>';
       }
       return view.kind==='event'?'<ellipse rx="16" ry="7" fill="#ddc28c" opacity=".35"/><use href="#p-event" x="-14" y="-39" width="28" height="27"/>':'';
     }
@@ -9297,7 +9342,7 @@ window.SceneEnvironment=(()=>{
   function art(id,css){return'<svg class="'+(css||'')+'" aria-hidden="true"><use href="#'+id+'"/></svg>';}
   function supportInfo(id){var member=A.companion(id);return member?Object.assign({},R.SUPPORTS[id],{name:member.name}):R.SUPPORTS[id];}
   function companionArt(id,kind,css){return A.companionImage(id,kind,css)||art(kind==='avatar'?'i-'+R.SUPPORTS[id].icon:R.SUPPORTS[id].portrait||'portrait-support-'+id,css);}
-  function mapArt(key,fallback){var sprite=A.mapSprite(key,48,64,'');return sprite?'<svg class="pixel-sprite" viewBox="0 0 48 64" aria-hidden="true"><g transform="translate(24 60)">'+sprite+'</g></svg>':art(fallback,'pixel-sprite');}
+  function mapArt(key,fallback){var sprite=A.mapSprite(key,48,64,'');return sprite?'<svg class="pixel-sprite" viewBox="0 0 48 64" aria-hidden="true"><g transform="translate(24 60)">'+sprite+'</g></svg>':fallback?art(fallback,'pixel-sprite'):'';}
   // 长按连走撞墙时，同一句只提示一次（不重复朗读、不延长显示）；放开后再按会重新提示。
   var holdNotice=null,holdNoticeToken=null;
   function announce(message){
