@@ -3997,9 +3997,17 @@ var NewCardMusic = (function () {
         var tracks = [], current = null, mode = 'sequence', error = '', notice = '', pending = false;
         var wanted = false, epoch = 0, history = [], bag = [], ownedUrls = new Set();
         var selectedSetting = '';
+        // 自动播放：卡片挂载时开始播放（静音中不播）。玩家按过暂停，之后挂载的卡片不再自动播放。
+        // 浏览器还不允许出声（页面没被点过）时，等第一次点击或按键再播。
+        var userPaused = false, autoWanted = false, unlockDocs = new Set();
+        var UNLOCK = ['pointerdown', 'keydown', 'touchend'];
         // 小游戏曲目：和通用曲目分开的清单，共用同一个 audio（音量、静音、播放方式都相同）。
         // 进入小游戏时，自动切换开启且正在播放，就换成上次选的小游戏曲目；离开时回到原本的曲目与位置。
         var battleTracks = [], battleOn = true, battleActive = false, battleChoice = '', mainChoice = '', resumeAt = null;
+        // 亲密场景曲目（N01）：任一队友的 NSFW 状态为「是」时，正在播放就换上；全部回到「否」时回到原本的曲目与位置。
+        // 做法同小游戏曲目，但小游戏中以战斗曲目优先（离开小游戏时若场景仍在，换回亲密场景曲目）。
+        // 每张卡片回报自己楼层的状态，以楼层编号最大的卡片为准（旧楼层的变量不影响）。
+        var nsfwTracks = [], nsfwOn = true, nsfwActive = false, nsfwChoice = '', nsfwReports = new Map();
         try {
             var saved = JSON.parse(host.localStorage.getItem(SETTINGS) || '{}');
             mode = ['sequence', 'repeat-one', 'shuffle'].includes(saved.mode) ? saved.mode : mode;
@@ -4008,15 +4016,23 @@ var NewCardMusic = (function () {
             selectedSetting = typeof saved.track === 'string' ? saved.track : '';
             battleChoice = typeof saved.battleTrack === 'string' ? saved.battleTrack : '';
             battleOn = saved.battle !== false;
+            nsfwChoice = typeof saved.nsfwTrack === 'string' ? saved.nsfwTrack : '';
+            nsfwOn = saved.nsfw !== false;
         } catch (_) { audio.volume = .35; }
         mainChoice = selectedSetting;
-        function find(id) { return tracks.find(function (t) { return t.id === id; }) || battleTracks.find(function (t) { return t.id === id; }); }
+        function find(id) {
+            return tracks.find(function (t) { return t.id === id; }) || battleTracks.find(function (t) { return t.id === id; }) ||
+                nsfwTracks.find(function (t) { return t.id === id; });
+        }
         function isBattle(id) { return battleTracks.some(function (t) { return t.id === id; }); }
-        function listOf(id) { return isBattle(id) ? battleTracks : tracks; }
+        function isNsfw(id) { return nsfwTracks.some(function (t) { return t.id === id; }); }
+        function isMain(id) { return !!id && !isBattle(id) && !isNsfw(id); }
+        function listOf(id) { return isBattle(id) ? battleTracks : isNsfw(id) ? nsfwTracks : tracks; }
         function info(track) { return {id: track.id, title: track.title, artist: track.artist}; }
         function state() {
             return {
-                tracks: tracks.map(info), battleTracks: battleTracks.map(info),
+                tracks: tracks.map(info), battleTracks: battleTracks.map(info), nsfwTracks: nsfwTracks.map(info),
+                nsfwActive: nsfwActive, nsfwMusic: nsfwOn, nsfw: isNsfw(current),
                 track: current, playing: !audio.paused && !audio.ended, pending: pending,
                 time: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
                 duration: Number.isFinite(audio.duration) ? audio.duration : 0,
@@ -4026,7 +4042,7 @@ var NewCardMusic = (function () {
         }
         function notify() { if (!disposed) listeners.forEach(function (callback) { try { callback(state()); } catch (_) {} }); }
         function saveSettings() {
-            try { host.localStorage.setItem(SETTINGS, JSON.stringify({mode: mode, volume: audio.volume, muted: audio.muted, track: mainChoice, battleTrack: battleChoice, battle: battleOn})); } catch (_) {}
+            try { host.localStorage.setItem(SETTINGS, JSON.stringify({mode: mode, volume: audio.volume, muted: audio.muted, track: mainChoice, battleTrack: battleChoice, battle: battleOn, nsfwTrack: nsfwChoice, nsfw: nsfwOn})); } catch (_) {}
         }
         // 主要来源不能播（或已经载入失败）而且有备援时，用备援。
         function sourceOf(track) {
@@ -4051,8 +4067,8 @@ var NewCardMusic = (function () {
             var wasPlaying = wanted, old = tracks.find(function (t) { return t.id === current; });
             tracks = (next.length ? next : DEFAULTS.map(function (t) { return Object.assign({}, t); }));
             bag = [];
-            // 小游戏曲目播放中：只换清单，不打断（离开小游戏时再回到通用曲目）。
-            if (isBattle(current)) { notify(); return true; }
+            // 小游戏／亲密场景曲目播放中：只换清单，不打断（离开时再回到通用曲目）。
+            if (isBattle(current) || isNsfw(current)) { notify(); return true; }
             var keep = tracks.find(function (t) { return t.id === current; });
             if (!keep || !old || keep.src !== old.src) choose(tracks[0].id, wasPlaying, false);
             notify(); return true;
@@ -4070,20 +4086,49 @@ var NewCardMusic = (function () {
             } catch (problem) {
                 if (disposed || version !== epoch || !wanted) return false;
                 pending = false; wanted = false;
+                // 自动播放被浏览器挡下：不显示错误，等第一次点击或按键。
+                if (problem.name === 'NotAllowedError' && autoWanted) { armUnlock(); notify(); return false; }
                 error = problem.name === 'NotAllowedError' ? '请再次按下播放，让浏览器启用声音。' : '这首音乐无法播放，请选择其他曲目。';
                 notify(); return false;
             }
         }
         function pause() { wanted = false; pending = false; audio.pause(); notify(); }
+        // 自动播放开始时，亲密场景进行中就直接播亲密场景曲目。
+        function playAuto() {
+            if (nsfwActive && nsfwOn && !battleActive && !isNsfw(current) && nsfwTracks.length) startNsfw();
+            else play();
+        }
+        function unlock() {
+            disarmUnlock();
+            if (autoWanted && !wanted && !userPaused && !audio.muted) playAuto();
+        }
+        function armUnlock() {
+            // 已移除的卡片（iframe 已不在页面上）不再听。
+            unlockDocs.forEach(function (doc) { if (!doc.defaultView) unlockDocs.delete(doc); });
+            unlockDocs.forEach(function (doc) { UNLOCK.forEach(function (type) { doc.addEventListener(type, unlock, true); }); });
+        }
+        function disarmUnlock() {
+            unlockDocs.forEach(function (doc) { UNLOCK.forEach(function (type) { doc.removeEventListener(type, unlock, true); }); });
+        }
+        // view：呼叫的卡片视窗。卡片在 iframe 里，点击卡片不会传到最上层，所以两边的文件都要听。
+        function autoplay(view) {
+            if (disposed) return;
+            unlockDocs.add(host.document);
+            if (view && view.document) unlockDocs.add(view.document);
+            if (userPaused) return;
+            autoWanted = true;
+            if (!wanted && !audio.muted) playAuto();
+        }
         function choose(id, autoplay, remember) {
             if (disposed) return false;
             var track = find(id);
             if (!track) return false;
             // 小游戏中从通用曲目换到小游戏曲目：记下原本的曲目、位置与是否在播放，离开时回到这里。
-            if (battleActive && isBattle(id) && current && !isBattle(current)) resumeAt = {id: current, time: audio.currentTime || 0, playing: wanted};
+            // 亲密场景中从通用曲目换到亲密场景曲目也一样。
+            if (((battleActive && isBattle(id)) || (nsfwActive && isNsfw(id))) && isMain(current)) resumeAt = {id: current, time: audio.currentTime || 0, playing: wanted};
             if (remember !== false && current && current !== id) { history.push(current); if (history.length > 100) history.shift(); }
             epoch++; wanted = false; pending = false; audio.pause(); error = ''; current = id;
-            if (isBattle(id)) battleChoice = id; else mainChoice = id;
+            if (isBattle(id)) battleChoice = id; else if (isNsfw(id)) nsfwChoice = id; else mainChoice = id;
             if (track.notes && !track.src) track.src = blobUrl(scoreBlob(host, track));
             audio.src = sourceOf(track); audio.loop = mode === 'repeat-one'; audio.load();
             saveSettings(); notify();
@@ -4117,6 +4162,37 @@ var NewCardMusic = (function () {
         function startBattle() {
             var pick = battleTracks.find(function (t) { return t.id === battleChoice; }) || battleTracks[0];
             if (pick) choose(pick.id, true, false);
+        }
+        function startNsfw() {
+            var pick = nsfwTracks.find(function (t) { return t.id === nsfwChoice; }) || nsfwTracks[0];
+            if (pick) choose(pick.id, true, false);
+        }
+        function enterNsfw() {
+            if (nsfwActive) return;
+            nsfwActive = true;
+            if (!battleActive) { if (isMain(current)) resumeAt = null; if (nsfwOn && wanted) startNsfw(); }
+            notify();
+        }
+        function leaveNsfw() {
+            if (!nsfwActive) return;
+            nsfwActive = false;
+            if (isNsfw(current)) restoreMain(wanted); else if (!battleActive) resumeAt = null;
+            notify();
+        }
+        // 以楼层编号最大的回报为准；同一楼以最后一次回报为准。
+        function applyNsfw() {
+            var best = null;
+            nsfwReports.forEach(function (report) { if (!best || report.id >= best.id) best = report; });
+            if (best && best.active) enterNsfw(); else leaveNsfw();
+        }
+        function setNsfwMusic(value) {
+            if (disposed || typeof value !== 'boolean') return false;
+            nsfwOn = value; saveSettings();
+            if (nsfwActive && !battleActive) {
+                if (value && wanted && !isNsfw(current)) startNsfw();
+                else if (!value && isNsfw(current)) restoreMain(wanted);
+            }
+            notify(); return true;
         }
         // 回到通用曲目：原本的曲目从离开的位置继续；resume 决定是否接着播放。
         function restoreMain(resume) {
@@ -4152,6 +4228,10 @@ var NewCardMusic = (function () {
                 restoreMain(resumeAt ? resumeAt.playing : wanted);
                 notice = '战斗曲目无法载入，已改回原本的音乐。'; notify(); return;
             }
+            if (nsfwActive && isNsfw(current)) {
+                restoreMain(resumeAt ? resumeAt.playing : wanted);
+                notice = '亲密场景曲目无法载入，已改回原本的音乐。'; notify(); return;
+            }
             pending = false; wanted = false; audio.pause(); error = '这首音乐无法载入，请选择其他曲目。'; notify(); }
         function modeTo(value) {
             if (!['sequence', 'repeat-one', 'shuffle'].includes(value)) return;
@@ -4160,6 +4240,7 @@ var NewCardMusic = (function () {
         function seek(value) { if (Number.isFinite(value) && Number.isFinite(audio.duration) && audio.duration > 0) { audio.currentTime = Math.max(0, Math.min(audio.duration, value)); notify(); } }
         function dispose() {
             if (disposed) return;
+            disarmUnlock(); unlockDocs.clear();
             disposed = true; epoch++; audio.pause(); audio.removeAttribute('src'); audio.load();
             ownedUrls.forEach(function (url) { host.URL.revokeObjectURL(url); }); ownedUrls.clear(); listeners.clear();
             events.forEach(function (event) { audio.removeEventListener(event, notify); });
@@ -4175,9 +4256,17 @@ var NewCardMusic = (function () {
         tracks = normalized(initialTracks);
         if (!tracks.length) tracks = DEFAULTS.map(function (track) { return Object.assign({}, track); });
         var service = {
-            state: state, play: play, pause: pause, choose: choose, next: next, seek: seek, setMode: modeTo,
+            state: state, choose: choose, next: next, seek: seek, setMode: modeTo,
+            // 玩家按的播放／暂停。暂停后，之后挂载的卡片不再自动播放；再按播放就恢复。
+            play: function () { userPaused = false; disarmUnlock(); return play(); },
+            pause: function () { userPaused = true; disarmUnlock(); pause(); },
+            autoplay: autoplay,
             setVolume: function (value) { if (Number.isFinite(value)) { audio.volume = Math.max(0, Math.min(1, value)); saveSettings(); notify(); } },
-            mute: function () { audio.muted = !audio.muted; saveSettings(); notify(); },
+            // 静音中不自动播放；取消静音时，原本该自动播放（玩家没按过暂停）就开始播放。
+            mute: function () {
+                audio.muted = !audio.muted; saveSettings(); notify();
+                if (!audio.muted && autoWanted && !wanted && !userPaused) play();
+            },
             setTracks: setTracks,
             setBattleTracks: function (input) {
                 if (disposed || !Array.isArray(input)) return false;
@@ -4196,8 +4285,27 @@ var NewCardMusic = (function () {
             leaveBattle: function () {
                 if (disposed || !battleActive) return;
                 battleActive = false;
-                if (isBattle(current)) restoreMain(wanted); else resumeAt = null;
+                if (isBattle(current)) restoreMain(wanted); else if (!isNsfw(current)) resumeAt = null;
+                // 小游戏中亲密场景开始了：回到正文后换上亲密场景曲目。
+                if (nsfwActive && nsfwOn && wanted && !isNsfw(current) && nsfwTracks.length) startNsfw();
                 notify();
+            },
+            setNsfwTracks: function (input) {
+                if (disposed || !Array.isArray(input)) return false;
+                var ids = new Set(tracks.concat(battleTracks).map(function (t) { return t.id; }));
+                nsfwTracks = normalized(input).filter(function (t) { return !ids.has(t.id); });
+                notify(); return true;
+            },
+            setNsfwMusic: setNsfwMusic,
+            // token：每张卡片自己的记号；id：楼层编号。active：这一楼是否有队友的 NSFW 状态为「是」。
+            reportNsfw: function (token, id, active) {
+                if (disposed) return;
+                nsfwReports.set(token, {id: Number(id) || 0, active: !!active});
+                applyNsfw();
+            },
+            dropNsfw: function (token) {
+                if (disposed || !nsfwReports.has(token)) return;
+                nsfwReports.delete(token); applyNsfw();
             },
             attach: function (callback) {
                 if (cleanupTimer !== null) host.clearTimeout(cleanupTimer);
@@ -4216,6 +4324,7 @@ var NewCardMusic = (function () {
         var view = options.window, host = hostWindow(view), doc = root.ownerDocument;
         var player = host[KEY] || (host[KEY] = createPlayer(host, options.tracks));
         if (options.battleTracks) player.setBattleTracks(options.battleTracks);
+        if (options.nsfwTracks) player.setNsfwTracks(options.nsfwTracks);
         var abort = new view.AbortController(), closed = false, lastLibrary = '', returnFocus = null;
         var dialog = doc.createElement('dialog');
         dialog.className = 'nc-music';
@@ -4237,6 +4346,9 @@ var NewCardMusic = (function () {
             // 「战斗」分类（battleTracks）只在小游戏中显示；「通用」是一般曲目。
             '<div class="nc-library-group nc-battle-group" data-music-battle hidden><div class="nc-library-head"><h3>战斗</h3></div>' +
             '<label class="nc-auto"><input type="checkbox" data-music-auto><span>战斗中使用战斗曲目</span></label><ol class="nc-track-list" data-music-list="battle"></ol></div>' +
+            // 「亲密场景」分类（nsfwTracks）只在场景进行中显示。
+            '<div class="nc-library-group nc-battle-group" data-music-nsfw hidden><div class="nc-library-head"><h3>亲密场景</h3></div>' +
+            '<label class="nc-auto"><input type="checkbox" data-music-nsfw-auto><span>亲密场景中使用专属曲目</span></label><ol class="nc-track-list" data-music-list="nsfw"></ol></div>' +
             '<div class="nc-library-group"><div class="nc-library-head"><h3>通用</h3></div><ol class="nc-track-list" data-music-list="main"></ol></div></section></div>' +
             '<p class="nc-music-message" role="status" aria-live="polite"></p>';
         root.appendChild(dialog);
@@ -4257,7 +4369,7 @@ var NewCardMusic = (function () {
                 button.setAttribute('aria-pressed', String(state.muted));
             }
             dialog.dataset.playing = String(state.playing);
-            var selected = state.tracks.concat(state.battleTracks).find(function (track) { return track.id === state.track; });
+            var selected = state.tracks.concat(state.battleTracks, state.nsfwTracks).find(function (track) { return track.id === state.track; });
             // 还没选曲时曲名留白（高度由 CSS 保留，选曲后版面不跳动）。
             $('[data-music-title]').textContent = selected ? selected.title : '';
             $('[data-music-artist]').textContent = selected ? selected.artist : '';
@@ -4277,11 +4389,14 @@ var NewCardMusic = (function () {
             $('.nc-music-message').classList.toggle('is-error', !!state.error);
             $('[data-music-battle]').hidden = !(state.battleActive && state.battleTracks.length);
             $('[data-music-auto]').checked = state.battleMusic;
-            var libraryKey = JSON.stringify([state.tracks, state.battleTracks]);
+            $('[data-music-nsfw]').hidden = !(state.nsfwActive && state.nsfwTracks.length);
+            $('[data-music-nsfw-auto]').checked = state.nsfwMusic;
+            var libraryKey = JSON.stringify([state.tracks, state.battleTracks, state.nsfwTracks]);
             if (libraryKey !== lastLibrary) {
                 lastLibrary = libraryKey;
                 fillList($('[data-music-list="main"]'), state.tracks);
                 fillList($('[data-music-list="battle"]'), state.battleTracks);
+                fillList($('[data-music-list="nsfw"]'), state.nsfwTracks);
             }
             dialog.querySelectorAll('[data-music-track]').forEach(function (node) { node.setAttribute('aria-pressed', String(node.dataset.musicTrack === state.track)); });
         }
@@ -4342,6 +4457,7 @@ var NewCardMusic = (function () {
         });
         listen($('[data-music-volume]'), 'input', function (event) { player.setVolume(Number(event.target.value)); });
         listen($('[data-music-auto]'), 'change', function (event) { player.setBattleMusic(event.target.checked); });
+        listen($('[data-music-nsfw-auto]'), 'change', function (event) { player.setNsfwMusic(event.target.checked); });
         listen($('[data-music-seek]'), 'input', function (event) { player.seek(Number(event.target.value)); });
         function destroy() {
             if (closed) return;
@@ -4385,6 +4501,7 @@ var NewCardMusic = (function () {
         var view = options.window, host = hostWindow(view), doc = root.ownerDocument;
         var player = host[KEY] || (host[KEY] = createPlayer(host, options.tracks));
         if (options.battleTracks) player.setBattleTracks(options.battleTracks);
+        if (options.nsfwTracks) player.setNsfwTracks(options.nsfwTracks);
         var abort = new view.AbortController(), closed = false, panel = null;
         var button = root.querySelector('[data-role="music-toggle"]');
         var openButton = root.querySelector('[data-role="music-open"]');
@@ -4428,14 +4545,20 @@ var NewCardMusic = (function () {
         function destroy() {
             if (closed) return;
             closePanel(false);
-            closed = true; abort.abort(); release();
+            closed = true; abort.abort(); release(); player.dropNsfw(nsfwToken);
             if (openButton) openButton.setAttribute('aria-expanded', 'false');
         }
         listen(view, 'pagehide', function (event) { if (!event.persisted) destroy(); });
+        // 正文卡片挂载时自动播放（静音中、或玩家按过暂停就不播）。
+        player.autoplay(view);
+        var nsfwToken = {};
         return {
             open: open, isOpen: function () { return !!panel; },
             state: player.state, setTracks: player.setTracks,
             enterBattle: player.enterBattle, leaveBattle: player.leaveBattle, setBattleMusic: player.setBattleMusic,
+            // 这张卡片所在楼层的亲密场景状态（messageId：楼层编号，最大的一楼为准）。
+            setNsfw: function (active, messageId) { if (!closed) player.reportNsfw(nsfwToken, messageId, active); },
+            setNsfwMusic: player.setNsfwMusic,
             destroy: destroy
         };
     }
@@ -5201,15 +5324,33 @@ var NewCardAlbumData = (function () {
         music: { base: 'https://files.catbox.moe/', tracks: [
             {id: 'bgm-01', title: '曲目 01', src: 'c18lcn.ogg', fallback: 'iywnlz.m4a'},
             {id: 'bgm-02', title: '曲目 02', src: 'oncf8a.ogg', fallback: 'aga064.m4a'},
-            {id: 'bgm-03', title: '曲目 03', src: '87oa00.ogg', fallback: '47frig.m4a'}
+            {id: 'bgm-03', title: '曲目 03', src: '87oa00.ogg', fallback: '47frig.m4a'},
+            // 04～12：2026-11-23 上传（audio/bgm/04～12；延长方式见 audio/build_bgm.py）。
+            {id: 'bgm-04', title: '曲目 04', src: '7bkbeo.ogg', fallback: 'jvkn0m.m4a'},
+            {id: 'bgm-05', title: '曲目 05', src: 'hvhaes.ogg', fallback: 'dm7ful.m4a'},
+            {id: 'bgm-06', title: '曲目 06', src: 'cl0tsq.ogg', fallback: 'sc7fyd.m4a'},
+            {id: 'bgm-07', title: '曲目 07', src: '37p25e.ogg', fallback: 'pq6ewg.m4a'},
+            {id: 'bgm-08', title: '曲目 08', src: 'y70llj.ogg', fallback: 'pqwkgz.m4a'},
+            {id: 'bgm-09', title: '曲目 09', src: '1f5ji5.ogg', fallback: 'b840s2.m4a'},
+            {id: 'bgm-10', title: '曲目 10', src: 'qpl2yn.ogg', fallback: '0vr5xw.m4a'},
+            {id: 'bgm-11', title: '曲目 11', src: 'cyo8up.ogg', fallback: 'fiiz5g.m4a'},
+            {id: 'bgm-12', title: '曲目 12', src: 'ddnbz2.ogg', fallback: '7xmqrw.m4a'}
         ],
         // 战斗曲目（留声机的「战斗」分类，只在小游戏中显示）。src 以 ./ 或 ../ 开头时以卡片资料夹为准，不套用 base。
         // 01＝audio/bgm/B01.ogg、02＝audio/bgm/B02.ogg（2026-11-01 上传）。
         // .m4a 备援：audio/bgm/*.m4a，2026-11-22 上传（01＝iywnlz、02＝aga064、03＝47frig、B01＝bmggoq、B02＝ft92n3）。
         battle: [
             {id: 'battle-01', title: '小游戏 01', src: 'y7nm7w.ogg', fallback: 'bmggoq.m4a'},
-            {id: 'battle-02', title: '小游戏 02', src: 'u3q85d.ogg', fallback: 'ft92n3.m4a'}
+            // 02：2026-11-23 改成 0.8 倍速、音高一起变低（audio/bgm/B02）。原速版是 u3q85d.ogg／ft92n3.m4a；
+            // 0.8 倍速、音高不变的 B02keep 也已上传（t77v6j.ogg／abhle8.m4a），要换时改这一行。
+            {id: 'battle-02', title: '小游戏 02', src: 'oudnjl.ogg', fallback: '2crw91.m4a'},
+            {id: 'battle-03', title: '小游戏 03', src: '1g6d08.ogg', fallback: 'fk1lyo.m4a'}
+        ],
+        // 亲密场景曲目：任一队友的 NSFW状态 为「是」时自动切换（留声机的「亲密场景」分类，只在场景中显示）。
+        nsfw: [
+            {id: 'nsfw-01', title: '亲密场景 01', src: '5hppju.ogg', fallback: 'mzs4v4.m4a'}
         ] },
+        // 开局页曲目 OP（audio/bgm/OP，2026-11-23 上传：7f3i12.ogg／fp48oy.m4a）尚未接入，等开局页一起修改。
         ambience: { rain: './audio/ambience/rain.ogg', rainFallback: './audio/ambience/rain.m4a' },
         // 好感（雏形）：以百分比显示，max 是换算用的最大值；个别角色可在数据中用 bondMax 覆写。
         bond: { max: 100 },
@@ -8979,6 +9120,10 @@ var NewCardAlbumData = (function () {
                 return Object.assign({}, person, {bond: data.好感度, bondMax: 200, profile: profileWithLadder(person, data.阶梯),
                     experience: Object.assign({}, mvuObject(nsfw.侍奉经验), mvuObject(nsfw.亲密经验))});
             }).filter(Boolean));
+            // 亲密场景曲目：任一队友的 NSFW状态 为「是」。播放器以楼层编号最大的卡片为准。
+            if (team && musicUi && musicUi.setNsfw) musicUi.setNsfw(Object.keys(team).some(function (key) {
+                var data = mvuObject(team[key]); return !!data && data.NSFW状态 === '是';
+            }), typeof context.getCurrentMessageId === 'function' ? context.getCurrentMessageId() : context.messageId);
             var world = mvuObject(stat.世界);
             if (world) {
                 var now = mvuObject(world.当前) || {}, date = mvuObject(now.日期) || {}, time = mvuObject(now.时间) || {};
@@ -11252,7 +11397,8 @@ var NewCardAlbumData = (function () {
             // 留声机面板开在酒馆最外层的全萤幕对话框（见 music.js 的 mountFullscreen）；卡片里只留静音键与展开键。
             musicUi = NewCardMusic.mountFullscreen(root, {window: view, ambience: ambience, tracks: context.musicTracks || FRONTEND_CONFIG.music.tracks.map(musicSource),
                 fonts: function () { var style = view.getComputedStyle(root); return {serif: style.getPropertyValue('--serif').trim(), sans: style.getPropertyValue('--sans').trim()}; },
-                battleTracks: (FRONTEND_CONFIG.music.battle || []).map(musicSource)});
+                battleTracks: (FRONTEND_CONFIG.music.battle || []).map(musicSource),
+                nsfwTracks: (FRONTEND_CONFIG.music.nsfw || []).map(musicSource)});
             listen(root.querySelector('.mode-switch'), 'click', function () {
                 var paged = !root.classList.contains('paged-mode');
                 setReadingMode(paged);
