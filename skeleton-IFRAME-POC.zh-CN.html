@@ -6407,10 +6407,13 @@ var NewCardAlbumData = (function () {
         // 角色卡附带一条只影响显示的正则（regex-手札标签记号.json）：寻找 <(\/?(?:thinking|think|check|draft|{{getglobalvar::手札标签名}}))>，
         // 换成 <span data-rpg-tag="…"></span>，载入器再转回标签文字。这里把玩家设定的正文标签与过滤规则中
         // 英文 <名称> 形式的标签名称写进全域变量（例如 content|story）；内置的四个已写在正则里。
+        // CARD_TAGS 是卡片自己要判断的标签，一律写进去（不必重新汇入角色卡的正则）：
+        // encounter：看得到 <Encounter> 时，遭遇解析脚本还没回复也会先显示「整理遭遇中」，脚本没启用时看得出来。
         var TAG_NAMES_KEY = '手札标签名';
         var BUILT_IN_TAGS = ['thinking', 'think', 'check', 'draft'];
+        var CARD_TAGS = ['encounter'];
         function ruleTagNames() {
-            var names = [];
+            var names = CARD_TAGS.slice();
             ['anchor', 'filter'].forEach(function (kind) {
                 textRules[kind].rules.forEach(function (rule) {
                     [rule.open, rule.close].forEach(function (text) {
@@ -6923,26 +6926,26 @@ var NewCardAlbumData = (function () {
           }
         };
         var MAP_EVENT_RULES = {
-          "capacity": null,
-          "spawnChance": null,
+          "capacity": 5,
+          "spawnChance": 0.8,
           "expire": {
-            "hours": null,
-            "floors": null
+            "hours": 72,
+            "floors": 40
           },
           "time": {
-            "nightShare": null,
-            "nightStart": null,
-            "nightEnd": null
+            "nightShare": 0.6,
+            "nightStart": 20,
+            "nightEnd": 5
           },
           "byLadder": {
             "2": { "capacity": null, "spawnChance": null }
           },
           "districts": {
             "西区": {
-              "weight": null,
-              "scenes": { "street": null, "woodland": null, "factory": null, "residential": null },
-              "sizes": { "tiny": null, "small": null, "medium": null, "large": null },
-              "enemies": { "beast": null, "ghost": null, "undead": null, "lich": null, "drake": null, "wyvern": null, "dragon": null, "giant": null, "demon": null }
+              "weight": 3,
+              "scenes": { "street": 1, "woodland": 3, "factory": 0, "residential": 6 },
+              "sizes": { "tiny": 2, "small": 6, "medium": 2, "large": 0 },
+              "enemies": { "beast": 2, "ghost": 8, "undead": 0, "lich": 0, "drake": 0, "wyvern": 0, "dragon": 0, "giant": 0, "demon": 1 }
             },
             "西敏": {
               "weight": 0,
@@ -6951,28 +6954,28 @@ var NewCardAlbumData = (function () {
               "enemies": { "beast": null, "ghost": null, "undead": null, "lich": null, "drake": null, "wyvern": null, "dragon": null, "giant": null, "demon": null }
             },
             "北区": {
-              "weight": null,
-              "scenes": { "street": null, "woodland": null, "factory": null, "residential": null },
-              "sizes": { "tiny": null, "small": null, "medium": null, "large": null },
-              "enemies": { "beast": null, "ghost": null, "undead": null, "lich": null, "drake": null, "wyvern": null, "dragon": null, "giant": null, "demon": null }
+              "weight": 2,
+              "scenes": { "street": 0, "woodland": 8, "factory": 0, "residential": 2 },
+              "sizes": { "tiny": 0, "small": 2, "medium": 6, "large": 2 },
+              "enemies": { "beast": 8, "ghost": 0, "undead": 0, "lich": 0, "drake": 0, "wyvern": 1, "dragon": 0, "giant": 3, "demon": 0 }
             },
             "城东": {
-              "weight": null,
-              "scenes": { "street": null, "woodland": null, "factory": null, "residential": null },
-              "sizes": { "tiny": null, "small": null, "medium": null, "large": null },
-              "enemies": { "beast": null, "ghost": null, "undead": null, "lich": null, "drake": null, "wyvern": null, "dragon": null, "giant": null, "demon": null }
+              "weight": 5,
+              "scenes": { "street": 6, "woodland": 0, "factory": 3, "residential": 1 },
+              "sizes": { "tiny": 5, "small": 4, "medium": 1, "large": 0 },
+              "enemies": { "beast": 0, "ghost": 2, "undead": 8, "lich": 1, "drake": 0, "wyvern": 0, "dragon": 0, "giant": 0, "demon": 0 }
             },
             "南岸": {
-              "weight": null,
-              "scenes": { "street": null, "woodland": null, "factory": null, "residential": null },
-              "sizes": { "tiny": null, "small": null, "medium": null, "large": null },
-              "enemies": { "beast": null, "ghost": null, "undead": null, "lich": null, "drake": null, "wyvern": null, "dragon": null, "giant": null, "demon": null }
+              "weight": 3,
+              "scenes": { "street": 2, "woodland": 0, "factory": 8, "residential": 0 },
+              "sizes": { "tiny": 0, "small": 3, "medium": 5, "large": 2 },
+              "enemies": { "beast": 0, "ghost": 0, "undead": 2, "lich": 0, "drake": 6, "wyvern": 0, "dragon": 0, "giant": 0, "demon": 2 }
             },
             "东南": {
-              "weight": null,
-              "scenes": { "street": null, "woodland": null, "factory": null, "residential": null },
-              "sizes": { "tiny": null, "small": null, "medium": null, "large": null },
-              "enemies": { "beast": null, "ghost": null, "undead": null, "lich": null, "drake": null, "wyvern": null, "dragon": null, "giant": null, "demon": null }
+              "weight": 2,
+              "scenes": { "street": 0, "woodland": 4, "factory": 3, "residential": 3 },
+              "sizes": { "tiny": 0, "small": 1, "medium": 3, "large": 6 },
+              "enemies": { "beast": 0, "ghost": 0, "undead": 0, "lich": 0, "drake": 3, "wyvern": 0, "dragon": 1, "giant": 6, "demon": 0 }
             }
           }
         };
@@ -7254,7 +7257,7 @@ var NewCardAlbumData = (function () {
             return !destroyed && !isGenerating && !exploration && Number.isInteger(floor) && mapLatestFloor() === floor;
         }
         function canEnterMapEvent() { return mapEnterOpen() && floorUpdated(); }
-        // 最新一楼还没有变量更新：按钮留着但停用。
+        // 最新一楼还没有变量更新：按钮换成「解析变量」（见 map.js 的 parseForMapEvent）。
         function mapEnterWaiting() { return mapEnterOpen() && !floorUpdated(); }
         function setMapEventRules(rules) {
             if (!mapPlain(rules)) return false;
@@ -7604,8 +7607,9 @@ var NewCardAlbumData = (function () {
             atlas.eventCard.querySelector('.uiMapEventError').textContent = mapEnterError;
             var enter = atlas.eventCard.querySelector('.uiMapEnter'), waiting = mapEnterWaiting();
             enter.hidden = !waiting && !canEnterMapEvent();
-            enter.disabled = waiting;
-            enter.textContent = waiting ? '等待变量更新' : '进入探索';
+            // 还没有变量更新：按钮是「解析变量」（同正文的遭遇入口），按下后回到正文卡片显示「重新解析」的确认。
+            enter.dataset.mapAction = waiting ? 'parse' : 'enter';
+            enter.textContent = waiting ? '解析变量' : '进入探索';
         }
 
         // 换了说明的对象时，卷回顶端并把该处移到看得到的地方。
@@ -7785,6 +7789,7 @@ var NewCardAlbumData = (function () {
                 if (action === 'close') closeMap();
                 if (action === 'sheet-close') closeMapSheet();
                 if (action === 'enter') enterMapEvent();
+                if (action === 'parse') parseForMapEvent();
                 if (action === 'in') mapAnimate(atlas, mapZoomAt(atlas, v.w / 2, v.h / 2, atlas.view.s * 1.6), 220);
                 if (action === 'out') mapAnimate(atlas, mapZoomAt(atlas, v.w / 2, v.h / 2, atlas.view.s / 1.6), 220);
                 if (action === 'fit') mapAnimate(atlas, mapCentered(atlas, atlas.view.fit), 260);
@@ -7876,6 +7881,14 @@ var NewCardAlbumData = (function () {
             if (!event || !canEnterMapEvent()) return;
             mapEnterError = '';
             openExploration(null, event);
+        }
+
+        // 最新一楼还没有变量更新：关闭地图（它盖住正文卡片），在卡片上打开变量浮层的「要请求补全变量更新吗？」。
+        // 补全后再开地图，按钮就换成「进入探索」。
+        function parseForMapEvent() {
+            if (!mapEnterWaiting() || !stateView()) return;
+            closeMap(false);
+            runSvAction('ask');
         }
 
         // 整备页已经显示：关闭地图。之后关闭探索回到正文卡片（地图按钮），不回地图（使用者决定）。
