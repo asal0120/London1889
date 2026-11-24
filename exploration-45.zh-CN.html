@@ -8877,6 +8877,7 @@ window.SceneEnvironment=(()=>{
 (function () {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
+  const SNAPSHOT_STYLE=['display','visibility','opacity','fill','fill-opacity','stroke','stroke-opacity','stroke-width','color','mix-blend-mode','filter','clip-path','mask'];
   function create(options) {
     const board=options.board, R=options.rules, A=window.ExplorationActors, V=window.SceneRenderer;
     const surround=board.closest('.scene45-surround'), overviewButton=surround.querySelector('#scene45-overview'), note=surround.querySelector('#scene45-view-note');
@@ -8994,6 +8995,24 @@ window.SceneEnvironment=(()=>{
       setMotionEnabled(value){motionEnabled=!!value;syncMotion();},
       setEnvironment(value){return env.set(value);},getEnvironment(){return env.get();},
       isOverview(){return overview;},
+      // 碎裂转场用：把目前的 SVG 地图转成一张图片。页面样式不会跟着 SVG 走，有 class 的元素先把算好的样式写进 style。
+      snapshotAsync(){
+        if(disposed||!art)return null;
+        const r=art.getBoundingClientRect();if(!r.width||!r.height)return null;
+        const copy=art.cloneNode(true),from=[art,...art.querySelectorAll('[class]')],to=[copy,...copy.querySelectorAll('[class]')];
+        if(from.length!==to.length)return null;
+        from.forEach((el,i)=>{
+          const cs=getComputedStyle(el);let css=to[i].getAttribute('style')||'';
+          for(const k of SNAPSHOT_STYLE){const v=cs.getPropertyValue(k);if(v)css+=';'+k+':'+v;}
+          if(cs.transform&&cs.transform!=='none')css+=';transform:'+cs.transform+';transform-origin:'+cs.transformOrigin+';transform-box:'+cs.transformBox;
+          to[i].setAttribute('style',css);
+        });
+        copy.setAttribute('xmlns',NS);copy.setAttribute('width',r.width);copy.setAttribute('height',r.height);
+        const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml'})),img=new Image();
+        return new Promise((ok,fail)=>{img.onload=ok;img.onerror=()=>fail(new Error('snapshot'));img.src=url;})
+          .then(()=>img.decode?img.decode().catch(()=>{}):null)
+          .then(()=>{URL.revokeObjectURL(url);return{canvas:img,rect:r};},e=>{URL.revokeObjectURL(url);throw e;});
+      },
       setOverview(value){if(disposed||state?.phase!=='explore')return false;overview=!!value;stopMotion();render(state,travel);return true;},
       inspect(){return {generated:true,elevation:45,azimuth:0,projection:'orthographic',cellSize:72,groundScaleY:.7,width,height,camera:camera&&{...camera},playerCell:lastAt,visibleCells:state?state.cells.filter(c=>c.seen).length:0,occludingWalls:occluded.slice(),overview,playerPose:pose,walkReady,staticCharacter:pose!=='walk',environment:env.get(),weatherAnimating:env.isAnimating(),area:map?SceneMap.audit(map):null,disposed};},
       dispose(){if(disposed)return;stopMotion();disposed=true;if(fog)fog.dispose();env.dispose();observer?.disconnect();preference.removeEventListener('change',syncMotion);window.removeEventListener('blur',stopMotion);loader.onload=null;buttons.forEach(b=>{b.el.disabled=true;});}
@@ -10422,7 +10441,7 @@ window.SceneEnvironment=(()=>{
   // 只在「地图上走进敌人」（探索画面→战斗画面）时播放；单次遭遇战、重载还原、测试换档都不播。
   // 规则早已切到战斗，这里只是画面：refresh() 切画面前先复制目前的整个画面（去掉 id、事件、隐藏与画面外的 SVG 内容），
   // 切完后把副本叠在上面碎裂，底下是战斗画面。转场期间战斗画面 inert（不可点、不可聚焦），结束或被取消后恢复。
-  var transition=null,transitionSerial=0,suppressTransition=false;
+  var transition=null,transitionSerial=0,suppressTransition=false,heldShot=null,holdingShot=false;
   var SVG_RESOURCE={defs:1,clippath:1,mask:1,filter:1,lineargradient:1,radialgradient:1,pattern:1,marker:1,symbol:1,style:1};
   var SVG_LEAF={path:1,rect:1,circle:1,ellipse:1,line:1,polygon:1,polyline:1,image:1,use:1,text:1};
   function transitionMotionOff(){return window.matchMedia('(prefers-reduced-motion: reduce)').matches||presentation.getConfig().enabled===false;}
@@ -10494,9 +10513,11 @@ window.SceneEnvironment=(()=>{
     return{x:Math.max(24,Math.min(view.w-24,r.left+r.width/2)),y:Math.max(24,Math.min(view.h-24,r.top+r.height/2))};
   }
   // 切画面前呼叫：决定要不要播，要播就先复制目前画面。回传 null＝不播。
+  function transitionAllowed(){
+    return!(suppressTransition||disposed||pageSuspended||document.hidden||!state||state.phase!=='battle'||state.config.battleOnly)&&typeof Element.prototype.animate==='function'&&!!document.body;
+  }
   function prepareTransition(){
-    if(suppressTransition||disposed||pageSuspended||document.hidden||!state||state.phase!=='battle'||state.config.battleOnly)return null;
-    if(typeof Element.prototype.animate!=='function'||!document.body)return null;
+    if(!transitionAllowed())return null;
     var view={w:document.documentElement.clientWidth,h:window.innerHeight},box={l:-300,t:-300,r:view.w+300,b:view.h+300};
     // 页面背景是渐层，碎片要带着同一份背景，才不会和转场前的画面色差。
     var rect=uiRoot.getBoundingClientRect(),body=getComputedStyle(document.body),root=document.documentElement.getBoundingClientRect();
@@ -10512,7 +10533,21 @@ window.SceneEnvironment=(()=>{
   }
   // 场景能拍下目前画面时（立体版的 WebGL 地图），碎片改从一张整页图切：底色＋地图，不再把整页复制 45 份
   // （iPhone XS 排版、绘制 45 份副本要约 2.5 秒，2026-11-24 实测）。不能拍图的场景回传 null，照旧复制。
-  function sceneSnapshot(){return scene45&&scene45.snapshot?scene45.snapshot():null;}
+  function sceneSnapshot(){var shot=heldShot;heldShot=null;return shot&&shot.canvas?shot:sceneSnapshotNow();}
+  function sceneSnapshotNow(){return scene45&&scene45.snapshot?scene45.snapshot():null;}
+  // 要等一下才拿得到画面的场景（45° 的 SVG 地图要先转成图片）回传 Promise；其他场景回传 null。
+  function sceneSnapshotAsync(){return scene45&&scene45.snapshotAsync?scene45.snapshotAsync():null;}
+  // 遇敌时先停在地图画面，等地图图片准备好（最多 0.6 秒）再切到战斗，当作撞击前的停顿。等待期间其他 refresh 不切画面。
+  function holdForSnapshot(){
+    if(holdingShot)return true;
+    if(heldShot||transitionMotionOff()||!transitionAllowed())return false;
+    var pending=null;try{pending=sceneSnapshotAsync();}catch(_){pending=null;}
+    if(!pending||typeof pending.then!=='function')return false;
+    holdingShot=true;var done=false;
+    var go=function(shot){if(done)return;done=true;holdingShot=false;heldShot=shot||{};if(!disposed)refresh();heldShot=null;};
+    pending.then(go,function(){go(null);});setTimeout(function(){go(null);},600);
+    return true;
+  }
   function sceneSheet(view,panel,page){
     var snap=null;try{snap=sceneSnapshot();}catch(_){snap=null;}
     if(!snap||!snap.canvas||!snap.rect||!snap.rect.width)return null;
@@ -10681,7 +10716,8 @@ window.SceneEnvironment=(()=>{
     // 碎裂转场：只有探索画面→战斗画面（地图遇敌）才播；要在下面切画面之前先复制目前画面。
     if(transition&&scene!=='battle')cancelTransition();
     if(scene!=='battle')cancelTurnBanner();
-    var shatter=changed&&lastScene==='explore'&&scene==='battle'?prepareTransition():null;
+    if(changed&&lastScene==='explore'&&scene==='battle'&&holdForSnapshot())return;
+    var shatter=changed&&lastScene==='explore'&&scene==='battle'?prepareTransition():null;heldShot=null;
     $('app').dataset.scene=scene;
     $('retreat-button').hidden=scene!=='explore'&&scene!=='battle';
     if(changed){clearTimeout(noticeTimer);$('notice').hidden=true;}
