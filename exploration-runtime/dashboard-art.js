@@ -429,6 +429,12 @@
         for(var key in next)if(Object.prototype.hasOwnProperty.call(next,key))view[key]=next[key];
         start();
       },
+      // 碎裂轉場結束時重畫外框：外框只在尺寸或顏色改變時才畫，iPhone 在轉場最吃記憶體的那一刻可能畫成空白（2026-11-24 酒館內實測），
+      // 之後不會自己補。寬度先歸零，讓瀏覽器重新配置畫布。
+      redraw:function(){
+        if(disposed)return;
+        frame.width=0;refresh();
+      },
       dispose:function(){
         if(disposed)return;disposed=true;
         if(raf)cancelAnimationFrame(raf);raf=0;

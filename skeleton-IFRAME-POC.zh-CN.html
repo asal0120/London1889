@@ -11132,7 +11132,10 @@ var NewCardAlbumData = (function () {
                 frame.addEventListener('newcard-exploration-ready', wire, {once: true});
                 frame.addEventListener('load', wire, {once: true});
                 var base = '<base href="' + url.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
-                var ready = '<script>(function(){var f=window.frameElement;if(f)f.dispatchEvent(new Event("newcard-exploration-ready"));})();<\/script>';
+                // 探索页的宋体跟着正文字体（iPhone 没有内置中文宋体，不带入会全部变成黑体）。探索页的 --serif 以 --card-body-font 开头。
+                var font = BODY_FONTS[bodyFont] || BODY_FONTS[DEFAULT_BODY_FONT];
+                base += '<link rel="stylesheet" href="' + font.css + '"><style>:root{--card-body-font:' + font.family + '}</style>';
+                var ready ='<script>(function(){var f=window.frameElement;if(f)f.dispatchEvent(new Event("newcard-exploration-ready"));})();<\/script>';
                 html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, function (head) { return head + base; }) : base + html;
                 var end = html.search(/<\/body>(?![\s\S]*<\/body>)/i);
                 frame.srcdoc = end >= 0 ? html.slice(0, end) + ready + html.slice(end) : html + ready;
