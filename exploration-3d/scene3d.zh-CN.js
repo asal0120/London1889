@@ -1054,7 +1054,7 @@ function buildActors(){
   const dots=new THREE.InstancedMesh(new THREE.CircleGeometry(.07,8).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xe5cf94,transparent:true,opacity:.85,depthWrite:false}),160);
   dots.count=0;dots.frustumCulled=false;world.add(dots);
   const at=game.state?game.state.player.at:map.spawn,s=cellCenter(at);
-  actors={player,ring,dots,markers:new Map(),cell:at};
+  actors={player,ring,dots,markers:new Map(),cell:at,trail:[]};
   player.g.position.set(s.x,0,s.z);faceActor(player,1);camTarget.set(s.x,0,s.z);
 }
 function faceActor(a,dir){a.face=dir;a.sprite.scale.x=dir*(a.mirror||1);}
@@ -1121,10 +1121,21 @@ function schedule(){if(!rafId&&running()){clock.getDelta();rafId=requestAnimatio
 function tick(){
   rafId=0;if(!running())return;
   const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
-  const P=actors.player.g.position,c=cellCenter(game.state.player.at),dx=c.x-P.x,dz=c.z-P.z,d=Math.hypot(dx,dz);let moving=false;
-  if(d>.001){
-    if(!moveOK()||d>1.6){P.x=c.x;P.z=c.z;}
-    else{const sp=4.2*dt;moving=true;if(Math.abs(dx)>.01)faceActor(actors.player,dx<0?-1:1);if(d<=sp){P.x=c.x;P.z=c.z;}else{P.x+=dx/d*sp;P.z+=dz/d*sp;}}
+  const P=actors.player.g.position,at=game.state.player.at;let moving=false;
+  // 连按或点地面连走时，游戏里的位置会比画面上的主角先走好几格：依序走过每一格（转角不斜切），
+  // 落后 n 格就用 n 倍速追上。只有不相邻的跳动（传送等）才直接移过去。
+  // 原本落后超过 1.6 格就直接移到目标，连按第三下会像瞬移（2026-11-24 使用者回报）。
+  if(at!==actors.cell){
+    const c=cellCenter(at),last=actors.trail.length?actors.trail[actors.trail.length-1]:cellCenter(actors.cell);
+    if(Math.hypot(c.x-last.x,c.z-last.z)<1.05)actors.trail.push(c);else{actors.trail=[];P.x=c.x;P.z=c.z;}
+    actors.cell=at;
+  }
+  if(!moveOK()&&actors.trail.length){const c=actors.trail[actors.trail.length-1];P.x=c.x;P.z=c.z;actors.trail=[];}
+  let budget=4.2*Math.max(1,actors.trail.length)*dt;
+  while(actors.trail.length&&budget>0){
+    const c=actors.trail[0],dx=c.x-P.x,dz=c.z-P.z,d=Math.hypot(dx,dz);
+    if(d>.001){moving=true;if(Math.abs(dx)>.01)faceActor(actors.player,dx<0?-1:1);}
+    if(d<=budget){P.x=c.x;P.z=c.z;budget-=d;actors.trail.shift();}else{P.x+=dx/d*budget;P.z+=dz/d*budget;budget=0;}
   }
   const now=performance.now();if(moving)walkUntil=now+300;
   setPose(actors.player,!!WALK&&moveOK()&&now<walkUntil,t);
