@@ -2048,6 +2048,9 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .game-shell .app[data-scene="prep"] > #prep-view { flex: 1 0 auto; display: grid; }
 .game-shell .app[data-scene="prep"] #prep-view .prep-grid { grid-template-rows: auto 1fr; }
 .game-shell .app[data-scene="prep"] #prep-view .loadout { align-self: stretch; }
+/* 横长的桌机视窗（2026-11-24 回报）：封面高度约为宽度 0.75，宽度跟着视窗时整页远高于画面。
+   比照战斗画面依可见高度限制宽度并置中；再由 prep-cover.js 裁切封面下方（最多 38%），让纸页也在画面内。最小 720px。 */
+.game-shell .app[data-scene="prep"] #prep-view .prep-grid { width: 100%; max-width: max(720px, calc((100vh - 300px) / 0.5)); max-width: max(720px, calc((100dvh - 300px) / 0.5)); margin-inline: auto; }
 
 /* 队友头像的勾选改为封蜡章图片（不写字） */
 .game-shell .loadout .support-option .tick,
@@ -4445,9 +4448,9 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
         image.src = url;
       });
     }
-    const loadEffect = async ([key, asset]) => {
+    const loadEffect = async ([key, asset], priority = '') => {
       // 逾时后照常下载，到了就改用（effectMedia 存的是同一个物件）。
-      const item = await preload(asset.src, asset.href ? 30000 : 4000, () => { lastError = mediaDiagnostic(); });
+      const item = await preload(asset.src, asset.href ? 30000 : 4000, () => { lastError = mediaDiagnostic(); }, priority);
       if (disposed) { item.image.removeAttribute('src'); return; }
       effectMedia.set(key, item);
       if (!item.ok) lastError = 'A skill effect could not be loaded; using the built-in effect.';
@@ -4474,12 +4477,49 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       return svg;
     }
     const effectEntries = Object.entries(library.assets);
-    const effectsReady = Promise.all(effectEntries.filter(([, asset]) => !asset.href).map(loadEffect));
+    const effectsReady = Promise.all(effectEntries.filter(([, asset]) => !asset.href).map(entry => loadEffect(entry)));
     // Path-loaded atlases arrive in the background; until then the skill uses
     // its older image (library.fallback) or the CSS effect.
-    effectsReady.then(() => Promise.all(effectEntries.filter(([, asset]) => asset.href).map(loadEffect)));
+    // 载入顺序（2026-11-24）：原本开页就同时下载全部约 15MB，手机第一次载入时拖慢地图要用的图（主角站姿图晚出现）。
+    // 改成：prioritize() 指定这一局用得到的特效（玩家色谱、共通技巧、已选队友）先载，同时最多两张；
+    // 其余（其他色谱、未选队友）等用得到的都载完、闲置一段时间后，一次一张慢慢载。
+    const BACKGROUND_DELAY = 2500;
+    const effectQueue = new Map(effectEntries.filter(([, asset]) => asset.href));
+    let wantedEffects = new Set(), effectsRunning = 0, backgroundTimer = 0, queueOpen = false;
+    function startEffect(key, wanted) {
+      const asset = effectQueue.get(key); effectQueue.delete(key); effectsRunning++;
+      loadEffect([key, asset], wanted ? '' : 'low').finally(() => { effectsRunning--; pumpEffects(); });
+    }
+    function pumpEffects() {
+      if (disposed || !queueOpen) return;
+      for (const key of [...effectQueue.keys()]) if (wantedEffects.has(key) && effectsRunning < 2) startEffect(key, true);
+      if (effectsRunning || backgroundTimer || !effectQueue.size || [...effectQueue.keys()].some(key => wantedEffects.has(key))) return;
+      backgroundTimer = setTimeout(() => {
+        backgroundTimer = 0;
+        if (disposed || effectsRunning || !effectQueue.size) return;
+        startEffect(effectQueue.keys().next().value, false);
+      }, BACKGROUND_DELAY);
+    }
+    effectsReady.then(() => { queueOpen = true; pumpEffects(); });
+    // 这一局用得到的特效排到最前面：玩家色谱的整组特效（名称以「颜色-」开头；战斗中产生的自动技也在内），
+    // 加上玩家技能与已选队友支援技对应的特效（含接续播放的 then）。
+    function prioritize(input) {
+      const next = new Set(), spectrum = input && input.spectrum;
+      if (spectrum) for (const key of Object.keys(library.assets)) if (key.startsWith(spectrum + '-')) next.add(key);
+      for (const id of (input && input.skills) || []) {
+        let key = library.skills[id];
+        while (key && library.assets[key] && !next.has(key)) { next.add(key); key = library.assets[key].then; }
+      }
+      wantedEffects = next;
+      pumpEffects();
+    }
     function loadPortraits(settings) {
-      const urls = new Set(Object.values(settings.portraits).flatMap(entry => ['idle', 'poster', 'attack', 'hurt', 'defeat'].map(pose => entry[pose]).filter(Boolean)));
+      // 我方（player、companion-*）先载，敌方等我方都有结果（载完、失败或逾时）才开始，
+      // 手机第一次载入时频宽先给主角与队友（2026-11-24）。
+      const posesOf = entry => ['idle', 'poster', 'attack', 'hurt', 'defeat'].map(pose => entry[pose]).filter(Boolean);
+      const isAlly = key => key === 'player' || key.startsWith('companion-');
+      const allyUrls = new Set(Object.entries(settings.portraits).filter(([key]) => isAlly(key)).flatMap(([, entry]) => posesOf(entry)));
+      const enemyUrls = new Set(Object.entries(settings.portraits).filter(([key]) => !isAlly(key)).flatMap(([, entry]) => posesOf(entry)).filter(url => !allyUrls.has(url)));
       const atlases = new Map();
       for (const entry of Object.values(settings.portraits)) for (const [pose, sheet] of Object.entries(entry.atlas || {})) {
         if (!atlases.has(entry[pose])) atlases.set(entry[pose], sheet);
@@ -4493,15 +4533,16 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
         }
         return item;
       };
-      return Promise.all([...urls].map(async url => {
+      const load = urls => Promise.all([...urls].map(async url => {
         const sheet = atlases.get(url);
-        // 待机动画图集较大，下载顺序排在静态图与敌人图之后。
+        // 待机动画图集较大，下载顺序排在静态图之后。
         const item = await preload(url, 4000, arrived => {
           fit(arrived, sheet);
           if (media.get(url) === arrived) { lastError = mediaDiagnostic(); syncPortraits(); }
         }, sheet ? 'low' : 'high');
         return [url, fit(item, sheet)];
-      })).then(entries => new Map(entries));
+      }));
+      return load(allyUrls).then(allies => load(enemyUrls).then(enemies => new Map(allies.concat(enemies))));
     }
     function mediaDiagnostic() {
       return [...media.values()].some(item => !item.ok) ? 'Some images could not be loaded; using a static fallback.' :
@@ -5016,7 +5057,7 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       lastError = mediaDiagnostic(); syncPortraits();
     });
     return {
-      configure, bind, retain, play, cancel, setEnvironment,
+      configure, bind, retain, play, cancel, setEnvironment, prioritize,
       playing: () => jobs.length > 0,
       setSoundConfig: input => sound.configure(input, jobs.length > 0),
       getSoundConfig: sound.getConfig, getSoundState: sound.getState, subscribeSound: sound.subscribe,
@@ -5031,7 +5072,7 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
       },
       dispose() {
         if (disposed) return;
-        disposed = true; revision++; cancel(); if (tintSvg) tintSvg.remove();
+        disposed = true; revision++; cancel(); if (tintSvg) tintSvg.remove(); clearTimeout(backgroundTimer);
         sound.dispose();
         preference.removeEventListener('change', preferenceChanged);
         if (observer) observer.disconnect(); else window.removeEventListener('resize', reposition);
@@ -6587,6 +6628,8 @@ window.BattleSceneKeys = {"street":"london","woodland":"woodland","factory":"fac
         apply();
       },
       formation:function(enemies,layout){return formation(enemies,layout||mode);},
+      // 这一局战斗会用的场景图（探索时预先载入用）。
+      sceneImage:function(s){return sceneImage(s);},
       inspect:function(){return{mode:mode,open:openEnemy};},
       dispose:function(){
         if(disposed)return;disposed=true;
@@ -9234,6 +9277,9 @@ window.SceneEnvironment=(()=>{
       event.stopImmediatePropagation();
       blockClickUntil = 0;
     }
+    // 触控点方向键时，浏览器会在点击时把焦点移到按钮上；Android Chrome 每次焦点改变约 65～95ms（2026-11-24 USB 侦错量测），
+    // 连点会卡顿。挡下 mousedown 的预设动作就不移动焦点；键盘仍可用 Tab 移到按钮。
+    function keepFocus(event) { event.preventDefault(); }
     function suspend() { cancelGesture(true); stopHeld(); }
     function visibility() { if (doc.hidden) suspend(); else update(); }
     function resume() { if (!disposed) { measure(); update(); } }
@@ -9245,6 +9291,8 @@ window.SceneEnvironment=(()=>{
     pad.addEventListener('pointerup', heldUp);
     pad.addEventListener('pointercancel', heldUp);
     pad.addEventListener('lostpointercapture', heldUp);
+    pad.addEventListener('mousedown', keepFocus);
+    stick.addEventListener('mousedown', keepFocus);
     window.addEventListener('blur', suspend);
     root.addEventListener('keydown', onKey, true);
     board.addEventListener('pointerdown', onPointerDown, true);
@@ -9303,6 +9351,8 @@ window.SceneEnvironment=(()=>{
         pad.removeEventListener('pointerup', heldUp);
         pad.removeEventListener('pointercancel', heldUp);
         pad.removeEventListener('lostpointercapture', heldUp);
+        pad.removeEventListener('mousedown', keepFocus);
+        stick.removeEventListener('mousedown', keepFocus);
         window.removeEventListener('blur', suspend);
         if (layoutFrame !== null) cancelAnimationFrame(layoutFrame);
         if (observer) observer.disconnect();
@@ -10242,7 +10292,35 @@ window.SceneEnvironment=(()=>{
     var mine=turnBanner;
     mine[0].onfinish=function(){if(turnBanner===mine){turnBanner=null;node.hidden=true;}};
   }
-  function focusPlayer(){var tile=$('board').querySelector('[data-tile="'+state.player.at+'"]');if(tile)tile.focus({preventScroll:true});}
+  // 移动后把焦点放到玩家格，是给键盘操作用的；触控操作时不移动焦点。
+  // Android Chrome 每次焦点改变都会逐一检查页面上的表单元素（酒馆页约 2400 个），一次 65～95ms，连点移动会卡顿（2026-11-24 USB 侦错量测）。
+  var touchDriven=false;
+  function noteInput(event){touchDriven=event.type==='pointerdown'&&(event.pointerType==='touch'||event.pointerType==='pen');}
+  // 战斗图片预先载入：进入探索时先下载并解码这一局战斗会用的场景图、色谱与资源图示。
+  // 原本遇敌那一刻才下载与解码（手机上主执行绪约 0.5 秒），破碎转场因此只闪一下（2026-11-24 USB 侦错量测）。
+  // 保留 Image 物件，让解码后的图留在快取里；同一网址只载一次。
+  var warmImages={};
+  function warmImage(url){
+    if(!url||warmImages[url])return;
+    var img=new Image();img.decoding='async';img.src=url;warmImages[url]=img;
+    if(typeof img.decode==='function')img.decode().catch(function(){});
+  }
+  // 从整备页就开始（2026-11-24 提前）：整备页已知道色谱、技能、同行队友与地点类型。
+  // 特效的下载顺序交给 presentation.prioritize：这一局用得到的先载，其他色谱与未选队友之后慢慢载。
+  function preloadBattleArt(){
+    var cfg=state?state.config:config;if(!cfg)return;
+    if(typeof presentation.prioritize==='function'){
+      var supportSkills=(cfg.supports||[]).map(function(id){return R.SUPPORTS[id]&&R.SUPPORTS[id].skill;}).filter(Boolean);
+      presentation.prioritize({spectrum:cfg.spectrum,skills:R.playerSkills(cfg).concat(supportSkills)});
+    }
+    // 场景图：探索中依地图；整备页依设定的地点类型（没有地点类型的探索局等地图产生后再载）。
+    var probe=state||(cfg.battleOnly?{config:cfg}:cfg.scene&&cfg.scene.locationType?{config:cfg,sceneMap:{locationType:cfg.scene.locationType}}:null);
+    if(probe&&typeof battleLayout.sceneImage==='function')warmImage(battleLayout.sceneImage(probe));
+    var spectra=window.ExplorationSpectrumIcons||{},resources=window.ExplorationResourceIcons||{};
+    warmImage(spectra[cfg.spectrum]);
+    Object.keys(resources).forEach(function(key){warmImage(resources[key]);});
+  }
+  function focusPlayer(){if(touchDriven)return;var tile=$('board').querySelector('[data-tile="'+state.player.at+'"]');if(tile)tile.focus({preventScroll:true});}
   function canWalk(){return !(scene45&&scene45.isOverview())&&!disposed&&!pageSuspended&&!combatVisual&&!document.hidden&&state&&state.phase==='explore'&&!document.querySelector('dialog[open]');}
   function stopWalking(){
     clearTimeout(walkTimer);walkTimer=null;
@@ -10602,8 +10680,8 @@ window.SceneEnvironment=(()=>{
     $('retreat-button').hidden=scene!=='explore'&&scene!=='battle';
     if(changed){clearTimeout(noticeTimer);$('notice').hidden=true;}
     ['prep','explore','battle','result'].forEach(function(id){$(id+'-view').hidden=id!==(scene==='ended'?'result':scene);});
-    if(scene==='prep'){renderPrep();$('start-button').textContent=resultParked?'返回已保存的结算':'确认出击';if(resultParked)$('start-button').disabled=false;}
-    if(scene==='explore')renderExplore();
+    if(scene==='prep'){renderPrep();preloadBattleArt();$('start-button').textContent=resultParked?'返回已保存的结算':'确认出击';if(resultParked)$('start-button').disabled=false;}
+    if(scene==='explore'){renderExplore();preloadBattleArt();}
     if(scene==='battle'){if(changed){selectedSkill=layoutSkills(R.playerSkills(state.config))[0];selectedEnemy=null;selectedSpend=0;openSpectrumResource=null;}renderBattle();}
     if(scene==='ended')renderResult();
     if(state&&state.phase==='event')renderEvent();else if($('event-dialog').open)$('event-dialog').close();
@@ -10882,7 +10960,7 @@ window.SceneEnvironment=(()=>{
   function pagehide(){pageSuspended=true;cancelTransition();cancelWalking();stopEnemy();cancelCombatVisual();if(state&&!P.accepted(state,meta))discardAttempt(false);syncPresentation();save();}
   function pageshow(){if(!disposed){pageSuspended=false;refresh();}}
   function visibility(){if(document.hidden){cancelTransition();cancelWalking();stopEnemy();}syncPresentation();if(!document.hidden)scheduleEnemy();}
-  uiRoot.addEventListener('click',onClick);uiRoot.addEventListener('change',changeHistoryTime);uiRoot.addEventListener('change',changeHitSettings);uiRoot.addEventListener('change',changeSkillLayout);document.addEventListener('keydown',onKey);document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',stopKeyRepeat);document.addEventListener('close',onMusicClose,true);
+  uiRoot.addEventListener('click',onClick);uiRoot.addEventListener('change',changeHistoryTime);uiRoot.addEventListener('change',changeHitSettings);uiRoot.addEventListener('change',changeSkillLayout);document.addEventListener('keydown',onKey);document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',stopKeyRepeat);document.addEventListener('close',onMusicClose,true);document.addEventListener('pointerdown',noteInput,true);document.addEventListener('keydown',noteInput,true);
   $('companion-portraits').addEventListener('scroll',scheduleCompanionControls,{passive:true});
   $('companion-rail').addEventListener('pointerdown',onCompanionPointerDown,{passive:true});
   if(typeof ResizeObserver==='function'){companionObserver=new ResizeObserver(scheduleCompanionControls);companionObserver.observe($('companion-portraits'));}
@@ -10992,7 +11070,7 @@ window.SceneEnvironment=(()=>{
       $('companion-portraits').removeEventListener('scroll',scheduleCompanionControls);
       $('companion-rail').removeEventListener('pointerdown',onCompanionPointerDown);
       window.removeEventListener('resize',scheduleCompanionControls);
-      uiRoot.removeEventListener('click',onClick);uiRoot.removeEventListener('change',changeHistoryTime);uiRoot.removeEventListener('change',changeHitSettings);uiRoot.removeEventListener('change',changeSkillLayout);document.removeEventListener('keydown',onKey);document.removeEventListener('keyup',onKeyUp);window.removeEventListener('blur',stopKeyRepeat);stopKeyRepeat();document.removeEventListener('close',onMusicClose,true);
+      uiRoot.removeEventListener('click',onClick);uiRoot.removeEventListener('change',changeHistoryTime);uiRoot.removeEventListener('change',changeHitSettings);uiRoot.removeEventListener('change',changeSkillLayout);document.removeEventListener('keydown',onKey);document.removeEventListener('keyup',onKeyUp);window.removeEventListener('blur',stopKeyRepeat);stopKeyRepeat();document.removeEventListener('close',onMusicClose,true);document.removeEventListener('pointerdown',noteInput,true);document.removeEventListener('keydown',noteInput,true);
       document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',pagehide);window.removeEventListener('pageshow',pageshow);
       ['help-dialog','skill-layout-dialog','retreat-dialog','event-dialog','history-dialog'].forEach(function(id){$(id).removeEventListener('close',onModalClose);if($(id).open)$(id).close();});
       $('retreat-dialog').removeEventListener('cancel',onRetreatCancel);

@@ -10775,6 +10775,167 @@ var NewCardAlbumData = (function () {
             }
             return cache.promise;
         }
+
+        // ── 探索素材提前下载（2026-11-24 使用者决定）──
+        // 最新一楼显示完（生成结束或聊天载入）几秒后，在最外层视窗背景下载探索页和一定会用到的图片；
+        // 探索页开在同一个最外层视窗，所以进入探索时直接使用快取。每个工作阶段只下载一次。
+        // 同时最多 2 个、低优先；任何一楼开始生成就不再开始新的下载，生成结束后才继续，避免和串流抢频宽。
+        // 图片清单从探索页里写的路径读出，只挑自己的色谱；其他色谱、队友待机动画与特效、敌人、战斗背景
+        // 仍由探索页自己依序载入。探索页改了路径写法时只是少下载一些，不会出错。
+        var PRELOAD_DELAY_MS = 4000, PRELOAD_PARALLEL = 2;
+        var preloadTimer = null;
+        function preloadState() {
+            var host = explorationHost();
+            return host.__newcardPreload || (host.__newcardPreload = {pausedBy: null, queue: [], queued: {}, running: {}, started: {}, owner: null, page: '', count: 0});
+        }
+        // 卡片被移除后，它设下的回呼不会再执行；用这个判断它留下的下载和暂停是否要由别的卡片接手。
+        function preloadAlive(win) {
+            try { return !!win && !win.closed && (win.frameElement ? win.frameElement.isConnected : win === win.top); } catch (_) { return false; }
+        }
+        function preloadPause(on) {
+            var state = preloadState();
+            if (on) {
+                state.pausedBy = view;
+                preloadTimer = clearTimer(preloadTimer);
+            } else if (state.pausedBy === view || !preloadAlive(state.pausedBy)) {
+                state.pausedBy = null;
+            }
+        }
+        function schedulePreload() {
+            if (destroyed || isGenerating || !isLatestFloor()) return;
+            preloadTimer = clearTimer(preloadTimer);
+            preloadTimer = setTimer(function () { preloadTimer = null; startPreload(); }, PRELOAD_DELAY_MS);
+        }
+        function startPreload() {
+            var url = explorationUrl(), state = preloadState();
+            if (destroyed || isGenerating || state.pausedBy || !url) return;
+            var spectrum = skillLoadout().spectrum || '';
+            var page = url + '|' + spectrum;
+            if (state.page === page) { pumpPreload(); return; }
+            state.page = page;
+            explorationHtml(explorationHost(), url).then(function (html) {
+                if (state.page !== page) return;
+                enqueuePreload(state, preloadList(html, url, spectrum));
+                pumpPreload();
+            }, function () { if (state.page === page) state.page = ''; });
+        }
+        // 顺序：主角站姿与走路图 → 介面与整备页 → 队友静态图 → 主角待机动画 → 立体场景程式与 Draco 解码器
+        // → 立体场景（街道 > 绿地 > 室内 > 工厂，2026-11-24 使用者指定）→ 共通特效 → 自己色谱的特效。
+        var PRELOAD_SCENES = [/street/, /woodland/, /fireplace/, /factory/];
+        function preloadList(html, pageUrl, spectrum) {
+            var list = [], seen = {}, match, map = {};
+            var add = function (path, rank, kind) {
+                var href;
+                try { href = new URL(path, pageUrl).href; } catch (_) { return; }
+                if (seen[href]) return;
+                seen[href] = true;
+                list.push({url: href, rank: rank, kind: kind || 'image', imports: map});
+            };
+            var paths = /(?:\.\/)?((?:assets|exploration-runtime|exploration-3d)\/[\w\-\/.]+?\.(?:webp|png))/g;
+            while ((match = paths.exec(html))) {
+                var path = match[1], color = /(?:effects\/spectrum|ui\/resource|ui\/spectrum)\/([a-z]+)-/.exec(path);
+                if (color && color[1] !== spectrum) continue;
+                if (/effects\/team\//.test(path)) continue;
+                var companion = /actors\/char\d/.test(path);
+                if (companion && /idle-atlas/.test(path)) continue;
+                add(path, /\/effects\/spectrum\//.test(path) ? 7 : /\/effects\//.test(path) ? 6 : /idle-atlas/.test(path) ? 3 :
+                    companion ? 2 : /actors\/|walk-sheet/.test(path) ? 0 : 1);
+            }
+            // 立体版：import map 与场景模组。模组下载后再从内容找出它汇入的模组与场景素材（见 preloadModule）。
+            var importMap = /<script type="importmap">([\s\S]*?)<\/script>/.exec(html);
+            try { if (importMap) map = JSON.parse(importMap[1]).imports || {}; } catch (_) {}
+            list.forEach(function (item) { item.imports = map; });
+            Object.keys(map).forEach(function (key) { if (!/\/$/.test(key)) add(map[key], 4, 'module'); });
+            var modules = /<script type="module" src="([^"]+)"/g;
+            while ((match = modules.exec(html))) add(match[1], 4, 'module');
+            return list;
+        }
+        function preloadResolve(spec, base, map) {
+            if (/^(?:\.{0,2}\/|https?:)/.test(spec)) return new URL(spec, base).href;
+            if (map[spec]) return map[spec];
+            var prefix = Object.keys(map).filter(function (key) { return /\/$/.test(key) && spec.indexOf(key) === 0; })
+                .sort(function (a, b) { return b.length - a.length; })[0];
+            return prefix ? map[prefix] + spec.slice(prefix.length) : '';
+        }
+        // 从模组内容找出：汇入的模组、场景模型与贴图（ASSET+'…'、KIT_STYLES 墙面）、Draco 解码器。
+        // scene3d.js 改了写法时只是少下载一些。
+        function preloadModule(item, text) {
+            var found = [], match, seen = {};
+            var add = function (url, rank, kind) {
+                if (!url || seen[url]) return;
+                seen[url] = true;
+                found.push({url: url, rank: rank, kind: kind, imports: item.imports});
+            };
+            var imports = /(?:\bfrom|\bimport)\s*['"]([^'"]+)['"]/g;
+            while ((match = imports.exec(text))) {
+                // 说明文字里也有 import 'model.bin' 之类的例子：只收 .js。
+                try { var spec = preloadResolve(match[1], item.url, item.imports); if (/\.m?js$/.test(spec)) add(spec, 4, 'module'); } catch (_) {}
+            }
+            var assetBase = /const ASSET=new URL\('([^']+)',import\.meta\.url\)/.exec(text);
+            if (assetBase) {
+                var base = new URL(assetBase[1], item.url).href, sceneRank = function (name) {
+                    for (var i = 0; i < PRELOAD_SCENES.length; i++) if (PRELOAD_SCENES[i].test(name)) return 5 + i / 10;
+                    return 5 + PRELOAD_SCENES.length / 10;
+                };
+                var assets = /ASSET\+'([\w\-]+\.(?:glb|webp))'/g;
+                while ((match = assets.exec(text))) add(new URL(match[1], base).href, sceneRank(match[1]), /\.glb$/.test(match[1]) ? 'fetch' : 'image');
+                var styles = /const KIT_STYLES=\[([^\]]*)\]/.exec(text);
+                if (styles) (styles[1].match(/[\w-]+/g) || []).forEach(function (name) { add(new URL('street/' + name + '.webp', base).href, sceneRank('street'), 'image'); });
+            }
+            var draco = /setDecoderPath\('([^']+)'\)/.exec(text);
+            if (draco) ['draco_wasm_wrapper.js', 'draco_decoder.wasm'].forEach(function (name) { add(new URL(name, draco[1]).href, 4.5, 'fetch'); });
+            return found;
+        }
+        function enqueuePreload(state, items) {
+            items.forEach(function (item) {
+                if (state.started[item.url] || state.queued[item.url]) return;
+                state.queued[item.url] = true;
+                item.index = state.count = (state.count || 0) + 1;
+                state.queue.push(item);
+            });
+            state.queue.sort(function (a, b) { return a.rank - b.rank || a.index - b.index; });
+        }
+        function pumpPreload() {
+            var state = preloadState(), host = explorationHost();
+            if (destroyed || isGenerating || state.pausedBy) return;
+            // 探索画面开着时让探索页自己的载入先用频宽；关闭后下一次排程再继续。
+            if (host.document.querySelector('dialog[aria-label="探索"]')) return;
+            if (state.owner !== view && !preloadAlive(state.owner)) {
+                // 开始下载的卡片已移除：它的下载不会再回报，放回伫列重新要（已进快取的很快就结束）。
+                var lost = Object.keys(state.running).map(function (url) { delete state.started[url]; delete state.queued[url]; return state.running[url]; });
+                state.running = {};
+                enqueuePreload(state, lost);
+            }
+            while (Object.keys(state.running).length < PRELOAD_PARALLEL && state.queue.length) {
+                var item = state.queue.shift();
+                if (state.started[item.url]) continue;
+                state.started[item.url] = true;
+                state.running[item.url] = item;
+                state.owner = view;
+                loadPreloadItem(host, item, function (url, found) {
+                    delete state.running[url];
+                    if (found && found.length) enqueuePreload(state, found);
+                    pumpPreload();
+                });
+            }
+        }
+        function loadPreloadItem(host, item, done) {
+            var finished = false, end = function (found) { if (!finished) { finished = true; done(item.url, Array.isArray(found) ? found : null); } };
+            if (item.kind !== 'image') {
+                // 模组、模型与解码器以 CORS 方式下载，和探索页的 import／fetch 共用快取；要读完内容才会存进快取。
+                host.fetch(item.url, {mode: 'cors', priority: 'low'}).then(function (response) {
+                    if (!response.ok) return null;
+                    if (item.kind !== 'module') return response.arrayBuffer().then(function () { return null; });
+                    return response.text().then(function (text) { return preloadModule(item, text); });
+                }).then(end, end);
+                return;
+            }
+            var image = new host.Image();
+            image.fetchPriority = 'low';
+            image.onload = image.onerror = function () { image.onload = image.onerror = null; end(); };
+            image.src = item.url;
+        }
+
         // 小游戏同行资格：认识且好感百分比 17% 以上。读不到 MVU 队友数据时全部可带。
         // 原本是好感 50 以上、最大值 300（2026-10-31 使用者决定）；改用百分比后，最大值改变也不必改门槛。
         // 17% 是四舍五入后的百分比，和 TEAM 页显示的数字相同；最大值 300 时正好等于 50 以上。
@@ -11170,6 +11331,7 @@ var NewCardAlbumData = (function () {
             if (isGenerating) { repagTimer = clearTimer(repagTimer); streamPaging = false; renderStateView(); }
             root.classList.toggle('generating', isGenerating);
             syncPageControls();
+            preloadPause(isGenerating);
         }
 
         // 串流中（全文模式）只重画「从第一个不同段落开始的尾端」。成功回传 true；
@@ -11298,6 +11460,7 @@ var NewCardAlbumData = (function () {
             if (encounterView.tag && context.encounter) context.encounter.query();
             watchExtraAnalysis();
             reportHeight();
+            schedulePreload();
         }
 
         function update(rawData, options) {
@@ -11594,6 +11757,7 @@ var NewCardAlbumData = (function () {
             edgePointers.clear();
             safeBridgeCall('beforeRender');
             destroyed = true;
+            preloadPause(false);
             mapImageVersion++;
             closeMap(false);
             mapReadIds.clear();
