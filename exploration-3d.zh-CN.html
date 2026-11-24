@@ -9414,6 +9414,7 @@ window.SceneEnvironment=(()=>{
       setEnvironment:function(v){if(real)return real.setEnvironment(v);env=SceneEnvironment.normalize(v,env);return Object.assign({},env);},
       getEnvironment:function(){return real?real.getEnvironment():Object.assign({},env);},
       isOverview:function(){return real?real.isOverview():false;},
+      snapshot:function(){return real&&real.snapshot?real.snapshot():null;},
       setOverview:function(v){return real?real.setOverview(v):false;},
       inspect:function(){return real?Object.assign(real.inspect(),{fallback:fallback}):{pending:true,disposed:disposed};},
       dispose:function(){disposed=true;clearTimeout(timer);if(real)real.dispose();}
@@ -10546,14 +10547,31 @@ window.SceneEnvironment=(()=>{
     if(suppressTransition||disposed||pageSuspended||document.hidden||!state||state.phase!=='battle'||state.config.battleOnly)return null;
     if(typeof Element.prototype.animate!=='function'||!document.body)return null;
     var view={w:document.documentElement.clientWidth,h:window.innerHeight},box={l:-300,t:-300,r:view.w+300,b:view.h+300};
-    var rect=uiRoot.getBoundingClientRect(),copy=uiRoot.cloneNode(false);
+    // 页面背景是渐层，碎片要带着同一份背景，才不会和转场前的画面色差。
+    var rect=uiRoot.getBoundingClientRect(),body=getComputedStyle(document.body),root=document.documentElement.getBoundingClientRect();
+    var cap={rect:rect,view:view,hit:impactPoint(view),bg:{image:body.backgroundImage,color:body.backgroundColor,left:root.left,top:root.top,w:root.width,h:root.height}};
+    // 能拍下地图时只用整页图，不复制介面（介面在闪光下直接消失，2026-11-24 使用者选定）。减少动态效果的淡出仍要完整画面，照旧复制。
+    if(!transitionMotionOff()){cap.sheet=sceneSheet(view,getComputedStyle(uiRoot).backgroundColor,body.backgroundColor);if(cap.sheet)return cap;}
+    var copy=uiRoot.cloneNode(false);
     copy.removeAttribute('id');copy.className+=' shatter-copy';copy.setAttribute('inert','');copy.setAttribute('aria-hidden','true');
     var rects=new WeakMap();
     Array.prototype.forEach.call(uiRoot.children,function(child){if(/hud-toast|hud-save/.test(child.className))return;var part=cloneVisible(child,box,rects);if(part)copy.appendChild(part);});// 短暂的提示与存档标示不进副本（也避免页面上同时有两份提示）
-    var styleText=idRules(renameCopyIds(copy,'sx'+(++transitionSerial)+'-'));
-    // 页面背景是渐层，碎片要带着同一份背景，才不会和转场前的画面色差。
-    var body=getComputedStyle(document.body),root=document.documentElement.getBoundingClientRect();
-    return{copy:copy,rects:rects,style:styleText,rect:rect,view:view,hit:impactPoint(view),bg:{image:body.backgroundImage,color:body.backgroundColor,left:root.left,top:root.top,w:root.width,h:root.height}};
+    cap.copy=copy;cap.rects=rects;cap.style=idRules(renameCopyIds(copy,'sx'+(++transitionSerial)+'-'));
+    return cap;
+  }
+  // 场景能拍下目前画面时（立体版的 WebGL 地图），碎片改从一张整页图切：底色＋地图，不再把整页复制 45 份
+  // （iPhone XS 排版、绘制 45 份副本要约 2.5 秒，2026-11-24 实测）。不能拍图的场景回传 null，照旧复制。
+  function sceneSnapshot(){return scene45&&scene45.snapshot?scene45.snapshot():null;}
+  function sceneSheet(view,panel,page){
+    var snap=null;try{snap=sceneSnapshot();}catch(_){snap=null;}
+    if(!snap||!snap.canvas||!snap.rect||!snap.rect.width)return null;
+    var s=Math.min(window.devicePixelRatio||1,2),sheet=document.createElement('canvas');
+    sheet.width=Math.ceil(view.w*s);sheet.height=Math.ceil(view.h*s);
+    var ctx=sheet.getContext('2d');if(!ctx)return null;
+    var bg=panel&&!/rgba\(0, 0, 0, 0\)|transparent/.test(panel)?panel:page;
+    ctx.fillStyle=bg||'#1d1814';ctx.fillRect(0,0,sheet.width,sheet.height);
+    var r=snap.rect;ctx.drawImage(snap.canvas,r.left*s,r.top*s,r.width*s,r.height*s);
+    return{canvas:sheet,scale:s};
   }
   function seeded(seed){return function(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646;};}
   // 以撞击点为中心，射线 × 圈数切成多边形；尺寸依画面缩放（原型以 1280×800 为准）。
@@ -10574,7 +10592,7 @@ window.SceneEnvironment=(()=>{
     return{pts:pts,polys:polys,r:r,k:k};
   }
   function transitionAnim(node,frames,options){
-    var a=node.animate(frames,Object.assign({fill:'both',easing:'linear'},options));transition.anims.push(a);return a;
+    var a=node.animate(frames,Object.assign({fill:'both',easing:'linear'},options));a.pause();transition.anims.push(a);return a;
   }
   function cancelTransition(){
     if(!transition)return;
@@ -10612,22 +10630,45 @@ window.SceneEnvironment=(()=>{
       sxEl('polygon',{points:edge,fill:'#c9a45c',transform:'translate(12,0)'},coverGroup);
       sxEl('polygon',{points:edge,fill:'#0b0d11'},coverGroup);
       var stage=sxDiv('shatter-stage',fx),flash=sxDiv('shatter-flash',fx),pieces=[];
-      // 底层放一整份完整画面（只含这一份带 SVG 资源与改名后的 id），碎片落下前先遮住碎片之间的细缝；碎片开始动时移除。
-      var base=sxDiv('shatter-shard',stage);base.style.cssText='left:0;top:0;width:100%;height:100%';
-      paintBackground(base,0,0);var baseCopy=cap.copy.cloneNode(true);size(baseCopy,cap.rect.left,cap.rect.top);base.appendChild(baseCopy);
-      transitionAnim(base,[{opacity:1},{opacity:0}],{duration:1,delay:240});
-      // 碎片：每片是同一份画面副本，用多边形裁切；碎片外框只取它占到的范围，避免每片都配一张整页大小的图层。
-      g.polys.forEach(function(poly){
-        var xs=poly.pts.map(function(p){return p.x;}),ys=poly.pts.map(function(p){return p.y;});
-        var bx=Math.max(0,Math.floor(Math.min.apply(null,xs))),by=Math.max(0,Math.floor(Math.min.apply(null,ys)));
-        var ex=Math.min(W,Math.ceil(Math.max.apply(null,xs))),ey=Math.min(H,Math.ceil(Math.max.apply(null,ys)));
-        if(ex<=bx||ey<=by)return;
-        var shard=sxDiv('shatter-shard',stage),piece=cloneInBox(cap.copy,{l:Math.min.apply(null,xs)-2,r:Math.max.apply(null,xs)+2,t:Math.min.apply(null,ys)-2,b:Math.max.apply(null,ys)+2},cap.rects);
-        shard.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+(ex-bx)+'px;height:'+(ey-by)+'px;clip-path:polygon('+poly.pts.map(function(p){return(p.x-bx).toFixed(1)+'px '+(p.y-by).toFixed(1)+'px';}).join(',')+')';
-        paintBackground(shard,bx,by);
-        size(piece,cap.rect.left-bx,cap.rect.top-by);shard.appendChild(piece);
-        pieces.push({node:shard,poly:poly});
-      });
+      var sheet=cap.sheet;
+      if(sheet){
+        // 整页图路径：底层是整页图本身（遮碎片间的细缝）；每片是一小张画布，只画自己的多边形，没有 clip-path，也没有网页副本。
+        var s=sheet.scale,whole=sheet.canvas;whole.className='shatter-shard';whole.style.cssText='left:0;top:0;width:'+W+'px;height:'+H+'px';
+        stage.appendChild(whole);
+        transitionAnim(whole,[{opacity:1},{opacity:0}],{duration:1,delay:240});
+        g.polys.forEach(function(poly){
+          var xs=poly.pts.map(function(p){return p.x;}),ys=poly.pts.map(function(p){return p.y;});
+          var bx=Math.max(0,Math.floor(Math.min.apply(null,xs))),by=Math.max(0,Math.floor(Math.min.apply(null,ys)));
+          var ex=Math.min(W,Math.ceil(Math.max.apply(null,xs))),ey=Math.min(H,Math.ceil(Math.max.apply(null,ys)));
+          if(ex<=bx||ey<=by)return;
+          var shard=document.createElement('canvas'),w=Math.ceil((ex-bx)*s),h=Math.ceil((ey-by)*s);
+          shard.className='shatter-shard';shard.width=w;shard.height=h;
+          shard.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+(ex-bx)+'px;height:'+(ey-by)+'px';
+          var c=shard.getContext('2d');
+          if(c){
+            c.beginPath();poly.pts.forEach(function(p,i){c[i?'lineTo':'moveTo']((p.x-bx)*s,(p.y-by)*s);});c.closePath();c.clip();
+            c.drawImage(whole,bx*s,by*s,w,h,0,0,w,h);
+          }
+          stage.appendChild(shard);pieces.push({node:shard,poly:poly});
+        });
+      }else{
+        // 底层放一整份完整画面（只含这一份带 SVG 资源与改名后的 id），碎片落下前先遮住碎片之间的细缝；碎片开始动时移除。
+        var base=sxDiv('shatter-shard',stage);base.style.cssText='left:0;top:0;width:100%;height:100%';
+        paintBackground(base,0,0);var baseCopy=cap.copy.cloneNode(true);size(baseCopy,cap.rect.left,cap.rect.top);base.appendChild(baseCopy);
+        transitionAnim(base,[{opacity:1},{opacity:0}],{duration:1,delay:240});
+        // 碎片：每片是同一份画面副本，用多边形裁切；碎片外框只取它占到的范围，避免每片都配一张整页大小的图层。
+        g.polys.forEach(function(poly){
+          var xs=poly.pts.map(function(p){return p.x;}),ys=poly.pts.map(function(p){return p.y;});
+          var bx=Math.max(0,Math.floor(Math.min.apply(null,xs))),by=Math.max(0,Math.floor(Math.min.apply(null,ys)));
+          var ex=Math.min(W,Math.ceil(Math.max.apply(null,xs))),ey=Math.min(H,Math.ceil(Math.max.apply(null,ys)));
+          if(ex<=bx||ey<=by)return;
+          var shard=sxDiv('shatter-shard',stage),piece=cloneInBox(cap.copy,{l:Math.min.apply(null,xs)-2,r:Math.max.apply(null,xs)+2,t:Math.min.apply(null,ys)-2,b:Math.max.apply(null,ys)+2},cap.rects);
+          shard.style.cssText='left:'+bx+'px;top:'+by+'px;width:'+(ex-bx)+'px;height:'+(ey-by)+'px;clip-path:polygon('+poly.pts.map(function(p){return(p.x-bx).toFixed(1)+'px '+(p.y-by).toFixed(1)+'px';}).join(',')+')';
+          paintBackground(shard,bx,by);
+          size(piece,cap.rect.left-bx,cap.rect.top-by);shard.appendChild(piece);
+          pieces.push({node:shard,poly:poly});
+        });
+      }
       // 裂痕（白线叠在深色粗线上）：主裂痕沿射线往外并带折角，只有内圈有横向裂痕。
       var cracks=sxEl('svg',{'class':'shatter-cracks',viewBox:'0 0 '+W+' '+H,preserveAspectRatio:'none'},stage),lines=[];
       g.pts.forEach(function(ray){
@@ -10671,8 +10712,15 @@ window.SceneEnvironment=(()=>{
       transitionAnim(coverGroup,[{transform:'translateX(0)'},{transform:'translateX('+(-(W+520))+'px)'}],{duration:320,delay:680,easing:'cubic-bezier(.7,0,.3,1)'});
       finishAt=1000;
     }
+    // 动画先停在第一格，等碎片真的画上画面（隔两个画格）才开始计时：进战斗的第一格在慢手机上要 0.4～1 秒以上，
+    // 原本计时照走，动画在卡住时就播完了，玩家只看到一闪（2026-11-24 iPhone XS 实测）。画格一直没来时（背景分页）照原本时间收掉。
     var mine=transition;
-    mine.timer=setTimeout(function(){if(transition===mine)cancelTransition();},finishAt+120);
+    mine.timer=setTimeout(function(){if(transition===mine)cancelTransition();},finishAt+3000);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){
+      if(transition!==mine)return;
+      mine.anims.forEach(function(a){a.play();});
+      clearTimeout(mine.timer);mine.timer=setTimeout(function(){if(transition===mine)cancelTransition();},finishAt+120);
+    });});
   }
   function refresh(){
     if(disposed)return;

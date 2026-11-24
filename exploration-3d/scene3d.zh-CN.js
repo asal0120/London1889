@@ -1271,6 +1271,8 @@ function create(options){
     setMotionEnabled(v){motionEnabled=!!v;},
     setEnvironment(v){const r=env.set(v);syncTime();return r;},getEnvironment(){return env.get();},
     isOverview(){return overviewMode;},
+    // 碎裂转场用：重画一次后立刻交出画布，呼叫端要在同一段程式里复制（WebGL 画面在下次重绘前才有内容）。
+    snapshot(){if(host.disposed||!scene||!actors)return null;composer.render();const r=cv.getBoundingClientRect();return r.width&&r.height?{canvas:cv,rect:r}:null;},
     setOverview(v){if(host.disposed||game.state?.phase!=='explore')return false;overviewMode=!!v;host.fogKey='';
       if(actors)placeCamera(true);render(game.state,game.travel);if(actors){updateSun(true);renderer.shadowMap.needsUpdate=true;}return true;},
     inspect(){return {generated:true,renderer:'webgl',elevation:44,projection:'perspective',playerCell:game.state?game.state.player.at:null,
