@@ -10490,10 +10490,11 @@ var NewCardAlbumData = (function () {
             return typeof context.rawData === 'string' ? context.rawData : stRegexRenderedInput || '';
         }
         // 酒馆聊天数据里这一楼的原文。MVU 用 refresh: 'none' 静默改写楼层，载入器下次重读前 floorRaw() 还是旧的。
-        // 读不到时用卡片手上的原文。
+        // 先用载入器的 getRawMessage（和交给卡片的 rawData 同一个来源），再用酒馆助手；都读不到时用卡片手上的原文。
         function chatFloorRaw() {
             var floor = mapCardFloor();
             try {
+                if (typeof context.getRawMessage === 'function') return String(context.getRawMessage());
                 if (typeof context.getChatMessages === 'function' && floor != null) {
                     var list = context.getChatMessages(Number(floor));
                     var message = Array.isArray(list) ? list[list.length - 1] : null;
@@ -10501,6 +10502,12 @@ var NewCardAlbumData = (function () {
                 }
             } catch (_) {}
             return floorRaw();
+        }
+        // MVU 静默改写楼层后，卡片手上的原文还是旧的：请载入器重读这一楼（requestPluginReconcile → deliver），
+        // 原文有变才会重新交给卡片。只在轮询时（见 watchExtraAnalysis）和重新解析结束时检查。
+        function reconcileSilentRaw() {
+            if (destroyed || isGenerating || typeof context.rawData !== 'string' || typeof context.requestPluginReconcile !== 'function') return;
+            if (chatFloorRaw() !== floorRaw()) context.requestPluginReconcile();
         }
         // 找不到变量区域时回传 null；区域存在但没有内容时回传空字串。
         function extractStateText(raw) {
@@ -10710,6 +10717,7 @@ var NewCardAlbumData = (function () {
             if (!rawContentActive || !isLatestFloor() || mvuUpdateMethod() === MVU_PLOT_ONLY) { if (svRetryRaw !== null) endSvRetry(); return; }
             checkSvRetry();
             checkSvFailed();
+            reconcileSilentRaw();
             if (svExtraLive() !== svExtraShown) {
                 var ended = svExtraShown;
                 if (!svExtraShown) setSvOpen(false);
@@ -10751,6 +10759,7 @@ var NewCardAlbumData = (function () {
             if (failed) revealSvBottom();
             renderStateView();
             repaintEncounter();
+            reconcileSilentRaw();
         }
         function setSvFailed(on, chat) {
             svFailedChat = on ? chat : null;
