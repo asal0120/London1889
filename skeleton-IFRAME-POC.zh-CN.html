@@ -3192,13 +3192,16 @@
 /* 手机：与相簿一致，立绘在左侧、向右淡出，名字与数值在右侧。 */
 .rpg-v7-root.d-material-ui .dpTop { position: relative; height: 300px; margin-top: 8px; overflow: hidden; }
 .rpg-v7-root.d-material-ui .dpSheet .portrait {
-  position: absolute; top: -6px; left: -72px; right: auto; display: block; width: auto; height: 400px;
-  min-height: 0; max-height: none; aspect-ratio: 1500 / 2100; overflow: visible;
+  /* 2026-11-25：立绘框只到区块底部，底部淡出在区块底边刚好结束。
+     以前框高 400px、区块在约 300px 处切掉，底部淡出到 384px 才结束，切口处仍有六成不透明，下半身消失得突兀。
+     立绘本身仍是 400px 高（见下方 img），大小与位置不变；区块比立绘高时（320 的经验面），淡出改在立绘底边结束。 */
+  position: absolute; top: -6px; bottom: 0; left: -72px; right: auto; display: block; width: 286px; height: auto;
+  min-height: 0; max-height: none; aspect-ratio: auto; overflow: hidden;
   border: 0; border-radius: 0; background: none;
   /* 右侧淡入文字区；左缘与上缘被区块裁切的地方也淡出，不留硬边。 */
-  -webkit-mask-image: linear-gradient(270deg, transparent 5%, var(--mask-solid) 45%), linear-gradient(90deg, transparent 24%, var(--mask-solid) 36%), linear-gradient(transparent 1%, var(--mask-solid) 7%, var(--mask-solid) 62%, transparent 96%);
+  -webkit-mask-image: linear-gradient(270deg, transparent 5%, var(--mask-solid) 45%), linear-gradient(90deg, transparent 24%, var(--mask-solid) 36%), linear-gradient(transparent 4px, var(--mask-solid) 28px, var(--mask-solid) calc(min(100%, 400px) - 130px), transparent min(100%, 400px));
   -webkit-mask-composite: source-in, source-in;
-  mask-image: linear-gradient(270deg, transparent 5%, var(--mask-solid) 45%), linear-gradient(90deg, transparent 24%, var(--mask-solid) 36%), linear-gradient(transparent 1%, var(--mask-solid) 7%, var(--mask-solid) 62%, transparent 96%);
+  mask-image: linear-gradient(270deg, transparent 5%, var(--mask-solid) 45%), linear-gradient(90deg, transparent 24%, var(--mask-solid) 36%), linear-gradient(transparent 4px, var(--mask-solid) 28px, var(--mask-solid) calc(min(100%, 400px) - 130px), transparent min(100%, 400px));
   mask-composite: intersect, intersect;
 }
 .rpg-v7-root.d-material-ui .dpSheet .portrait::after { content: none; }
@@ -3207,6 +3210,10 @@
 /* 每位角色的立绘各占一层、叠在同一位置；切换时新旧两层短暂并存（swapPortrait）。z-index 让立绘维持在宽版角饰前面。 */
 .rpg-v7-root.d-material-ui .dpSheet .portraitLayer { position: absolute; inset: 0; z-index: 1; }
 .rpg-v7-root.d-material-ui .dpSheet .portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+/* 手机版：立绘固定 400px 高、从框的上缘开始，框变矮时只裁掉下方，不会缩放。 */
+@container rpg-card (max-width: 560px) {
+  .rpg-v7-root.d-material-ui .dpSheet .portrait img { inset: 0 0 auto 0; height: 400px; }
+}
 .rpg-v7-root.d-material-ui .dpSheet .portraitLayer > .initial { position: absolute; inset: 0; display: grid; place-items: center; font-size: 64px; }
 .rpg-v7-root.d-material-ui .dpSheet .infoCol { position: relative; z-index: 1; display: block; width: 58%; margin-left: 42%; padding-top: 8px; }
 .rpg-v7-root.d-material-ui .dpSheet .nameplate { padding: 0; border: 0; border-radius: 0; background: none; }
@@ -3319,23 +3326,22 @@
 .rpg-v7-root .expGroup h4 { margin: 0 0 6px; color: var(--card-fg-dim); font: 600 12px/1.4 var(--serif); letter-spacing: .2em; }
 .rpg-v7-root .expGroup .profileGrid { grid-template-columns: minmax(0, 1fr); }
 .rpg-v7-root .profileEmpty { margin: 0; padding: 2px 0; color: var(--card-fg-dim); font-size: 13px; }
-/* 320：名字右侧没有空位，好感退回名字下方的一列（图示＋好感＋点线＋数字）。 */
+/* 320（2026-11-25 改）：好感与 390 相同，留在名字右侧（好感、仪表、数字上下排），只是缩小，不再退回名字下方的一列。 */
 @container rpg-card (max-width: 340px) {
-  .rpg-v7-root.d-material-ui .dpSheet .bondMeter {
-    grid-column: 1 / -1; grid-row: auto; display: flex; flex-direction: row; align-items: center; gap: 6px; margin-top: 12px; padding: 0 4px;
-  }
-  .rpg-v7-root .bondDelta { right: 0; bottom: 100%; margin: 0 0 2px; }
-  .rpg-v7-root .bondGauge { width: 32px; }
-  .rpg-v7-root .bondLabel { color: var(--card-fg); font-size: 13px; letter-spacing: .06em; text-indent: 0; }
-  .rpg-v7-root .bondMeter .lead { display: block; }
-  .rpg-v7-root .bondNum, .rpg-v7-root .bondNum.three { font-size: 18px; }
+  .rpg-v7-root .bondGauge { width: 36px; }
+  .rpg-v7-root .bondLabel { font-size: 11px; letter-spacing: .2em; text-indent: .2em; }
+  .rpg-v7-root .bondNum { font-size: 22px; }
+  /* 100% 比仪表宽，会把好感区撑宽；这个宽度缩成 16px，宽度与仪表相近。 */
+  .rpg-v7-root .bondNum.three { font-size: 16px; }
+  /* 名字也跟着卡片宽度略缩（cqi 是队伍面板宽，手机版比卡片窄约 70px）：卡片 300px 时 29px、340px 时恢复 34px，三个字的名字才排得下。 */
+  .rpg-v7-root.d-material-ui .dpSheet .charName { font-size: clamp(29px, calc(29px + (100cqi - 230px) * .125), 34px); }
   .rpg-v7-root.d-material-ui .dpSheet .dpProfile { padding: 0 4px; }
   .rpg-v7-root :is(.dpProfileLabel, .profileFlip) { letter-spacing: .08em; }
 }
-/* 手机 341–560：好感在名字右侧时，名字可往右多用 24px（伸进间隔与好感栏的左侧空白），真的放不下才换行。
+/* 手机（560 以下）：好感在名字右侧时，名字可往右多用 24px（伸进间隔与好感栏的左侧空白），真的放不下才换行。
    2026-11-21：卡片宽约 354–390px 时三个字的名字差 2px 就被挤成两行（实测手机约 370px），画面上其实放得下。
    只放宽名字本身；罗马拼音、称号维持原宽度，不会叠到好感数字。 */
-@container rpg-card (min-width: 341px) and (max-width: 560px) {
+@container rpg-card (max-width: 560px) {
   .rpg-v7-root.d-material-ui .dpSheet .infoCol > .nameplate .charName { max-width: none; margin-right: -24px; }
 }
 /* 经验两组：区块够宽才并排，320 的窄栏改成上下排列。并排时依名称长短分宽度，短名称那组最多占一半。 */
@@ -3383,7 +3389,7 @@
 
   /* 立绘：改版前的四角饰（PSD 向量路径）＋柔光底，人物画在角饰前面。 */
   .rpg-v7-root.d-material-ui .dpSheet .portrait {
-    position: sticky; top: 0; left: auto; right: auto; grid-column: 1; grid-row: 1 / -1; align-self: start;
+    position: sticky; top: 0; bottom: auto; left: auto; right: auto; grid-column: 1; grid-row: 1 / -1; align-self: start;
     width: 100%; height: 100cqh; aspect-ratio: auto; overflow: hidden;
     background: radial-gradient(ellipse at 50% 70%, var(--portrait-hi), transparent 72%);
     -webkit-mask-image: none; mask-image: none;
@@ -3436,10 +3442,19 @@
   .rpg-v7-root.d-material-ui .dpSheet .thumb.active .thumbFace { width: calc(var(--face) * 1.22); height: calc(var(--face) * 1.52); }
   .rpg-v7-root.d-material-ui .dpSheet .thumbFace .initial { font-size: 20px; }
 
-  /* 注记：填满剩下的高度，文字多时在框内卷动。 */
-  .rpg-v7-root.d-material-ui .dpNotes { display: flex; flex-direction: column; min-height: 0; contain: size; margin-bottom: 4px; }
+  /* 注记（2026-11-25）：外层仍占住剩下的高度，但不画底色与边框。看得到的框由小标＋文字两块拼成，
+     高度只跟文字一样高；文字超过剩下的空间时，才在框内卷动。 */
+  .rpg-v7-root.d-material-ui .dpNotes {
+    display: flex; flex-direction: column; min-height: 0; contain: size; margin-bottom: 4px;
+    padding: 0; background: none; border: 0;
+  }
+  .rpg-v7-root.d-material-ui .dpNotesLabel {
+    flex: none; margin: 0; padding: 12px 14px 6px;
+    background: var(--status-wash); border-top: 3px double var(--status-rule);
+  }
   .rpg-v7-root.d-material-ui .dpSheet .charDesc {
-    flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px;
+    flex: 0 1 auto; min-height: 0; overflow-y: auto; padding: 0 20px 14px 14px;
+    background: var(--status-wash); border-bottom: 3px double var(--status-rule);
     scrollbar-width: thin; scrollbar-color: var(--status-rule) transparent;
   }
 }
@@ -3477,6 +3492,56 @@
   .rpg-v7-root.d-material-ui .dpSheet .charName { font-size: 40px; }
   .rpg-v7-root.d-material-ui .dpSheet .queueStrip { gap: 15px; }
   .rpg-v7-root.d-material-ui .dpSheet .thumb { font-size: 14px; }
+}
+
+/* 宽版字级与栏距（2026-11-25）：宽版原本沿用手机的字级，在宽萤幕上太小；右栏文字整体放大约 1.2 倍。
+   立绘栏宽度不变。笔刷背景右侧本身约有 12% 透明，栏间距从最多 44px 改成最多 20px，中间才不会空太多。 */
+@container rpg-card (min-width: 561px) {
+  .rpg-v7-root.d-material-ui .dpSheet { column-gap: clamp(12px, 1.5%, 20px); }
+  .rpg-v7-root.d-material-ui .dpHead { font-size: 15px; }
+  .rpg-v7-root.d-material-ui .dpSheet .charTitle { font-size: 16px; }
+  .rpg-v7-root .dpProfileLabel, .rpg-v7-root .profileFlip, .rpg-v7-root .expGroup h4 { font-size: 14px; }
+  .rpg-v7-root .profileFlip span { font-size: 19px; }
+  .rpg-v7-root .profileGrid { column-gap: 24px; row-gap: 11px; }
+  .rpg-v7-root .profileRow, .rpg-v7-root .profileEmpty { font-size: 16px; }
+  .rpg-v7-root .profileRow dd.num { font-size: 18px; }
+  .rpg-v7-root .bondLabel { font-size: 14px; }
+  .rpg-v7-root.d-material-ui .dpNotesLabel, .rpg-v7-root.d-material-ui .dpNotesLabel i { font-size: 14px; }
+  .rpg-v7-root.d-material-ui .dpSheet .charDesc { font-size: 16px; }
+  /* 好感在名字右侧（卡片宽 561–849px）：仪表与数字跟着宽度缩放，卡片越窄越小，三个字的名字才不会被挤成两行。
+     cqi 是队伍面板（panelArea，比卡片窄 40px）的宽度。卡片宽 561px 时仪表 38px、数字 24px；宽到 700px 时恢复 64px、34px。 */
+  .rpg-v7-root .bondGauge { width: clamp(38px, calc(18.7cqi - 59.4px), 64px); }
+  .rpg-v7-root.d-material-ui .dpSheet .bondMeter { column-gap: clamp(8px, calc(2.9cqi - 7px), 12px); }
+  .rpg-v7-root .bondNum, .rpg-v7-root .bondNum.three { font-size: clamp(24px, calc(7.2cqi - 13.5px), 34px); }
+  /* 宽版人物数据一律一栏：每个栏位各占一行，数据区较高，也不会把生日拆成两行。手机版仍是两栏。 */
+  .rpg-v7-root .profileFace > .profileGrid { grid-template-columns: minmax(0, 1fr); }
+}
+/* 卡片宽 561–689px：100% 比一般数值小 4px（最小 20px，同手机版）。690px 以上数字区固定宽度，100% 用一般大小。 */
+@container rpg-card (min-width: 561px) and (max-width: 689.98px) {
+  .rpg-v7-root .bondNum.three { font-size: clamp(20px, calc(7.2cqi - 17.5px), 34px); }
+}
+/* 好感数字区固定为「100%」的宽度、靠左对齐：1%、10%、100% 的仪表位置相同，不被位数往旁边挤。
+   卡片宽不到 690px 时不固定：好感在名字右侧，固定宽度会把三个字的名字挤成两行（原本只有 100% 时才会）。 */
+@container rpg-card (min-width: 690px) {
+  .rpg-v7-root .bondNum, .rpg-v7-root .bondNum.three { display: inline-block; min-width: calc(3ch + .46em); text-align: left; }
+}
+/* 好感：人物数据改成一栏后右侧较空，好感稍微放大，并对齐数据区的垂直中央。
+   人物数据右侧留白（padding-right）＝好感的宽度。 */
+@container rpg-card (min-width: 850px) {
+  .rpg-v7-root.d-material-ui .dpSheet .charName { font-size: 40px; }
+  .rpg-v7-root.d-material-ui .dpSheet .infoCol > .dpProfile { padding-right: 260px; }
+  .rpg-v7-root.d-material-ui .dpSheet .infoCol > .statBars { align-self: center; margin: 0 11px 0 24px; column-gap: 12px; row-gap: 8px; }
+  .rpg-v7-root .bondGauge { width: 88px; }
+  .rpg-v7-root .bondNum, .rpg-v7-root .bondNum.three { font-size: 45px; }
+  .rpg-v7-root .bondDelta { font-size: 13px; }
+}
+@container rpg-card (min-width: 1120px) {
+  .rpg-v7-root.d-material-ui .dpSheet .charName { font-size: 43px; }
+  .rpg-v7-root.d-material-ui .dpSheet .thumb { font-size: 15px; }
+  .rpg-v7-root.d-material-ui .dpSheet .infoCol > .dpProfile { padding-right: 290px; }
+  .rpg-v7-root .bondGauge { width: 100px; }
+  .rpg-v7-root .bondLabel { font-size: 15px; }
+  .rpg-v7-root .bondNum, .rpg-v7-root .bondNum.three { font-size: 51px; }
 }
 
 /* ===== 点击范围：可点元件视觉小于 44x44 时，用透明伪元素把范围扩到 44x44（不改外观；2026-10-13） =====
