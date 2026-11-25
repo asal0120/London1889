@@ -2326,7 +2326,14 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .scene3d .scene3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 /* 格子按鈕保留給鍵盤與原本的點擊流程；畫面上看不到，點地面由立體畫面換算成格子 */
 .scene3d .scene3d-hit { left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.scene3d .scene3d-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #c9bfa6; font-size: 13px; letter-spacing: .1em; }
+/* 載入提示在立體場景接手前就顯示，不能依賴場景加上的 class */
+.board > .scene3d-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #c9bfa6; font-size: 13px; letter-spacing: .1em; }
+/* 手機探索：地圖框往下長到補滿畫面高度。立體鏡頭固定顯示的格數寬度，框變高時多看到前後幾排。
+   45° 版（含立體載入失敗時的 2D 備援）的地圖是固定比例的圖，不套用。 */
+.game-shell[data-explore-mobile="true"]:has(#explore-view:not([hidden]) .board.scene3d) { display: flex; flex-direction: column; min-height: 100dvh; }
+.game-shell[data-explore-mobile="true"]:has(#explore-view:not([hidden]) .board.scene3d) :is(#app, #explore-view, .map-card, .map-surround, .map-grid-wrap) { display: flex; flex-direction: column; flex: 1 0 auto; }
+.game-shell[data-explore-mobile="true"]:has(#explore-view:not([hidden]) .board.scene3d) .explore-layout { flex: 1 0 auto; grid-template-rows: minmax(0, 1fr) auto; }
+.game-shell[data-explore-mobile="true"] #explore-view .board.scene3d { flex: 1 0 auto; }
 </style>
 </head>
 <body>
@@ -9411,11 +9418,13 @@ window.SceneEnvironment=(()=>{
   var Scene2D=window.ExplorationGeneratedScene;
   function create(options){
     var real=null,last=null,motion=options.motionEnabled!==false,env=SceneEnvironment.normalize(options.environment||{}),disposed=false,fallback=false,timer=0;
-    var board=options.board;board.replaceChildren();var wait=document.createElement('div');wait.className='scene3d-loading';wait.textContent='场景载入中…';board.append(wait);
+    // 载入期间就给地图框最后的比例与 class，提示文字置中，载完时框也不会跳动大小
+    var board=options.board;board.replaceChildren();board.classList.add('scene45','scene-generated','scene3d');board.style.setProperty('--scene-ratio','544 / 554');var wait=document.createElement('div');wait.className='scene3d-loading';wait.textContent='场景载入中…';board.append(wait);
     function start(impl){
       if(disposed||real)return;clearTimeout(timer);
+      if(impl===Scene2D)board.classList.remove('scene3d');
       try{real=impl.create(Object.assign({},options,{environment:env,motionEnabled:motion}));}
-      catch(e){console.warn('立体场景无法启动，改用 2D',e);if(impl===Scene2D)throw e;fallback=true;real=Scene2D.create(Object.assign({},options,{environment:env,motionEnabled:motion}));}
+      catch(e){console.warn('立体场景无法启动，改用 2D',e);if(impl===Scene2D)throw e;fallback=true;board.classList.remove('scene3d');real=Scene2D.create(Object.assign({},options,{environment:env,motionEnabled:motion}));}
       if(last)real.render(last[0],last[1]);
     }
     function useFallback(){if(!real&&!disposed){fallback=true;start(Scene2D);}}
@@ -11090,6 +11099,11 @@ window.SceneEnvironment=(()=>{
     getLastResult:function(){return lastResult?R.clone(lastResult):null;},
     getSavedHistory:function(){return Object.assign({version:1,entries:R.clone(savedRuns)},historySummary(savedRuns));},
     getSavePolicy:function(){return{version:P.version,generationVersion:P.generationVersion,opening:R.clone(opening),events:R.clone(eventLedger),accepted:P.accepted(state,meta)};},
+    // 结算中的局（含存档里留下的）：宿主用来决定关闭前是否询问、再次进入时是否先显示这份结算。没有则 null。
+    // attempted：曾交给宿主送出，但没收到完成的回应（可能已经送出过）。
+    getResultStatus:function(){return state&&state.phase==='ended'&&meta?{source:meta.source,outcome:state.outcome,accepted:P.accepted(state,meta),delivery:meta.delivery,attempted:Boolean(meta.hostAttempted)}:null;},
+    // 放弃结算中的局并回到整备（玩家关闭前确认放弃时用）。送出中不处理。
+    dropResult:function(){if(disposed||sending||!state||state.phase!=='ended')return false;return P.accepted(state,meta)?backToPrep(false):discardAttempt(false);},
     retry:function(){return P.unresolved(state,meta)&&discardAttempt(true);},
     closeResult:function(){return P.unresolved(state,meta)&&discardAttempt(false);},
     importEncounter:importEncounter,
