@@ -83,7 +83,7 @@ dialog{border:1px solid #677560;background:#20352f;color:var(--text);border-radi
 @container game (min-width:681px){.explore-panel-menu{gap:var(--explore-gap)}.explore-drawer{padding:0 20px 20px}.explore-drawer-heading h2{font-size:16px}.explore-drawer p,.explore-drawer .journal li,.explore-drawer .effect-list li,.map-instruction{font-size:14px}.map-instruction small,.support-detail-copy p{font-size:13px}.support-detail-title b{font-size:14px}.explore-drawer .journal{max-height:320px}}
 @container game (min-width:900px){.companion-portrait{flex-basis:calc((100% - 2 * var(--portrait-gap))/3)}}
 @container game (max-width:360px){.explore-dock{gap:8px;grid-template-columns:minmax(0,1.8fr) minmax(98px,1fr)}.map-heading{gap:6px;padding:0 8px}.map-counters{gap:7px}.map-counters span{font-size:12px}.map-counters b{font-size:12px}.explore-panel-menu button{min-height:54px;font-size:12px}.explore-drawer .journal{max-height:210px}}
-.skill-layout-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.skill-layout-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"show move" "facts facts" "desc desc";gap:2px 10px;align-items:center;padding:8px 0;border-bottom:1px solid #67756066}.skill-layout-row.is-hidden>:not(.skill-layout-move):not(.skill-layout-show){opacity:.45}.skill-layout-row.is-hidden .skill-layout-show b{opacity:.55;text-decoration:line-through}.skill-layout-show{grid-area:show;display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}.skill-layout-show input{width:20px;height:20px;margin:0;accent-color:var(--gold,#c9a45c)}.skill-layout-cost{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 4px;border:1px solid currentColor;border-radius:4px;font-size:12px;opacity:.85}.game-shell .skill-layout-row .skill-facts{grid-area:facts;justify-content:flex-start;gap:4px;margin:0}.skill-layout-move{grid-area:move;display:flex;gap:4px}.skill-layout-move button{min-width:44px;min-height:44px;padding:0;font-size:14px}.skill-layout-desc{grid-area:desc;margin:4px 0 0;font-size:12px;line-height:1.6;opacity:.85}.hit-settings{margin-top:16px;padding-top:12px;border-top:1px solid #677560}.hit-settings h3{font-size:13px;font-weight:600;letter-spacing:.06em;margin:0 0 4px}.hit-option{display:flex;align-items:center;gap:12px;min-height:44px;padding:4px 0;font-size:13px;line-height:1.5;cursor:pointer}.hit-option input{flex:none;width:22px;height:22px;margin:0;accent-color:#c9a45c;cursor:pointer}.hit-option small{display:block;font-size:12px;line-height:1.5;opacity:.75}
+.skill-layout-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.skill-layout-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"show move" "facts facts" "desc desc";gap:2px 10px;align-items:center;padding:8px 0;border-bottom:1px solid #67756066}.skill-layout-row.is-hidden>:not(.skill-layout-move):not(.skill-layout-show){opacity:.45}.skill-layout-row.is-hidden .skill-layout-show b{opacity:.55;text-decoration:line-through}.skill-layout-show{grid-area:show;display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}.skill-layout-show input{width:20px;height:20px;margin:0;accent-color:var(--gold,#c9a45c)}.skill-layout-cost{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 4px;border:1px solid currentColor;border-radius:4px;font-size:12px;opacity:.85}.game-shell .skill-layout-row .skill-facts{grid-area:facts;justify-content:flex-start;gap:4px;margin:0}.skill-layout-move{grid-area:move;display:flex;gap:4px}.skill-layout-move button{min-width:44px;min-height:44px;padding:0;font-size:14px}.skill-layout-desc{grid-area:desc;margin:4px 0 0;font-size:12px;line-height:1.6;opacity:.85}.hit-settings{margin-top:16px;padding-top:12px;border-top:1px solid #677560}.hit-settings h3{font-size:13px;font-weight:600;letter-spacing:.06em;margin:0 0 4px}.hit-option{display:flex;align-items:center;gap:12px;min-height:44px;padding:4px 0;font-size:13px;line-height:1.5;cursor:pointer}.hit-option input{flex:none;width:22px;height:22px;margin:0;accent-color:#c9a45c;cursor:pointer}.hit-option small{display:block;font-size:12px;line-height:1.5;opacity:.75}.motion-part{padding-left:22px}
 /* 探索遇敌→战斗的碎裂转场（只有画面；规则早已切到战斗）。副本是目前画面的复制，不可点、不可聚焦。 */
 .shatter-fx{position:fixed;inset:0;z-index:9500;overflow:hidden;pointer-events:auto;touch-action:none;contain:layout paint}
 .shatter-fx,.shatter-fx *{animation:none!important;transition:none!important}
@@ -2057,6 +2057,93 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .game-shell .loadout .support-option[aria-pressed="true"] .tick { background: var(--vr-wax) center / contain no-repeat; box-shadow: none; color: transparent; border-radius: 0; filter: drop-shadow(0 2px 2px var(--shade-47)); }
 </style>
 <!-- END_EXPLORATION_PRESENTATION_PREP_COVER_STYLE -->
+<!-- BEGIN_EXPLORATION_PRESENTATION_MOTION -->
+<script id="exploration-motion">
+/* 探索小游戏的动画设定（2026-11-25）。
+ * 不跟随系统的「减少动态效果」：预设全部开启，玩家在「玩法」对话框里全部或分项关闭，存在 localStorage。
+ * 分项：map 地图动态（走路动作、雨雪）、transition 遇敌转场、battle 战斗动画（招式特效与打击回馈）、ui 介面动态（过场、吊牌、雾气等）。
+ * query(part) 回传和 matchMedia('(prefers-reduced-motion: reduce)') 相同用法的物件：matches 为 true 表示该项已关闭，
+ * 设定改变时发出 change 事件。样式里原本的 @media (prefers-reduced-motion: reduce) 区块改由「介面动态」控制：
+ * 关闭时把区块的条件改成 all（套用），开启时改成 not all（不套用）。 */
+(function (root) {
+  'use strict';
+  var KEY = 'newcard.exploration.motion.v1', PARTS = ['map', 'transition', 'battle', 'ui'];
+  var state = read(), listeners = {}, rules = [];
+  PARTS.forEach(function (part) { listeners[part] = []; });
+
+  function read() {
+    var saved = null, out = {};
+    try { saved = JSON.parse(root.localStorage.getItem(KEY) || 'null'); } catch (_) {}
+    PARTS.forEach(function (part) { out[part] = !(saved && saved[part] === false); });
+    return out;
+  }
+  function save() { try { root.localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {} }
+
+  // 收集还没处理过的「减少动态」区块（处理后条件不再含这段文字，不会重复收集）。
+  function collect(list) {
+    for (var i = 0; list && i < list.length; i++) {
+      var rule = list[i];
+      if (rule.media && /prefers-reduced-motion\s*:\s*reduce/i.test(rule.media.mediaText)) rules.push(rule);
+      else if (rule.cssRules) collect(rule.cssRules);
+    }
+  }
+  function applyStyles() {
+    var sheets = root.document ? root.document.styleSheets : [];
+    for (var i = 0; i < sheets.length; i++) { try { collect(sheets[i].cssRules); } catch (_) {} }
+    var text = state.ui ? 'not all' : 'all';
+    rules.forEach(function (rule) { try { if (rule.media.mediaText !== text) rule.media.mediaText = text; } catch (_) {} });
+  }
+
+  function query(part) {
+    if (PARTS.indexOf(part) < 0) throw new Error('Unknown motion part: ' + part);
+    var list = {
+      media: 'newcard-motion:' + part,
+      get matches() { return state[part] === false; },
+      addEventListener: function (type, fn) { if (type === 'change' && typeof fn === 'function') listeners[part].push(fn); },
+      removeEventListener: function (type, fn) {
+        if (type !== 'change') return;
+        var at = listeners[part].indexOf(fn);
+        if (at >= 0) listeners[part].splice(at, 1);
+      },
+      addListener: function (fn) { list.addEventListener('change', fn); },
+      removeListener: function (fn) { list.removeEventListener('change', fn); }
+    };
+    return list;
+  }
+  function notify(part) {
+    var event = {matches: state[part] === false, media: 'newcard-motion:' + part};
+    listeners[part].slice().forEach(function (fn) { try { fn(event); } catch (error) { setTimeout(function () { throw error; }); } });
+  }
+  function update(next) {
+    var changed = [];
+    PARTS.forEach(function (part) {
+      if (!Object.prototype.hasOwnProperty.call(next, part)) return;
+      var on = next[part] !== false;
+      if (state[part] !== on) { state[part] = on; changed.push(part); }
+    });
+    if (!changed.length) return false;
+    save();
+    if (changed.indexOf('ui') >= 0) applyStyles();
+    changed.forEach(notify);
+    return true;
+  }
+
+  root.ExplorationMotion = {
+    parts: PARTS.slice(),
+    query: query,
+    get: function () { return {map: state.map, transition: state.transition, battle: state.battle, ui: state.ui}; },
+    enabled: function (part) { return state[part] !== false; },
+    set: function (part, on) { var next = {}; next[part] = on; return update(next); },
+    setAll: function (on) { var next = {}; PARTS.forEach(function (part) { next[part] = on; }); return update(next); },
+    // 页面之后才加入的样式（立体版、测试注入）：再收集一次。
+    refreshStyles: applyStyles
+  };
+  applyStyles();
+  if (root.document && root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', applyStyles);
+  root.addEventListener('load', applyStyles);
+})(window);
+</script>
+<!-- END_EXPLORATION_PRESENTATION_MOTION -->
 <style id="exploration-scene45-style">
 /* The scene has its own world coordinates. The journal remains ordinary HTML. */
 .game-shell .scene45-surround {
@@ -2492,8 +2579,14 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
   <li id="help-spectrum" hidden></li>
   <li>体力与局内效果会带到下一场；护盾与战斗状态每场重置。</li>
 </ol><div class="hit-settings" role="group" aria-labelledby="hit-settings-title"><h3 id="hit-settings-title">战斗回馈</h3>
-  <label class="hit-option" for="hit-shake-toggle" title="系统开启「减少动态」时一律不晃动"><input type="checkbox" id="hit-shake-toggle"><span>画面震动</span></label>
+  <label class="hit-option" for="hit-shake-toggle" title="关闭战斗动画时一律不晃动"><input type="checkbox" id="hit-shake-toggle"><span>画面震动</span></label>
   <label class="hit-option" for="hit-sound-toggle"><input type="checkbox" id="hit-sound-toggle"><span>打击音效</span></label>
+</div><div class="hit-settings motion-settings" role="group" aria-labelledby="motion-settings-title"><h3 id="motion-settings-title">动画</h3>
+  <label class="hit-option" for="motion-all-toggle"><input type="checkbox" id="motion-all-toggle"><span>全部动画</span></label>
+  <label class="hit-option motion-part" for="motion-map-toggle"><input type="checkbox" id="motion-map-toggle" data-motion-part="map"><span>地图动态<small>走路动作、雨雪飘落</small></span></label>
+  <label class="hit-option motion-part" for="motion-transition-toggle"><input type="checkbox" id="motion-transition-toggle" data-motion-part="transition"><span>遇敌转场<small>进入战斗时的碎裂画面</small></span></label>
+  <label class="hit-option motion-part" for="motion-battle-toggle"><input type="checkbox" id="motion-battle-toggle" data-motion-part="battle"><span>战斗动画<small>招式特效、闪光、停顿与数字</small></span></label>
+  <label class="hit-option motion-part" for="motion-ui-toggle"><input type="checkbox" id="motion-ui-toggle" data-motion-part="ui"><span>介面动态<small>按钮、吊牌、雾气等的过场</small></span></label>
 </div><div class="dialog-actions"><button class="primary" id="close-help">关闭</button></div></div></dialog>
 <dialog id="skill-layout-dialog" class="skill-layout-dialog" aria-labelledby="skill-layout-title"><div class="dialog-body"><h2 id="skill-layout-title">招式配置</h2><ol class="skill-layout-list" id="skill-layout-list"></ol><div class="dialog-actions"><button class="secondary" id="reset-skill-layout">恢复预设</button><button class="primary" id="close-skill-layout">完成</button></div></div></dialog>
 <dialog id="retreat-dialog" aria-labelledby="retreat-title"><div class="dialog-body"><div class="eyebrow">中止行动</div><h2 id="retreat-title">撤离</h2><p>要重新挑战同一份开局，还是结束并回到故事？</p><div class="dialog-actions"><button class="primary" id="retry-retreat">重新挑战</button><button class="secondary" id="cancel-retreat">继续探索</button><button class="danger-button" id="confirm-retreat">结束并回到故事</button></div></div></dialog>
@@ -4409,7 +4502,8 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
     // against the host-provided base, else the build's base for this entry.
     const assetBase = new URL(root.EXPLORATION_ASSET_BASE || library.assetBase || './', document.baseURI).href;
     for (const asset of Object.values(library.assets)) if (!asset.src && asset.href) asset.src = new URL(asset.href, assetBase).href;
-    const preference = matchMedia('(prefers-reduced-motion: reduce)');
+    // 游戏自己的「战斗动画」设定（exploration-runtime/motion.js），不跟随系统的减少动态效果。
+    const preference = (window.ExplorationMotion?window.ExplorationMotion.query('battle'):{matches:false,addEventListener:function(){},removeEventListener:function(){}});
     let reducedMotion = preference.matches;
     let config = normalize(options.defaults || {}, {enabled: true, portraits: {}, effects: {}}), media = new Map();
     let assetsReady = false;
@@ -5168,7 +5262,8 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
   const LEVEL_NAMES = ['small', 'mid', 'big'];
   const levelName = index => index < 0 ? 'blocked' : LEVEL_NAMES[index];   // plan.level 为 -1 代表只有「护盾完全挡下」的目标
   const isAlly = id => id === 'player' || id === 'battle-companion' || String(id).startsWith('summon-');   // 我方：玩家、同伴、召唤物
-  const motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  // 游戏自己的「战斗动画」设定（exploration-runtime/motion.js），不跟随系统的减少动态效果。
+  const motionQuery = (window.ExplorationMotion?window.ExplorationMotion.query('battle'):{matches:false,addEventListener:function(){},removeEventListener:function(){}});
   const flashTimes = [];                // 闪白时间纪录（限制每秒次数）
   const log = [];                       // 触发纪录（验收与观察用）
   const listeners = new Set();
@@ -5382,8 +5477,8 @@ window.ExplorationActorAssets = {"images":{"player-idle":{"source":"assets/actor
     function surfaceOf(id) { const slot = slots.get(id); return slot && slot.isConnected ? slot.querySelector('.portrait-surface') : null; }
 
     function blocked() {
-      if (reduced()) return '系统减少动态已开启';
-      const status = api.getStatus(); if (status.reducedMotion) return '系统减少动态已开启';
+      if (reduced()) return '战斗动画已关闭';
+      const status = api.getStatus(); if (status.reducedMotion) return '战斗动画已关闭';
       if (api.getConfig().enabled === false) return '游戏内的动画已关闭';
       return '';
     }
@@ -5977,7 +6072,8 @@ window.ExplorationResourceIcons = {"momentum":"./assets/ui/resource/red-buff4.we
     frame.className='dashboard-frame';ring.className='spectrum-ring';
     frame.setAttribute('aria-hidden','true');ring.setAttribute('aria-hidden','true');
     dashboard.insertBefore(frame,dashboard.firstChild);execute.appendChild(ring);
-    var media=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
+    // 游戏自己的「介面动态」设定（motion.js），不跟随系统的减少动态效果。
+    var media=(window.ExplorationMotion?window.ExplorationMotion.query('ui'):{matches:false,addEventListener:function(){},removeEventListener:function(){}});
     var view={color:'basic',cost:0,costMax:0,pending:0,ready:false,pips:null};
     var raf=0,frameKey='',disposed=false,art={scale:false,inner:.62};
     // 版面可用 CSS 变量调整绘图：--art-scale: auto 让线宽与装饰随尺寸等比缩放（以框宽 424px、施放环 240px 为设计尺寸）；
@@ -6334,7 +6430,8 @@ window.ExplorationResourceIcons = {"momentum":"./assets/ui/resource/red-buff4.we
       node('rect',{width:384,height:384,filter:'url(#'+id+'-noise-'+i+')'},texture);
       node('rect',{x:-width*.3,y:-height*.3,width:width*1.6,height:height*1.6,fill:'url(#'+id+'-texture-'+i+')','class':'mist-cloud mist-cloud-'+i},layer);
     }
-    var preference=matchMedia('(prefers-reduced-motion: reduce)');
+    // 游戏自己的「介面动态」设定（motion.js），不跟随系统的减少动态效果。
+    var preference=(window.ExplorationMotion?window.ExplorationMotion.query('ui'):{matches:false,addEventListener:function(){},removeEventListener:function(){}});
     function sync(){if(disposed)return;var app=svg.closest('#app'),scene=app&&app.dataset.scene,paused=!active||document.hidden||preference.matches||scene&&scene!=='explore'||!!document.querySelector('dialog[open]');layer.classList.toggle('mist-paused',!!paused);defs.classList.toggle('mist-paused',!!paused);}
     document.addEventListener('visibilitychange',sync);preference.addEventListener('change',sync);
     var observer=new MutationObserver(sync);var app=svg.closest('#app');if(app)observer.observe(app,{attributes:true,attributeFilter:['data-scene']});
@@ -8843,7 +8940,8 @@ window.SceneEnvironment=(()=>{
   function period(hour){return hour<5||hour>=21?'night':hour<8?'dawn':hour<16?'day':hour<21?'dusk':'night';}
   function controller(onChange=()=>{}){
     let state=normalize({}),svg=null,bounds=null,raf=0,last=0,visible=true,particles=[],disposed=false;
-    const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+    // 游戏自己的「地图动态」设定（exploration-runtime/motion.js），不跟随系统的减少动态效果。
+    const reduced=(window.ExplorationMotion?window.ExplorationMotion.query('map'):{matches:false,addEventListener(){},removeEventListener(){}});
     function paint(){
       if(!svg)return;
       const p=presets[period(state.hour)];
@@ -8904,7 +9002,8 @@ window.SceneEnvironment=(()=>{
     let width=0,height=0,camera=null,overview=false,disposed=false,visible=true,buttons=[],props=[],walls=[],actors=[];
     let pose='poster',lastAt=null,timer=null,playerImage=null,playerArt=null,posterSource=null,posterKey=null;
     let motionEnabled=options.motionEnabled!==false,walkReady=false,occluded=[],seenKey='';
-    const preference=matchMedia('(prefers-reduced-motion: reduce)'), catalog=window.ExplorationActorAssets;
+    // 游戏自己的「地图动态」设定（exploration-runtime/motion.js），不跟随系统的减少动态效果。
+    const preference=(window.ExplorationMotion?window.ExplorationMotion.query('map'):{matches:false,addEventListener(){},removeEventListener(){}}), catalog=window.ExplorationActorAssets;
     const walkKey=catalog.player.walk, walkAsset=catalog.images[walkKey], loader=new Image();
     loader.onload=()=>{walkReady=true;};if(walkAsset)loader.src=walkAsset.src;
     const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;syncMotion();}):null;
@@ -9792,7 +9891,7 @@ window.SceneEnvironment=(()=>{
     if(!canInspectExplore())return;cancelWalking();
     var strip=$('companion-portraits'),portrait=strip.querySelector('[data-companion]');if(!portrait)return;
     var pitch=portrait.getBoundingClientRect().width+(parseFloat(getComputedStyle(strip).columnGap)||0);
-    strip.scrollBy({left:direction*pitch,behavior:window.matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+    strip.scrollBy({left:direction*pitch,behavior:window.ExplorationMotion&&!ExplorationMotion.enabled('ui')?'instant':'smooth'});
     scheduleCompanionControls();
   }
   function onCompanionPointerDown(){
@@ -10502,7 +10601,7 @@ window.SceneEnvironment=(()=>{
   var transition=null,transitionSerial=0,suppressTransition=false,heldShot=null,holdingShot=false;
   var SVG_RESOURCE={defs:1,clippath:1,mask:1,filter:1,lineargradient:1,radialgradient:1,pattern:1,marker:1,symbol:1,style:1};
   var SVG_LEAF={path:1,rect:1,circle:1,ellipse:1,line:1,polygon:1,polyline:1,image:1,use:1,text:1};
-  function transitionMotionOff(){return window.matchMedia('(prefers-reduced-motion: reduce)').matches||presentation.getConfig().enabled===false;}
+  function transitionMotionOff(){return window.ExplorationMotion&&!ExplorationMotion.enabled('transition')||presentation.getConfig().enabled===false;}
   function transitionShake(){var h=window.HitFeedback;return!(h&&typeof h.isShakeEnabled==='function'&&!h.isShakeEnabled());}
   function sxEl(tag,attrs,parent){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(var k in attrs)n.setAttribute(k,attrs[k]);if(parent)parent.appendChild(n);return n;}
   function sxDiv(cls,parent){var n=document.createElement('div');n.className=cls;if(parent)parent.appendChild(n);return n;}
@@ -10877,6 +10976,18 @@ window.SceneEnvironment=(()=>{
   function syncHelpSpectrum(){var c=(state&&state.config)||config,sp=c&&R.SPECTRA[c.spectrum],li=$('help-spectrum');li.hidden=!(sp&&sp.prototype);if(li.hidden)return;
     li.innerHTML='<b>'+sp.name.replace(/试作$/,'')+'</b>：'+sp.description.replace(/^三阶试玩：/,'');}
   function syncHitSettings(){var h=window.HitFeedback,shake=$('hit-shake-toggle'),sound=$('hit-sound-toggle'),g=h&&h.getSoundConfig();shake.disabled=sound.disabled=!h;if(!h)return;shake.checked=h.isShakeEnabled();sound.checked=!g||g.enabled!==false;}
+  // 动画设定（2026-11-25）：不跟随系统，预设全开；「全部动画」一次开关四项，只关部分时呈现半选。
+  function syncMotionSettings(){
+    var m=window.ExplorationMotion,all=$('motion-all-toggle'),boxes=[].slice.call(document.querySelectorAll('[data-motion-part]'));
+    all.disabled=!m;boxes.forEach(function(box){box.disabled=!m;});if(!m)return;
+    var state=m.get(),on=boxes.filter(function(box){box.checked=state[box.dataset.motionPart]!==false;return box.checked;}).length;
+    all.checked=on===boxes.length;all.indeterminate=on>0&&on<boxes.length;
+  }
+  function changeMotionSettings(event){
+    var m=window.ExplorationMotion,t=event.target;if(disposed||!m)return;
+    if(t.id==='motion-all-toggle')m.setAll(t.checked);else if(t.dataset&&t.dataset.motionPart)m.set(t.dataset.motionPart,t.checked);else return;
+    syncMotionSettings();
+  }
   function changeHitSettings(event){var h=window.HitFeedback;if(disposed||!h)return;if(event.target.id==='hit-shake-toggle')h.setShakeEnabled(event.target.checked);else if(event.target.id==='hit-sound-toggle')h.setSoundEnabled(event.target.checked);else return;syncHitSettings();}
   function openMusic(){if(disposed||!musicControl)return;cancelTransition();cancelWalking();stopEnemy();try{musicControl.open();}catch(error){console.error(error);}syncPresentation();}
   function onMusicClose(event){if(event.target&&event.target.classList&&event.target.classList.contains('nc-music'))onModalClose();}
@@ -10933,7 +11044,7 @@ window.SceneEnvironment=(()=>{
     saveSkillLayout();applySkillLayout({selector:'[data-layout-toggle="'+id+'"]'});
   }
   function openSkillLayout(){if(disposed||$('app').dataset.scene!=='prep')return;renderSkillLayout();if(!$('skill-layout-dialog').open)$('skill-layout-dialog').showModal();syncPresentation();}
-  function openHelp(){if(disposed)return;cancelTransition();cancelWalking();stopEnemy();syncHitSettings();syncHelpEvents();syncHelpSpectrum();if(!$('help-dialog').open)$('help-dialog').showModal();syncPresentation();}
+  function openHelp(){if(disposed)return;cancelTransition();cancelWalking();stopEnemy();syncHitSettings();syncMotionSettings();syncHelpEvents();syncHelpSpectrum();if(!$('help-dialog').open)$('help-dialog').showModal();syncPresentation();}
   function openRetreat(){if(disposed||!state||state.phase==='ended')return;cancelTransition();cancelWalking();stopEnemy();$('cancel-retreat').hidden=false;$('retreat-title').textContent='撤离';$('cancel-retreat').textContent=combatVisual||state.phase==='battle'?'继续战斗':'继续探索';if(!$('retreat-dialog').open)$('retreat-dialog').showModal();syncPresentation();}
   async function confirmResult(){
     if(disposed||!state||state.phase!=='ended'||!meta||sending||meta.delivery==='sent')return;
@@ -11060,7 +11171,7 @@ window.SceneEnvironment=(()=>{
   function pagehide(){pageSuspended=true;cancelTransition();cancelWalking();stopEnemy();cancelCombatVisual();if(state&&!P.accepted(state,meta))discardAttempt(false);syncPresentation();save();}
   function pageshow(){if(!disposed){pageSuspended=false;refresh();}}
   function visibility(){if(document.hidden){cancelTransition();cancelWalking();stopEnemy();}syncPresentation();if(!document.hidden)scheduleEnemy();}
-  uiRoot.addEventListener('click',onClick);uiRoot.addEventListener('change',changeHistoryTime);uiRoot.addEventListener('change',changeHitSettings);uiRoot.addEventListener('change',changeSkillLayout);document.addEventListener('keydown',onKey);document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',stopKeyRepeat);document.addEventListener('close',onMusicClose,true);document.addEventListener('pointerdown',noteInput,true);document.addEventListener('keydown',noteInput,true);
+  uiRoot.addEventListener('click',onClick);uiRoot.addEventListener('change',changeHistoryTime);uiRoot.addEventListener('change',changeHitSettings);uiRoot.addEventListener('change',changeMotionSettings);uiRoot.addEventListener('change',changeSkillLayout);document.addEventListener('keydown',onKey);document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',stopKeyRepeat);document.addEventListener('close',onMusicClose,true);document.addEventListener('pointerdown',noteInput,true);document.addEventListener('keydown',noteInput,true);
   $('companion-portraits').addEventListener('scroll',scheduleCompanionControls,{passive:true});
   $('companion-rail').addEventListener('pointerdown',onCompanionPointerDown,{passive:true});
   if(typeof ResizeObserver==='function'){companionObserver=new ResizeObserver(scheduleCompanionControls);companionObserver.observe($('companion-portraits'));}
@@ -11175,7 +11286,7 @@ window.SceneEnvironment=(()=>{
       $('companion-portraits').removeEventListener('scroll',scheduleCompanionControls);
       $('companion-rail').removeEventListener('pointerdown',onCompanionPointerDown);
       window.removeEventListener('resize',scheduleCompanionControls);
-      uiRoot.removeEventListener('click',onClick);uiRoot.removeEventListener('change',changeHistoryTime);uiRoot.removeEventListener('change',changeHitSettings);uiRoot.removeEventListener('change',changeSkillLayout);document.removeEventListener('keydown',onKey);document.removeEventListener('keyup',onKeyUp);window.removeEventListener('blur',stopKeyRepeat);stopKeyRepeat();document.removeEventListener('close',onMusicClose,true);document.removeEventListener('pointerdown',noteInput,true);document.removeEventListener('keydown',noteInput,true);
+      uiRoot.removeEventListener('click',onClick);uiRoot.removeEventListener('change',changeHistoryTime);uiRoot.removeEventListener('change',changeHitSettings);uiRoot.removeEventListener('change',changeMotionSettings);uiRoot.removeEventListener('change',changeSkillLayout);document.removeEventListener('keydown',onKey);document.removeEventListener('keyup',onKeyUp);window.removeEventListener('blur',stopKeyRepeat);stopKeyRepeat();document.removeEventListener('close',onMusicClose,true);document.removeEventListener('pointerdown',noteInput,true);document.removeEventListener('keydown',noteInput,true);
       document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',pagehide);window.removeEventListener('pageshow',pageshow);
       ['help-dialog','skill-layout-dialog','retreat-dialog','event-dialog','history-dialog'].forEach(function(id){$(id).removeEventListener('close',onModalClose);if($(id).open)$(id).close();});
       $('retreat-dialog').removeEventListener('cancel',onRetreatCancel);

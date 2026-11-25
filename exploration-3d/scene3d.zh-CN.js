@@ -1024,7 +1024,8 @@ function fogStep(dt,snap){
 /* ---------- 游戏接口 ----------
    探索页（exploration-45 的规则与介面）透过 create() 取得画面物件，方法与 2D 版 ExplorationGeneratedScene 相同。 */
 let host=null,game={state:null,travel:null,map:null},rafId=0,visible=true,overviewMode=false,motionEnabled=true;
-const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+// 游戏自己的「地图动态」设定（exploration-runtime/motion.js），不跟随系统的减少动态效果。
+const reduced=window.ExplorationMotion?window.ExplorationMotion.query('map'):{matches:false};
 const moveOK=()=>motionEnabled&&!reduced.matches;
 function generateMap(){map=game.map;state.type=map.locationType;return map;}
 

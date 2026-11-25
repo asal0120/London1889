@@ -341,7 +341,8 @@
     frame.className='dashboard-frame';ring.className='spectrum-ring';
     frame.setAttribute('aria-hidden','true');ring.setAttribute('aria-hidden','true');
     dashboard.insertBefore(frame,dashboard.firstChild);execute.appendChild(ring);
-    var media=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
+    // 遊戲自己的「介面動態」設定（motion.js），不跟隨系統的減少動態效果。
+    var media=(window.ExplorationMotion?window.ExplorationMotion.query('ui'):{matches:false,addEventListener:function(){},removeEventListener:function(){}});
     var view={color:'basic',cost:0,costMax:0,pending:0,ready:false,pips:null};
     var raf=0,frameKey='',disposed=false,art={scale:false,inner:.62};
     // 版面可用 CSS 變數調整繪圖：--art-scale: auto 讓線寬與裝飾隨尺寸等比縮放（以框寬 424px、施放環 240px 為設計尺寸）；
