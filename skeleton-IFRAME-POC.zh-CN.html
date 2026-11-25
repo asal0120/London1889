@@ -666,15 +666,16 @@
 .rpg-v7-root .svVal { font: 12.5px/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--q); white-space: pre-wrap; overflow-wrap: anywhere; }
 .rpg-v7-root .svVal.is-none { color: var(--ink-dim); font-family: var(--sans); }
 .rpg-v7-root .svRaw { margin: 8px 0 0; font: 12px/1.65 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--ink-dim); white-space: pre-wrap; word-break: break-all; }
-.rpg-v7-root .svConfirm, .rpg-v7-root .svWait, .rpg-v7-root .svMissing, .rpg-v7-root .svPlotOnly {
+.rpg-v7-root .svConfirm, .rpg-v7-root .svWait, .rpg-v7-root .svMissing, .rpg-v7-root .svPlotOnly, .rpg-v7-root .svFailed {
     display: none; margin: 0 8px; padding: 10px 6px 12px; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.65;
 }
 .rpg-v7-root .svConfirm .svRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-.rpg-v7-root.sv-confirm .svConfirm, .rpg-v7-root.sv-retrying .svWait, .rpg-v7-root.sv-missing .svMissing, .rpg-v7-root.sv-plot-only .svPlotOnly { display: block; }
+.rpg-v7-root.sv-confirm .svConfirm, .rpg-v7-root.sv-retrying .svWait, .rpg-v7-root.sv-missing .svMissing, .rpg-v7-root.sv-plot-only .svPlotOnly,
+.rpg-v7-root.sv-failed:not(.sv-confirm):not(.sv-retrying) .svFailed { display: block; }
 .rpg-v7-root.sv-confirm .svRetry, .rpg-v7-root.sv-retrying .svRetry { display: none; }
 .rpg-v7-root .svWait { color: var(--ink-dim); }
 .rpg-v7-root .svWait::after { content: '…'; animation: encBlink 1.2s steps(4) infinite; }
-.rpg-v7-root .svMissing { color: var(--enc); }
+.rpg-v7-root .svMissing, .rpg-v7-root .svFailed { color: var(--enc); }
 /* 浮层很窄时（手机约 320px 的楼层），浮层标题列的「重新解析」只留图示（下方确认区仍有文字）。 */
 @container sv-entry (max-width: 280px) { .rpg-v7-root .svPop .svRetry .svBtnText { display: none; } .rpg-v7-root .svPop .svRetry { padding: 0 9px; } }
 @media (prefers-reduced-motion: reduce) { .rpg-v7-root .svWait::after, .rpg-v7-root .svBarWait::after { animation: none; } }
@@ -10429,6 +10430,9 @@ var NewCardAlbumData = (function () {
         var ENCOUNTER_SIZES = {tiny: 1, small: 2, medium: 3, large: 4};
         var encounterView = {tag: false, record: null, rewriting: false, result: null};
         var encounterRewriteTimer = null, encounterUnsubscribe = null;
+        // 收过的就绪遭遇：解析版本 → 敌人数据（2026-11-25）。插件改同一楼的其他文字（例如 BBI 插入图片标签）时，
+        // 遭遇解析会给新的版本号；敌人数据相同就仍是同一场遭遇（同小游戏「已结算」的判断，不看版本号）。
+        var encounterBattles = {};
 
         function encounterIcon(scene) {
             return '<svg class="encIcon" viewBox="0 0 20 20" aria-hidden="true">' + (ENCOUNTER_ICONS[scene] || ENCOUNTER_ICONS.street) + '</svg>';
@@ -10473,10 +10477,30 @@ var NewCardAlbumData = (function () {
         // 最新一楼另有「重新解析」，触发 MVU 脚本的同名按钮；MVU 只重试最新一楼。
         var MVU_RETRY_BUTTON = '重试额外模型解析';   // 必须和 MVU 脚本的按钮名称完全相同（简体）
         var SV_RETRY_TIMEOUT_MS = 120000;
+        // 送出后 MVU 没在 SV_RETRY_START_MS 内开始解析：当作没有接受请求。
+        // MVU「依次请求，失败后重试」每次尝试都会开关一次解析中状态；关闭满 SV_RETRY_GAP_MS 才当作结束。
+        var SV_RETRY_START_MS = 5000, SV_RETRY_GAP_MS = 2000;
         var svRetryRaw = null, svRetryTimer = null, svMissingTimer = null;
+        var svRetrySentAt = 0, svRetrySeen = false, svRetryOffAt = 0;
+        // 判定失败后 SV_FAILED_WATCH_MS 内继续读聊天数据：MVU 晚一点才写回变量区域时，清掉失败提示。
+        var SV_FAILED_WATCH_MS = 30000;
+        var svFailedChat = null, svFailedAt = 0;
 
         function floorRaw() {
             return typeof context.rawData === 'string' ? context.rawData : stRegexRenderedInput || '';
+        }
+        // 酒馆聊天数据里这一楼的原文。MVU 用 refresh: 'none' 静默改写楼层，载入器下次重读前 floorRaw() 还是旧的。
+        // 读不到时用卡片手上的原文。
+        function chatFloorRaw() {
+            var floor = mapCardFloor();
+            try {
+                if (typeof context.getChatMessages === 'function' && floor != null) {
+                    var list = context.getChatMessages(Number(floor));
+                    var message = Array.isArray(list) ? list[list.length - 1] : null;
+                    if (message && typeof message.message === 'string') return message.message;
+                }
+            } catch (_) {}
+            return floorRaw();
         }
         // 找不到变量区域时回传 null；区域存在但没有内容时回传空字串。
         function extractStateText(raw) {
@@ -10591,6 +10615,7 @@ var NewCardAlbumData = (function () {
                     '<div class="svRow"><button type="button" class="svBtn is-quiet" data-sv-action="cancel">取消</button>' +
                     '<button type="button" class="svBtn is-main" data-sv-action="retry">重新解析</button></div></div>' +
                     '<div class="svWait" role="status">已送出，等待 MVU 解析</div>' +
+                    '<div class="svFailed" role="status">MVU 没有写入变量更新，可以再按一次「重新解析」。</div>' +
                     '<div class="svMissing" role="status">找不到 MVU 脚本。请确认酒馆助手里的 MVU 脚本已启用。</div>' +
                     '<div class="svPlotOnly" role="status">MVU 的更新方式是「随 AI 输出」，不会另外解析变量。可以在 MVU 设定改用「额外模型解析」后再按一次，或重新生成这一楼。</div>' : '');
             return {html: html, bar: bar};
@@ -10669,7 +10694,8 @@ var NewCardAlbumData = (function () {
         // ── 额外模型解析进行中也显示「更新中」 ──
         // 设定是「额外模型解析」时，MVU 在正文生成结束后另送一次请求，再把变量区域接到这一楼后面。
         // 这段时间最新一楼缺少变量区域，横条显示「更新中」，不显示「未找到」。
-        // MVU 没有开始、结束事件，卡片每 SV_POLL_MS 读一次 mvuAnalyzing()；只在最新一楼、缺少变量区域时读。
+        // MVU 没有开始、结束事件，卡片每 SV_POLL_MS 读一次 mvuAnalyzing()；只在最新一楼、缺少变量区域或等待重新解析时读。
+        // MVU 的解析中状态和酒馆的停止按钮同时开关；请求失败时也会关闭（MVU 在 finally 里关）。
         // 生成刚结束、MVU 还没开始的空档（SV_AWAIT_MS 内）也算更新中；MVU 关闭自动请求时不等。
         var SV_POLL_MS = 500, SV_AWAIT_MS = 4000;
         var svAwaitUntil = 0, svPollTimer = null, svExtraShown = false;
@@ -10680,7 +10706,10 @@ var NewCardAlbumData = (function () {
         }
         function watchExtraAnalysis() {
             svPollTimer = clearTimer(svPollTimer);
-            if (destroyed || isGenerating || !rawContentActive || !isLatestFloor() || mvuUpdateMethod() === MVU_PLOT_ONLY) return;
+            if (destroyed || isGenerating) return;   // 生成结束时 finish() 会再呼叫
+            if (!rawContentActive || !isLatestFloor() || mvuUpdateMethod() === MVU_PLOT_ONLY) { if (svRetryRaw !== null) endSvRetry(); return; }
+            checkSvRetry();
+            checkSvFailed();
             if (svExtraLive() !== svExtraShown) {
                 var ended = svExtraShown;
                 if (!svExtraShown) setSvOpen(false);
@@ -10688,13 +10717,51 @@ var NewCardAlbumData = (function () {
                 // 额外解析结束、或等它开始的空档过了：地图这时才抽新事件（见 mapSpawnReady）。
                 if (ended) refreshMapEvents();
             }
-            if (svExtraShown || extractStateText(floorRaw()) === null) svPollTimer = setTimer(watchExtraAnalysis, SV_POLL_MS);
+            var failedWatch = svFailedChat !== null && Date.now() - svFailedAt < SV_FAILED_WATCH_MS;
+            if (svRetryRaw !== null || failedWatch || svExtraShown || extractStateText(floorRaw()) === null) svPollTimer = setTimer(watchExtraAnalysis, SV_POLL_MS);
         }
         function setSvState(name, on) { root.classList.toggle(name, !!on); }
         function endSvRetry() {
             svRetryTimer = clearTimer(svRetryTimer);
             svRetryRaw = null;
+            svRetrySeen = false;
+            svRetryOffAt = 0;
             setSvState('sv-retrying', false);
+        }
+        // 等待重新解析的结果。MVU 的顺序：静默删掉旧的变量区域 → 开启解析中 → 请求 → 关闭解析中 → 静默接上新区域。
+        // 所以不看「原文有没有改变」，结果一律读聊天数据（chatFloorRaw），不读卡片手上的原文。
+        // MVU 解析失败没有事件，只跳错误提示；所以看解析中状态：开过又关闭满 SV_RETRY_GAP_MS，或一直没开，就结束等待。
+        function checkSvRetry() {
+            if (svRetryRaw === null) return;
+            var now = Date.now();
+            if (mvuAnalyzing()) { svRetrySeen = true; svRetryOffAt = 0; return; }
+            if (!svRetrySeen) { if (now - svRetrySentAt < SV_RETRY_START_MS) return; }
+            else {
+                if (!svRetryOffAt) svRetryOffAt = now;
+                if (now - svRetryOffAt < SV_RETRY_GAP_MS) return;
+            }
+            settleSvRetry();
+        }
+        // 结束等待：MVU 有开始解析，而且聊天数据里这一楼现在有变量区域，就是成功；否则是失败，浮层显示提示。
+        // 新结果和旧的一模一样也算成功。
+        function settleSvRetry() {
+            var chat = chatFloorRaw(), failed = !svRetrySeen || extractStateText(chat) === null;
+            endSvRetry();
+            setSvFailed(failed, chat);
+            if (failed) revealSvBottom();
+            renderStateView();
+            repaintEncounter();
+        }
+        function setSvFailed(on, chat) {
+            svFailedChat = on ? chat : null;
+            svFailedAt = on ? Date.now() : 0;
+            setSvState('sv-failed', on);
+        }
+        // 保险：判定失败之后，这一楼的原文改变、而且有变量区域（MVU 晚一点才写回），就清掉失败提示。
+        function checkSvFailed() {
+            if (svFailedChat === null) return;
+            var chat = chatFloorRaw();
+            if (chat !== svFailedChat && extractStateText(chat) !== null) setSvFailed(false);
         }
         // 确认、等待、找不到按钮的提示在浮层底部；出现时把浮层卷到底。
         function revealSvBottom() {
@@ -10710,6 +10777,7 @@ var NewCardAlbumData = (function () {
                 setSvOpen(true);
                 setSvState('sv-missing', false);
                 setSvState('sv-plot-only', false);
+                setSvFailed(false);
                 setSvState('sv-confirm', true);
                 revealSvBottom();
             } else if (action === 'cancel') {
@@ -10733,11 +10801,16 @@ var NewCardAlbumData = (function () {
                     return;
                 }
                 svRetryRaw = floorRaw();
+                svRetrySentAt = Date.now();
+                svRetrySeen = false;
+                svRetryOffAt = 0;
+                setSvFailed(false);
                 setSvState('sv-retrying', true);
                 revealSvBottom();
                 svRetryTimer = clearTimer(svRetryTimer);
-                svRetryTimer = setTimer(function () { svRetryTimer = null; endSvRetry(); }, SV_RETRY_TIMEOUT_MS);
-                try { target.helper.eventEmit(target.event); } catch (error) { endSvRetry(); console.error('[skeleton-IFRAME-POC] MVU 重新解析送出失败', error); }
+                svRetryTimer = setTimer(function () { svRetryTimer = null; if (svRetryRaw !== null) settleSvRetry(); }, SV_RETRY_TIMEOUT_MS);
+                try { target.helper.eventEmit(target.event); } catch (error) { endSvRetry(); console.error('[skeleton-IFRAME-POC] MVU 重新解析送出失败', error); return; }
+                watchExtraAnalysis();
             }
         }
         function initializeStateViewer() {
@@ -10771,7 +10844,9 @@ var NewCardAlbumData = (function () {
         }
         // 生成结束、楼层文字被改写（例如 MVU 补上变量区域）时：更新浮层，并重画正文后面的横条与遭遇入口。
         function syncStateViewer() {
-            if (svRetryRaw !== null && floorRaw() !== svRetryRaw) endSvRetry();
+            // MVU 已写回新的变量区域、解析也结束了：不必等宽限时间。
+            if (svRetryRaw !== null && svRetrySeen && !mvuAnalyzing() && extractStateText(chatFloorRaw()) !== null) { endSvRetry(); setSvFailed(false); }
+            checkSvFailed();
             renderStateView();
             if (destroyed || isGenerating || !rawContentActive || lastRenderedText === null) return;
             var before = allParas.join('\u0001');
@@ -10793,8 +10868,12 @@ var NewCardAlbumData = (function () {
         }
         function onEncounterUpdate(update) {
             if (!update || destroyed) return;
-            if (update.kind === 'reset') encounterView.record = null;
-            else if (update.kind === 'record') encounterView.record = update.record;
+            if (update.kind === 'reset') { encounterView.record = null; encounterBattles = {}; }
+            else if (update.kind === 'record') {
+                encounterView.record = update.record;
+                var seen = update.record;
+                if (seen && seen.status === 'ready' && seen.source) encounterBattles[seen.source.instanceId + ':' + seen.source.revision] = JSON.stringify(seen.battle);
+            }
             else if (update.kind === 'rewrite') {
                 encounterView.rewriting = update.state === 'started';
                 if (!encounterView.rewriting) encounterRewriteTimer = clearTimer(encounterRewriteTimer);
@@ -11087,8 +11166,14 @@ var NewCardAlbumData = (function () {
         }
         function explorationCurrent(source) {
             var record = encounterView.record, bridge = context.encounter;
-            return !!(record && record.status === 'ready' && source && bridge && bridge.isLatest() &&
-                source.messageId === record.source.messageId && source.revision === record.source.revision);
+            if (!(record && record.status === 'ready' && source && bridge && bridge.isLatest())) return false;
+            var now = record.source;
+            if (source.messageId !== now.messageId) return false;
+            if (source.revision === now.revision) return true;
+            // 版本号不同：同一个解析环境、同一聊天、同一楼、同一回复版本，而且敌人数据相同，才算同一场遭遇。
+            var before = encounterBattles[source.instanceId + ':' + source.revision];
+            return before !== undefined && source.instanceId === now.instanceId && source.scopeKey === now.scopeKey &&
+                source.variantId === now.variantId && before === JSON.stringify(record.battle);
         }
         // 结果以玩家讯息送出，接着开始生成下一楼。
         function deliverExploration(payload) {
@@ -11097,17 +11182,36 @@ var NewCardAlbumData = (function () {
             var current = exploration, map = current && current.mapEvent;
             // 先处理上次留下的结算时，只有它属于这张卡片目前的遭遇才标上结果。
             var own = current && current.resumed ? current.resumedOwn : !map;
-            return Promise.resolve(context.createChatMessages([{role: 'user', message: payload.prompt}], {refresh: 'all'})).then(function () {
+            // 小游戏收到这个回复后才把这一局记成「已送出」；这里先关闭的话，存档会留着未送出的局，挡住之后的遭遇。
+            // 所以下一轮再关闭并开始生成。
+            var after = function () {
+                if (destroyed) return;
                 if (own) encounterView.result = EXPLORATION_OUTCOMES[payload.outcome] || '';
-                // 小游戏收到这个回复后才把这一局记成「已送出」；这里先关闭的话，存档会留着未送出的局，挡住之后的遭遇。
-                // 所以下一轮再关闭并开始生成。
-                (current ? current.host : view).setTimeout(function () {
-                    if (current && exploration === current) closeExploration();
-                    if (own) repaintEncounter();
-                    context.triggerSlash('/trigger');
-                }, 0);
-                return true;
-            }, function () { return false; });
+                if (current && exploration === current) closeExploration();
+                if (own) repaintEncounter();
+            };
+            var host = current ? current.host : view, chain = deliveryChain(host);
+            return chain(context.createChatMessages, [{role: 'user', message: payload.prompt}], after, context.triggerSlash);
+        }
+        // 送出结果并开始生成下一楼（2026-11-25）。原本用 refresh: 'all'：酒馆助手会重新载入整个聊天，
+        // 载入器因此移除所有卡片，这张卡片的后续程式（关闭小游戏、/trigger）不再执行，结果送出了却没有生成下一楼。
+        // 现在只把新讯息加在最后（refresh: 'affected'，不重新载入），并在最外层视窗执行这串步骤：
+        // 即使其他扩充功能在这时重新载入聊天、卡片被移除，仍会开始生成。
+        var DELIVERY_CHAIN = 'return function (send, messages, after, trigger) {' +
+            'return Promise.resolve(send(messages, {refresh: "affected"})).then(function () {' +
+            'setTimeout(function () { try { after(); } catch (_) {} trigger("/trigger"); }, 0); return true;' +
+            '}, function () { return false; }); };';
+        function deliveryChain(host) {
+            if (host !== view) {
+                try { return host.Function(DELIVERY_CHAIN)(); } catch (_) {}
+            }
+            // 无法在最外层执行时（没有最外层视窗、或页面禁止动态产生程式），在卡片内执行同样的步骤。
+            return function (send, messages, after, trigger) {
+                return Promise.resolve(send(messages, {refresh: 'affected'})).then(function () {
+                    view.setTimeout(function () { try { after(); } catch (_) {} trigger('/trigger'); }, 0);
+                    return true;
+                }, function () { return false; });
+            };
         }
         function wireExploration(current) {
             var game = null;
@@ -11449,7 +11553,7 @@ var NewCardAlbumData = (function () {
             cancelEdgeTurn();
             // 生成刚结束：额外模型解析还没开始的空档也显示「更新中」（见 watchExtraAnalysis）。
             if (isGenerating && !on) svAwaitUntil = mvuUpdateMethod() === MVU_EXTRA && mvuAutoRequest() ? Date.now() + SV_AWAIT_MS : 0;
-            if (on) { svAwaitUntil = 0; svPollTimer = clearTimer(svPollTimer); }
+            if (on) { svAwaitUntil = 0; svPollTimer = clearTimer(svPollTimer); setSvFailed(false); }
             isGenerating = !!on;
             stateStreamSeen = false;
             lastLiveBar = false;
