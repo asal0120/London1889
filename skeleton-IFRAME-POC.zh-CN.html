@@ -4175,7 +4175,7 @@ var NewCardMusic = (function musicModule() {
                 await audio.play();
                 if (disposed || version !== epoch) return false;
                 if (!wanted) audio.pause();
-                pending = false; notify(); return wanted;
+                hiddenEnd = false; pending = false; notify(); return wanted;
             } catch (problem) {
                 if (disposed || version !== epoch || !wanted) return false;
                 pending = false; wanted = false;
@@ -4185,7 +4185,7 @@ var NewCardMusic = (function musicModule() {
                 notify(); return false;
             }
         }
-        function pause() { wanted = false; pending = false; clearStall(); audio.pause(); notify(); }
+        function pause() { wanted = false; pending = false; hiddenEnd = false; clearStall(); audio.pause(); notify(); }
         // 读取逾时：要播放，但 STALL_MS 内播放位置都没有前进（文件一时读不到，play() 一直没有结果，或播到一半停在缓冲）。
         // 第一次：同一首重新读取，从原本的位置接着播；再逾时：换下一首。
         // 只在播放器自己停住时处理；被系统或其他程式暂停（audio.paused）不算，不会自己恢复播放。
@@ -4288,8 +4288,12 @@ var NewCardMusic = (function musicModule() {
             if (!id) id = mode === 'shuffle' && direction > 0 ? randomNext(list) : list[(index + direction + list.length) % list.length].id;
             choose(id, autoplay == null ? wanted : autoplay, direction > 0);
         }
+        // 在背景（切到其他应用程式）播完时，浏览器常不让下一首开始播放。
+        // 记下这件事，回到前景时若下一首还没播起来，就再试一次（见 resumeVisible）。
+        var hiddenEnd = false;
         function ended() {
             if (disposed) return;
+            hiddenEnd = !!host.document.hidden;
             if (mode === 'repeat-one') { audio.currentTime = 0; play(); }
             else next(1, true);
         }
@@ -4380,17 +4384,26 @@ var NewCardMusic = (function musicModule() {
             events.forEach(function (event) { audio.removeEventListener(event, notify); });
             audio.removeEventListener('ended', ended); audio.removeEventListener('error', failed);
             audio.removeEventListener('waiting', waiting); audio.removeEventListener('stalled', waiting); clearStall();
-            host.removeEventListener('pagehide', suspend);
+            host.removeEventListener('pagehide', suspend); host.document.removeEventListener('visibilitychange', resumeVisible);
             if (cleanupTimer !== null) host.clearTimeout(cleanupTimer);
             if (host[KEY] === service) delete host[KEY];
         }
         function suspend(event) { if (event.persisted) pause(); else dispose(); }
+        // 只处理「背景中播完、下一首没能开始」；玩家按的暂停、静音或被系统暂停都不会自己恢复。
+        function resumeVisible() {
+            if (disposed || host.document.hidden || !hiddenEnd) return;
+            hiddenEnd = false;
+            if (userPaused || audio.muted || !audio.paused) return;
+            disarmUnlock();
+            play();
+        }
         var events = ['play', 'pause', 'playing', 'timeupdate', 'loadedmetadata', 'durationchange', 'volumechange', 'seeking', 'seeked'];
         events.forEach(function (event) { audio.addEventListener(event, notify); });
         // 停在缓冲时开始计时；同一个位置重复收到不重新计时，免得逾时一直往后延。
         function waiting() { if (stallTimer === null || (audio.currentTime || 0) !== stallFrom) armStall(); }
         audio.addEventListener('ended', ended); audio.addEventListener('error', failed); host.addEventListener('pagehide', suspend);
         audio.addEventListener('waiting', waiting); audio.addEventListener('stalled', waiting);
+        host.document.addEventListener('visibilitychange', resumeVisible);
         tracks = normalized(initialTracks);
         if (!tracks.length) tracks = DEFAULTS.map(function (track) { return Object.assign({}, track); });
         var service = {
