@@ -2236,7 +2236,9 @@
   flex: 1 1 0; min-height: 0; max-height: none; padding: clamp(12px, 2.5%, 24px);
   scrollbar-gutter: stable both-edges; container: status-panel / size;
 }
-.rpg-v7-root.d-material-ui.sheet-open .tabRow { margin-top: 0; padding-bottom: 6px; }
+/* 页签开合时位置不动：底部内距与收起时相同；选中的页签不上移，改拿掉上方 1px 让它贴齐面板。 */
+.rpg-v7-root.d-material-ui.sheet-open .tabRow { margin-top: 0; padding-top: 0; }
+.rpg-v7-root.d-material-ui .tabRow button[aria-pressed="true"] { transform: none; }
 .rpg-v7-root.d-material-ui {
   --status-rule: rgba(205, 173, 119, .48);
   --status-rule-soft: rgba(205, 173, 119, .16);
