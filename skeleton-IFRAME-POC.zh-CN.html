@@ -9270,8 +9270,40 @@ var NewCardAlbumData = (function () {
         }
         // MVU 好感度的最大值：TEAM 页的好感百分比与小游戏同行资格都以它为基准。最大值改变时只改这里。
         var MVU_BOND_MAX = 200;
+        // 不存在的日期往后推（2026-11-26）：2/30 → 3/2，非闰年的 2/29 → 3/1，12/32 → 隔年 1/1。
+        // 日期存在、或栏位不是有效数字时回传 null。Schema 只限制 日 不小于 1，超过该月天数的部分由这里处理。
+        function mvuRealDate(date) {
+            var y = Number(date.年), m = Number(date.月), d = Number(date.日);
+            if (![y, m, d].every(Number.isInteger) || m < 1 || m > 12 || d < 1) return null;
+            var real = new Date(y, m - 1, d);
+            return real.getDate() === d ? null : {年: real.getFullYear(), 月: real.getMonth() + 1, 日: real.getDate()};
+        }
+        // 写回变量：只在最新一楼、MVU 已写入这一楼（floorUpdated）、额外解析不在进行中时写，下一回合的 EJS 与模型才读到正确日期。
+        // 同一楼、同一个错误日期只写一次，避免写入没有生效时反复写。
+        var mvuDateFixed = '';
+        function fixMvuDate(wrong, real) {
+            var floor = mapCardFloor(), key = floor + ':' + [wrong.年, wrong.月, wrong.日].join('/');
+            if (key === mvuDateFixed || !floorUpdated() || mvuAnalyzing() || !Number.isInteger(floor) ||
+                mapLatestFloor() !== floor || typeof context.updateVariablesWith !== 'function') return;
+            mvuDateFixed = key;
+            try {
+                context.updateVariablesWith(function (variables) {
+                    var stat = mapPlain(variables && variables.stat_data), world = mapPlain(stat && stat.世界);
+                    var date = mapPlain(world && mapPlain(world.当前) && world.当前.日期);
+                    if (date && !mvuRealDate(date)) return variables;   // 已经是存在的日期（例如模型刚改过）
+                    if (date) Object.assign(date, real);
+                    return variables;
+                }, {type: 'message', message_id: floor});
+            } catch (_) {}
+        }
         function applyMvu(variables) {
             var stat = mvuObject(variables) && mvuObject(variables.stat_data) || {};
+            var statDate = mvuObject(mvuObject(mvuObject(stat.世界) && stat.世界.当前) && stat.世界.当前.日期);
+            var realDate = statDate && mvuRealDate(statDate);
+            if (realDate) {
+                fixMvuDate(Object.assign({}, statDate), realDate);
+                Object.assign(statDate, realDate);   // 画面（顶部日期、整备封面便条）一律显示推算后的日期
+            }
             mvuStat = stat;
             var team = mvuObject(stat.队友);
             if (team) renderParty(DEMO_PARTY.map(function (person) {

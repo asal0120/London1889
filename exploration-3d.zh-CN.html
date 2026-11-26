@@ -741,7 +741,19 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .game-shell .spectrum-dashboard:has(> .dashboard-frame) .spectrum-core .cost-label { color: var(--strong); }
 .game-shell .spectrum-dashboard:has(> .dashboard-frame) .cost-preview { color: var(--muted); }
 .game-shell .spectrum-execute > .spectrum-ring { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; }
-.game-shell .spectrum-execute:has(> .spectrum-ring)::before { display: none; }
+/* 施放环外圈的星芒框：依色谱换图（build.py 的 SPECTRUM_FRAMES，与准星同一款），用遮罩染成色谱颜色；可施放时变亮。
+   第二层遮罩在 Cost 仪表与上方资源格那一圈（canvas 半径 .87，换算成这个框约 62%–74%）挖出透明环带，框不会压到仪表。 */
+.game-shell .spectrum-execute:has(> .spectrum-ring)::before {
+  inset: -14%; z-index: -2; border: 0; border-radius: 0; box-shadow: none; background: var(--battle-hi);
+  -webkit-mask: var(--spectrum-frame) center / contain no-repeat, radial-gradient(circle closest-side, #000 59%, transparent 62%, transparent 74%, #000 77%);
+  -webkit-mask-composite: source-in;
+  mask: var(--spectrum-frame) center / contain no-repeat, radial-gradient(circle closest-side, #000 59%, transparent 62%, transparent 74%, #000 77%);
+  mask-composite: intersect;
+  opacity: .55; transition: opacity .3s; pointer-events: none;
+}
+.game-shell .spectrum-execute.is-ready:has(> .spectrum-ring)::before { opacity: .95; }
+/* 星芒框会伸到 Cost 数字旁边：数字放在框的上层。 */
+.game-shell .spectrum-core .command-top { position: relative; z-index: 1; }
 .game-shell .spectrum-execute:has(> .spectrum-ring) .spectrum-icon, .game-shell .spectrum-execute:has(> .spectrum-ring) .spectrum-fallback { width: 58%; height: 58%; }
 /* The ring's lower arc shows Cost, so the old pip strip stays only for layout checks and screen-reader-hidden markup. */
 .game-shell .spectrum-dashboard:has(> .dashboard-frame) .spectrum-core .cost-pips { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); }
@@ -818,10 +830,11 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
 .game-shell .stage .hp-track { height: 14px; margin-top: 0; padding: 2px; border-radius: var(--radius-lg); background: var(--shade-67); box-shadow: inset 0 0 0 1px var(--veil-12); overflow: hidden; }
 .game-shell[data-theme="light"] .stage .hp-track { background: #3d2c1bb0; box-shadow: inset 0 0 0 1px #fff3; }
 .game-shell .stage .hp-fill { height: 100%; border-radius: var(--radius-lg); transition: width .5s; }
-/* The selected target gets a turning reticle (every living enemy for all-enemy moves). */
+/* The selected target gets a turning reticle (every living enemy for all-enemy moves).
+   星芒框依色谱换图（build.py 的 SPECTRUM_FRAMES），用遮罩染成色谱颜色。 */
 .game-shell .enemy-art::after {
-  content: ""; position: absolute; left: 50%; top: 50%; height: 88%; aspect-ratio: 1; z-index: 2; border: 2px solid var(--battle-hi); border-radius: var(--radius-round);
-  clip-path: polygon(0 0, 30% 0, 30% 100%, 0 100%, 0 0, 100% 0, 100% 100%, 70% 100%, 70% 0);
+  content: ""; position: absolute; left: 50%; top: 50%; height: 110%; aspect-ratio: 1; z-index: 2;
+  background: var(--battle-hi); -webkit-mask: var(--spectrum-frame) center / contain no-repeat; mask: var(--spectrum-frame) center / contain no-repeat;
   filter: drop-shadow(0 0 6px var(--battle-glow)); transform: translate(-50%, -50%) scale(.6); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
 }
 .game-shell #battle-view:not([aria-busy="true"]) .combat-grid[data-aim="enemy"] .enemy-card[aria-pressed="true"]:not(.dead) .enemy-art::after,
@@ -987,6 +1000,13 @@ body:has(> .game-shell[data-theme="light"]) { background: #d2c6af; }
   --orn-frame: url("./assets/ui/material/nouveau-frame-02-brass.png");
 }
 .game-shell[data-theme="light"] { --orn-frame: url("./assets/ui/material/nouveau-frame-02-ink.png"); }
+.game-shell .combat-grid { --spectrum-frame: url("./assets/ui/spectrum/basic-frame.webp"); }
+.game-shell .combat-grid[data-spectrum="red"] { --spectrum-frame: url("./assets/ui/spectrum/red-frame.webp"); }
+.game-shell .combat-grid[data-spectrum="blue"] { --spectrum-frame: url("./assets/ui/spectrum/blue-frame.webp"); }
+.game-shell .combat-grid[data-spectrum="yellow"] { --spectrum-frame: url("./assets/ui/spectrum/yellow-frame.webp"); }
+.game-shell .combat-grid[data-spectrum="green"] { --spectrum-frame: url("./assets/ui/spectrum/green-frame.webp"); }
+.game-shell .combat-grid[data-spectrum="purple"] { --spectrum-frame: url("./assets/ui/spectrum/purple-frame.webp"); }
+.game-shell .combat-grid[data-spectrum="cyan"] { --spectrum-frame: url("./assets/ui/spectrum/cyan-frame.webp"); }
 </style>
 <!-- END_EXPLORATION_THEME -->
 <!-- BEGIN_EXPLORATION_PRESENTATION_STYLE -->
