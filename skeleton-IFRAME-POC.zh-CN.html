@@ -2236,9 +2236,7 @@
   flex: 1 1 0; min-height: 0; max-height: none; padding: clamp(12px, 2.5%, 24px);
   scrollbar-gutter: stable both-edges; container: status-panel / size;
 }
-/* 页签开合时位置不动：底部内距与收起时相同；选中的页签不上移，改拿掉上方 1px 让它贴齐面板。 */
-.rpg-v7-root.d-material-ui.sheet-open .tabRow { margin-top: 0; padding-top: 0; }
-.rpg-v7-root.d-material-ui .tabRow button[aria-pressed="true"] { transform: none; }
+.rpg-v7-root.d-material-ui.sheet-open .tabRow { margin-top: 0; padding-bottom: 6px; }
 .rpg-v7-root.d-material-ui {
   --status-rule: rgba(205, 173, 119, .48);
   --status-rule-soft: rgba(205, 173, 119, .16);
@@ -3012,12 +3010,14 @@
 .rpg-v7-root.d-refresh .ncAlbumCharacter::after { top: 2px; right: 2px; transform: scaleX(-1); }
 .rpg-v7-root.d-refresh .ncAlbumCharacter .ncAlbumPortrait { background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.5), transparent 70%); filter: sepia(.12); }
 
-/* 窄版：封蜡缩小；两者放不下，有新事件时只显示新事件，看完（或没有新事件）时显示事件数，避免「查看」被挤出底板 */
+/* 窄版：封蜡缩小、数量文字收起，避免「查看」被挤出底板 */
 @container rpg-card (max-width: 360px) {
   .rpg-v7-root.d-refresh .uiMapToggle { gap: 5px; padding-inline: 8px 6px; }
   .rpg-v7-root.d-refresh .uiMapToggleTitle { letter-spacing: .02em; }
-  .rpg-v7-root.d-refresh .uiMapToggle.has-unread .uiMapCount { display: none; }
+  .rpg-v7-root.d-refresh .uiMapCount { display: none; }
   .rpg-v7-root.d-refresh .uiMapNotice:not(:empty) { margin-left: auto; padding-left: 19px; }
+  /* 没有新事件时（无事件或都已读），「查看」一样靠右。 */
+  .rpg-v7-root.d-refresh .uiMapNotice:empty + .uiMapToggleAction { margin-left: auto; }
   .rpg-v7-root.d-refresh .uiMapNotice:not(:empty)::before { width: 16px; height: 16px; }
 }
 
@@ -4170,12 +4170,11 @@ var NewCardMusic = (function musicModule() {
             if (!current) choose(firstTrack(), false, false);
             var version = epoch;
             wanted = true; pending = true; error = ''; notify();
-            armStall();
             try {
                 await audio.play();
                 if (disposed || version !== epoch) return false;
                 if (!wanted) audio.pause();
-                hiddenEnd = false; pending = false; notify(); return wanted;
+                pending = false; notify(); return wanted;
             } catch (problem) {
                 if (disposed || version !== epoch || !wanted) return false;
                 pending = false; wanted = false;
@@ -4185,44 +4184,7 @@ var NewCardMusic = (function musicModule() {
                 notify(); return false;
             }
         }
-        function pause() { wanted = false; pending = false; hiddenEnd = false; clearStall(); audio.pause(); notify(); }
-        // 读取逾时：要播放，但 STALL_MS 内播放位置都没有前进（文件一时读不到，play() 一直没有结果，或播到一半停在缓冲）。
-        // 第一次：同一首重新读取，从原本的位置接着播；再逾时：换下一首。
-        // 只在播放器自己停住时处理；被系统或其他程式暂停（audio.paused）不算，不会自己恢复播放。
-        var STALL_MS = 30000, stallTimer = null, stallFrom = 0, stallRetried = false;
-        function clearStall() { if (stallTimer !== null) { host.clearTimeout(stallTimer); stallTimer = null; } }
-        function armStall() {
-            clearStall();
-            if (disposed || !wanted) return;
-            var version = epoch;
-            stallFrom = audio.currentTime || 0;
-            stallTimer = host.setTimeout(function () {
-                stallTimer = null;
-                if (disposed || version !== epoch || !wanted) return;
-                if ((audio.currentTime || 0) !== stallFrom) { stallRetried = false; return; }
-                if (pending || (!audio.paused && !audio.ended)) stalled();
-            }, STALL_MS);
-        }
-        function stalled() {
-            var track = find(current);
-            if (!track) return;
-            if (!stallRetried) {
-                stallRetried = true;
-                var at = audio.currentTime || 0;
-                epoch++; pending = false;
-                audio.src = sourceOf(track); audio.load();
-                if (at > 0) { try { audio.currentTime = at; } catch (_) {} }
-                play(); return;
-            }
-            var list = listOf(current), title = track.title;
-            if (list.length > 1) { next(1, true); notice = '「' + title + '」读取逾时，已换下一首。'; notify(); return; }
-            // 清单只有一首：小游戏／亲密场景曲目回到原本的音乐；通用曲目停下并说明。
-            if ((battleActive && isBattle(current)) || (nsfwActive && isNsfw(current))) {
-                restoreMain(resumeAt ? resumeAt.playing : true);
-                notice = '「' + title + '」读取逾时，已改回原本的音乐。'; notify(); return;
-            }
-            pending = false; wanted = false; audio.pause(); error = '音乐读取逾时，请稍后再按播放。'; notify();
-        }
+        function pause() { wanted = false; pending = false; audio.pause(); notify(); }
         // 自动播放开始时，亲密场景进行中就直接播亲密场景曲目。
         function playAuto() {
             if (nsfwActive && nsfwOn && !battleActive && !isNsfw(current) && nsfwTracks.length) startNsfw();
@@ -4257,7 +4219,7 @@ var NewCardMusic = (function musicModule() {
             // 亲密场景中从通用曲目换到亲密场景曲目也一样。
             if (((battleActive && isBattle(id)) || (nsfwActive && isNsfw(id))) && isMain(current)) resumeAt = {id: current, time: audio.currentTime || 0, playing: wanted};
             if (remember !== false && current && current !== id) { history.push(current); if (history.length > 100) history.shift(); }
-            epoch++; wanted = false; pending = false; clearStall(); stallRetried = false; audio.pause(); error = ''; notice = ''; current = id;
+            epoch++; wanted = false; pending = false; audio.pause(); error = ''; current = id;
             if (isBattle(id)) battleChoice = id; else if (isNsfw(id)) nsfwChoice = id; else mainChoice = id;
             if (track.notes && !track.src) track.src = blobUrl(scoreBlob(host, track));
             audio.src = sourceOf(track); audio.loop = mode === 'repeat-one'; audio.load();
@@ -4288,12 +4250,8 @@ var NewCardMusic = (function musicModule() {
             if (!id) id = mode === 'shuffle' && direction > 0 ? randomNext(list) : list[(index + direction + list.length) % list.length].id;
             choose(id, autoplay == null ? wanted : autoplay, direction > 0);
         }
-        // 在背景（切到其他应用程式）播完时，浏览器常不让下一首开始播放。
-        // 记下这件事，回到前景时若下一首还没播起来，就再试一次（见 resumeVisible）。
-        var hiddenEnd = false;
         function ended() {
             if (disposed) return;
-            hiddenEnd = !!host.document.hidden;
             if (mode === 'repeat-one') { audio.currentTime = 0; play(); }
             else next(1, true);
         }
@@ -4383,27 +4341,14 @@ var NewCardMusic = (function musicModule() {
             ownedUrls.forEach(function (url) { host.URL.revokeObjectURL(url); }); ownedUrls.clear(); listeners.clear();
             events.forEach(function (event) { audio.removeEventListener(event, notify); });
             audio.removeEventListener('ended', ended); audio.removeEventListener('error', failed);
-            audio.removeEventListener('waiting', waiting); audio.removeEventListener('stalled', waiting); clearStall();
-            host.removeEventListener('pagehide', suspend); host.document.removeEventListener('visibilitychange', resumeVisible);
+            host.removeEventListener('pagehide', suspend);
             if (cleanupTimer !== null) host.clearTimeout(cleanupTimer);
             if (host[KEY] === service) delete host[KEY];
         }
         function suspend(event) { if (event.persisted) pause(); else dispose(); }
-        // 只处理「背景中播完、下一首没能开始」；玩家按的暂停、静音或被系统暂停都不会自己恢复。
-        function resumeVisible() {
-            if (disposed || host.document.hidden || !hiddenEnd) return;
-            hiddenEnd = false;
-            if (userPaused || audio.muted || !audio.paused) return;
-            disarmUnlock();
-            play();
-        }
         var events = ['play', 'pause', 'playing', 'timeupdate', 'loadedmetadata', 'durationchange', 'volumechange', 'seeking', 'seeked'];
         events.forEach(function (event) { audio.addEventListener(event, notify); });
-        // 停在缓冲时开始计时；同一个位置重复收到不重新计时，免得逾时一直往后延。
-        function waiting() { if (stallTimer === null || (audio.currentTime || 0) !== stallFrom) armStall(); }
         audio.addEventListener('ended', ended); audio.addEventListener('error', failed); host.addEventListener('pagehide', suspend);
-        audio.addEventListener('waiting', waiting); audio.addEventListener('stalled', waiting);
-        host.document.addEventListener('visibilitychange', resumeVisible);
         tracks = normalized(initialTracks);
         if (!tracks.length) tracks = DEFAULTS.map(function (track) { return Object.assign({}, track); });
         var service = {
@@ -6899,22 +6844,27 @@ var NewCardAlbumData = (function () {
         var TALK_QUOTES = {'「': '」', '『': '』', '“': '”', '＂': '＂', '"': '"'};
         var TALK_LINE = /^([^「」『』“”＂"【】:：\r\n]+?)\s*(?:【([^【】\r\n]*)(】?))?\s*([:：]?)\s*(?:([「『“＂"])(.*))?$/u;
 
-        // 格式：名字【动作】：「台词」，【动作】与冒号都可省略；整行以收引号结尾才算对话。
+        // 格式：名字【动作】：「台词」，【动作】与冒号都可省略。
+        // 收引号后还有文字时：有冒号或【动作】，后面的文字拆出来当一般叙述（tail）；
+        // 只有「名字＋引号」时整行要以收引号结尾，避免「莉泽＂惊喜＂地…」被误判。
         // open＝串流中仍在增长的最后一行：已有冒号或【时，开引号一出现就先画成对话；
-        // 只有「名字＋引号」时要等收引号，避免「莉泽＂惊喜＂地…」被误判。
+        // 只有「名字＋引号」时要等收引号。
         function matchDialogue(line, open) {
             line = line.trim();
             var match = TALK_LINE.exec(line);
             if (!match || /[<>\uE000\uE001]/.test(line)) return null;
             var hasAction = match[2] !== undefined, action = hasAction ? match[2].trim() : '';
-            var text = '';
+            var text = '', tail = '';
             if (!match[5]) {
                 // 还没出现开引号：只有串流中的「名字【动作…」先画出来。
                 if (!open || !hasAction) return null;
             } else {
                 if (hasAction && !match[3]) return null;
                 var rest = match[6], close = TALK_QUOTES[match[5]], end = rest.indexOf(close);
-                if (end >= 0 && end !== rest.length - close.length) return null;
+                if (end >= 0 && end !== rest.length - close.length) {
+                    if (!(hasAction || match[4])) return null;
+                    tail = rest.slice(end + close.length).trim();
+                }
                 if (end >= 0) {
                     text = rest.slice(0, end);
                     if (!text.trim()) return null;
@@ -6931,7 +6881,7 @@ var NewCardAlbumData = (function () {
                 row = playerRow();
             } else if (dialogueNames.has(name)) row = dialogueNames.get(name);
             else if (hasAction || match[4]) row = npcRow(match[1]);
-            return row ? {speaker: row, text: text, action: action} : null;
+            return row ? {speaker: row, text: text, action: action, tail: tail} : null;
         }
 
         function renderDialogue(match) {
@@ -7870,8 +7820,6 @@ var NewCardAlbumData = (function () {
             var notice = root.querySelector('.uiMapNotice');
             if (notice.textContent !== noticeText) notice.textContent = noticeText;
             root.querySelector('.uiMapCount').textContent = countText;
-            // 窄版用：有新事件时收起事件数（见 CSS「窄版：封蜡缩小」）。
-            root.querySelector('.uiMapToggle').classList.toggle('has-unread', !!unread);
             root.querySelector('.uiMapToggle').setAttribute('aria-label', '开启伦敦地图，' + countText + (unread ? '，' + noticeText : ''));
             var atlas = mapReadyAtlas();
             if (atlas) atlas.box.querySelector('.uiMapDialogCount').innerHTML = count ? '<b>' + count + '</b> 个事件' : '暂无事件';
@@ -11642,7 +11590,11 @@ var NewCardAlbumData = (function () {
             var lines = paragraph.split(/\r?\n/);
             lines.forEach(function (line, index) {
                 var match = matchDialogue(line, open && index === lines.length - 1);
-                if (match) { flushPlain(); blocks.push(renderDialogue(match)); }
+                if (match) {
+                    flushPlain();
+                    blocks.push(renderDialogue(match));
+                    if (match.tail) plain.push(match.tail);
+                }
                 else plain.push(line);
             });
             flushPlain();
