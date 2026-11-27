@@ -11174,7 +11174,8 @@ window.SceneEnvironment=(()=>{
     getSavePolicy:function(){return{version:P.version,generationVersion:P.generationVersion,opening:R.clone(opening),events:R.clone(eventLedger),accepted:P.accepted(state,meta)};},
     // 结算中的局（含存档里留下的）：宿主用来决定关闭前是否询问、再次进入时是否先显示这份结算。没有则 null。
     // attempted：曾交给宿主送出，但没收到完成的回应（可能已经送出过）。
-    getResultStatus:function(){return state&&state.phase==='ended'&&meta?{source:meta.source,outcome:state.outcome,accepted:P.accepted(state,meta),delivery:meta.delivery,attempted:Boolean(meta.hostAttempted)}:null;},
+    // eventId：这份结算属于哪个事件（地图事件是 'host:map:'＋事件编号；正文遭遇是 'encounter:'＋来源与楼层）。宿主用来判断是不是同一个事件。
+    getResultStatus:function(){return state&&state.phase==='ended'&&meta?{source:meta.source,eventId:meta.eventId||null,outcome:state.outcome,accepted:P.accepted(state,meta),delivery:meta.delivery,attempted:Boolean(meta.hostAttempted)}:null;},
     // 放弃结算中的局并回到整备（玩家关闭前确认放弃时用）。送出中不处理。
     dropResult:function(){if(disposed||sending||!state||state.phase!=='ended')return false;return P.accepted(state,meta)?backToPrep(false):discardAttempt(false);},
     retry:function(){return P.unresolved(state,meta)&&discardAttempt(true);},

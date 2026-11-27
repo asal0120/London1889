@@ -7436,6 +7436,13 @@ var NewCardAlbumData = (function () {
             if (event.time) out.hour = event.time.hour + event.time.minute / 60;
             return out;
         }
+        // 正文遭遇的光影与天气依 MVU 的 世界.当前.时间／天气（2026-11-27：原本没送，沿用上一局的时段）。读不到时间时用正午。
+        function storyEnvironment() {
+            var world = mvuObject(mvuStat && mvuStat.世界) || {}, now = mvuObject(world.当前) || {}, time = mvuObject(now.时间) || {};
+            var sky = String(now.天气 || ''), hour = Number(time.时), minute = Number(time.分) || 0;
+            hour = Number.isFinite(hour) && hour >= 0 && hour < 24 ? hour + Math.min(Math.max(minute, 0), 59) / 60 : 12;
+            return {weather: /雨/.test(sky) ? 'rain' : /雪/.test(sky) ? 'snow' : 'clear', hour: hour};
+        }
         // 事件发生的时刻：晚于目前时间就是今天的该时刻，早于目前时间就是隔天。没有时间标签或读不到时间时回传 null。
         function mapEventMoment(event) {
             if (!event.time || !mapEventNow || mapEventNow.minutes === null) return null;
@@ -11350,12 +11357,19 @@ var NewCardAlbumData = (function () {
                 pending = typeof game.getResultStatus === 'function' ? game.getResultStatus() : null;
                 // 已交给故事的局只是还停在结算（小游戏送出后由这里关闭）：直接回到整备，不再显示。
                 if (pending && pending.delivery === 'sent') { game.dropResult(); pending = game.getResultStatus(); }
+                // 只有同一个事件才先显示上次的结算（2026-11-27 使用者决定）：同一个地图事件，或这张卡片目前的正文遭遇（同一楼、同一回复版本）。
+                // 其他事件直接放弃那份结算，带入这次的遭遇。别的楼层的正文结算本来就送不出去（来源核对不通过）。
+                if (pending) {
+                    var origin = game.getEncounterSource();
+                    var same = map ? pending.source === 'map' && pending.eventId === 'host:map:' + map.id
+                        : pending.source === 'story' && !!origin && explorationCurrent(origin);
+                    if (!same) { game.dropResult(); pending = game.getResultStatus(); }
+                }
             } catch (_) {}
             if (pending) {
-                var origin = game.getEncounterSource();
                 current.resumed = true;
                 // 上次的结算来自这张卡片目前的正文遭遇时，送出后在入口标上结果。正文结算要核对来源才能送出。
-                current.resumedOwn = pending.source === 'story' && !!origin && explorationCurrent(origin);
+                current.resumedOwn = !map;
                 game.bindEncounterSource(explorationCurrent);
             } else if (!applyExplorationEntry(current)) return;
             // 探索与战斗中隐藏关闭钮（会挡住右上角的资讯），改用游戏内的「撤离」；整备与结算时才显示。
@@ -11392,6 +11406,7 @@ var NewCardAlbumData = (function () {
                 if (result && result.ok && !game.configure(mapExploreConfig(map))) result = null;
             } else {
                 game.configure({enemyWeights: null});
+                game.setSceneEnvironment(storyEnvironment());
                 result = game.useEncounter(current.record, {source: 'story', isCurrent: explorationCurrent});
             }
             if (result && result.ok) return true;
